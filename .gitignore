@@ -40,6 +40,24 @@ lerna-debug.log*
 
 
 # ==================================================
+# Frontend additional build / tooling files
+# ==================================================
+**/dist-ssr/
+*.tsbuildinfo
+**/.eslintcache
+
+# Cypress
+**/cypress/videos/
+**/cypress/screenshots/
+
+# Vitest
+**/__screenshots__/
+
+# Vite
+*.timestamp-*-*.mjs
+
+
+# ==================================================
 # Backend - Spring / Java / Gradle / Maven
 # ==================================================
 **/.gradle/
@@ -63,11 +81,16 @@ lerna-debug.log*
 *.ipr
 *.iws
 
-.vscode/
-
 .classpath
 .project
 .settings/
+
+
+# ==================================================
+# VS Code
+# ==================================================
+**/.vscode/*
+!**/.vscode/extensions.json
 
 
 # ==================================================
