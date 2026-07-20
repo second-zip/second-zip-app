@@ -4,11 +4,11 @@ body:
   - type: input
     id: feature-id
     attributes:
-    label: '📌 관련 기능 ID'
-    description: '기능 명세서의 기능 ID를 작성해주세요. 관련 기능 ID가 없는 작업은 N/A로 작성해주세요.'
-    placeholder: '예: RE_01 또는 N/A'
+      label: '📌 관련 기능 ID'
+      description: '기능 명세서의 기능 ID를 작성해주세요. 관련 기능 ID가 없는 작업은 N/A로 작성해주세요.'
+      placeholder: '예: RE_01 또는 N/A'
     validations:
-    required: true
+      required: true
 
   - type: textarea
     id: work-description
