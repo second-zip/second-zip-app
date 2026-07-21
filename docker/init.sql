@@ -43,6 +43,10 @@ CREATE TABLE accounts (
         'WOMAN',
         'CAT'
     ) NOT NULL DEFAULT 'CAT',
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (account_id),
     UNIQUE KEY uk_accounts_email (email),
@@ -65,6 +69,10 @@ CREATE TABLE terms (
     ) NOT NULL,
     is_required BOOLEAN NOT NULL,
     version VARCHAR(30) NOT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (term_id),
     UNIQUE KEY uk_terms_type_version (term_type, version)
@@ -461,6 +469,10 @@ CREATE TABLE account_term_consents (
     term_id BIGINT NOT NULL,
     is_agreed BOOLEAN NOT NULL DEFAULT FALSE,
     agreed_at DATETIME NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (account_term_consent_id),
 
@@ -505,6 +517,10 @@ CREATE TABLE analysis_reports (
         'CAUTION',
         'DANGER'
     ) NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (analysis_report_id),
     UNIQUE KEY uk_analysis_reports_share_token (share_token),
@@ -536,6 +552,10 @@ CREATE TABLE ai_generate_messages (
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     reason TEXT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (ai_generate_message_id),
     KEY idx_ai_generate_messages_report_id (analysis_report_id),
@@ -567,6 +587,10 @@ CREATE TABLE report_check_results (
         'CAUTION',
         'DANGER'
     ) NOT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (report_check_result_id),
 
@@ -601,6 +625,10 @@ CREATE TABLE report_fraud_types (
         'CAUTION',
         'DANGER'
     ) NOT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (report_fraud_type_id),
 
@@ -643,6 +671,10 @@ CREATE TABLE report_fraud_detail_results (
         'CAUTION',
         'DANGER'
     ) NOT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (report_fraud_detail_result_id),
     UNIQUE KEY uk_fraud_detail_results_type (
@@ -674,6 +706,10 @@ CREATE TABLE checklist_items (
         'OFFICETEL',
         'TRUST_PROPERTY'
     ) NOT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (checklist_item_id),
     UNIQUE KEY uk_checklist_items_category_contents (
@@ -753,6 +789,10 @@ CREATE TABLE account_checklist_items (
     account_id BIGINT NOT NULL,
     checklist_item_id BIGINT NOT NULL,
     is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (account_checklist_item_id),
 
@@ -792,6 +832,10 @@ CREATE TABLE regions (
         'EUPMYEONDONG'
     ) NOT NULL,
     parent_region_id BIGINT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (region_id),
     UNIQUE KEY uk_regions_region_code (region_code),
@@ -815,6 +859,10 @@ CREATE TABLE fraud_damage_statistics (
     region_id BIGINT NOT NULL,
     damage_house_count INT NOT NULL DEFAULT 0,
     base_date DATE NOT NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (fraud_damage_statistic_id),
 
@@ -845,6 +893,10 @@ CREATE TABLE jeonse_price_indices (
     base_month DATE NOT NULL,
     price_index DECIMAL(10, 4) NOT NULL,
     change_rate DECIMAL(10, 4) NULL,
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (jeonse_price_index_id),
 
@@ -863,3 +915,337 @@ CREATE TABLE jeonse_price_indices (
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 ) ENGINE = InnoDB;
+
+-- =========================================================
+-- 시도 17개 
+-- =========================================================
+INSERT INTO regions (
+    region_code,
+    region_name,
+    region_level,
+    parent_region_id
+)
+VALUES
+    ('11', '서울특별시', 'SIDO', NULL),
+    ('26', '부산광역시', 'SIDO', NULL),
+    ('27', '대구광역시', 'SIDO', NULL),
+    ('28', '인천광역시', 'SIDO', NULL),
+    ('29', '광주광역시', 'SIDO', NULL),
+    ('30', '대전광역시', 'SIDO', NULL),
+    ('31', '울산광역시', 'SIDO', NULL),
+    ('36', '세종특별자치시', 'SIDO', NULL),
+    ('41', '경기도', 'SIDO', NULL),
+    ('43', '충청북도', 'SIDO', NULL),
+    ('44', '충청남도', 'SIDO', NULL),
+    ('46', '전라남도', 'SIDO', NULL),
+    ('47', '경상북도', 'SIDO', NULL),
+    ('48', '경상남도', 'SIDO', NULL),
+    ('50', '제주특별자치도', 'SIDO', NULL),
+    ('51', '강원특별자치도', 'SIDO', NULL),
+    ('52', '전북특별자치도', 'SIDO', NULL)
+ON DUPLICATE KEY UPDATE
+    region_name = VALUES(region_name),
+    region_level = VALUES(region_level),
+    parent_region_id = VALUES(parent_region_id);
+-- =========================================================
+-- HUG 통계 대상 시군구 148개
+-- =========================================================
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11110', '종로구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11140', '중구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11200', '성동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11215', '광진구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11230', '동대문구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11260', '중랑구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11290', '성북구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11305', '강북구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11320', '도봉구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11350', '노원구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11380', '은평구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11410', '서대문구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11440', '마포구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11470', '양천구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11500', '강서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11530', '구로구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11545', '금천구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11560', '영등포구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11590', '동작구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11620', '관악구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11650', '서초구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11680', '강남구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11710', '송파구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '11740', '강동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '11' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26110', '중구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26140', '서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26170', '동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26200', '영도구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26230', '부산진구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26260', '동래구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26290', '남구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26350', '해운대구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26380', '사하구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26410', '금정구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26440', '강서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26470', '연제구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26500', '수영구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '26530', '사상구', 'SIGUNGU', region_id FROM regions WHERE region_code = '26' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27110', '중구', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27140', '동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27170', '서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27230', '북구', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27260', '수성구', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27290', '달서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '27710', '달성군', 'SIGUNGU', region_id FROM regions WHERE region_code = '27' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28110', '중구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28140', '동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28177', '미추홀구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28185', '연수구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28200', '남동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28237', '부평구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28245', '계양구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28260', '서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '28710', '강화군', 'SIGUNGU', region_id FROM regions WHERE region_code = '28' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '29110', '동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '29' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '29140', '서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '29' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '29155', '남구', 'SIGUNGU', region_id FROM regions WHERE region_code = '29' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '29170', '북구', 'SIGUNGU', region_id FROM regions WHERE region_code = '29' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '29200', '광산구', 'SIGUNGU', region_id FROM regions WHERE region_code = '29' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '30110', '동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '30' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '30140', '중구', 'SIGUNGU', region_id FROM regions WHERE region_code = '30' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '30170', '서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '30' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '30200', '유성구', 'SIGUNGU', region_id FROM regions WHERE region_code = '30' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '30230', '대덕구', 'SIGUNGU', region_id FROM regions WHERE region_code = '30' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '31110', '중구', 'SIGUNGU', region_id FROM regions WHERE region_code = '31' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '31140', '남구', 'SIGUNGU', region_id FROM regions WHERE region_code = '31' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '36110', '세종시', 'SIGUNGU', region_id FROM regions WHERE region_code = '36' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41111', '장안구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41113', '권선구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41115', '팔달구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41117', '영통구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41131', '수정구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41133', '중원구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41135', '분당구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41150', '의정부시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41171', '만안구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41173', '동안구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41192', '원미구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41194', '소사구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41196', '오정구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41220', '평택시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41271', '상록구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41273', '단원구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41281', '덕양구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41285', '일산동구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41287', '일산서구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41310', '구리시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41360', '남양주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41370', '오산시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41390', '시흥시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41410', '군포시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41430', '의왕시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41450', '하남시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41461', '처인구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41463', '기흥구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41465', '수지구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41480', '파주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41500', '이천시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41550', '안성시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41570', '김포시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41593', '효행구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41595', '병점구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41597', '동탄구', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41610', '광주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41630', '양주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41650', '포천시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '41670', '여주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '41' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '43111', '상당구', 'SIGUNGU', region_id FROM regions WHERE region_code = '43' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '43112', '서원구', 'SIGUNGU', region_id FROM regions WHERE region_code = '43' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '43113', '흥덕구', 'SIGUNGU', region_id FROM regions WHERE region_code = '43' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '43114', '청원구', 'SIGUNGU', region_id FROM regions WHERE region_code = '43' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '43130', '충주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '43' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '44133', '서북구', 'SIGUNGU', region_id FROM regions WHERE region_code = '44' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '44200', '아산시', 'SIGUNGU', region_id FROM regions WHERE region_code = '44' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '44210', '서산시', 'SIGUNGU', region_id FROM regions WHERE region_code = '44' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '44230', '논산시', 'SIGUNGU', region_id FROM regions WHERE region_code = '44' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '44270', '당진시', 'SIGUNGU', region_id FROM regions WHERE region_code = '44' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '44810', '예산군', 'SIGUNGU', region_id FROM regions WHERE region_code = '44' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46150', '순천시', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46170', '나주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46230', '광양시', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46720', '곡성군', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46790', '화순군', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46840', '무안군', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '46880', '장성군', 'SIGUNGU', region_id FROM regions WHERE region_code = '46' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '47111', '남구', 'SIGUNGU', region_id FROM regions WHERE region_code = '47' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '47113', '북구', 'SIGUNGU', region_id FROM regions WHERE region_code = '47' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '47130', '경주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '47' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '47150', '김천시', 'SIGUNGU', region_id FROM regions WHERE region_code = '47' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '47190', '구미시', 'SIGUNGU', region_id FROM regions WHERE region_code = '47' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '48123', '성산구', 'SIGUNGU', region_id FROM regions WHERE region_code = '48' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '48127', '마산회원구', 'SIGUNGU', region_id FROM regions WHERE region_code = '48' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '48170', '진주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '48' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '48240', '사천시', 'SIGUNGU', region_id FROM regions WHERE region_code = '48' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '48250', '김해시', 'SIGUNGU', region_id FROM regions WHERE region_code = '48' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '48310', '거제시', 'SIGUNGU', region_id FROM regions WHERE region_code = '48' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '50110', '제주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '50' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '51110', '춘천시', 'SIGUNGU', region_id FROM regions WHERE region_code = '51' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '51130', '원주시', 'SIGUNGU', region_id FROM regions WHERE region_code = '51' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '51150', '강릉시', 'SIGUNGU', region_id FROM regions WHERE region_code = '51' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '51720', '홍천군', 'SIGUNGU', region_id FROM regions WHERE region_code = '51' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '51770', '정선군', 'SIGUNGU', region_id FROM regions WHERE region_code = '51' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '51780', '철원군', 'SIGUNGU', region_id FROM regions WHERE region_code = '51' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '52111', '완산구', 'SIGUNGU', region_id FROM regions WHERE region_code = '52' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '52113', '덕진구', 'SIGUNGU', region_id FROM regions WHERE region_code = '52' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '52130', '군산시', 'SIGUNGU', region_id FROM regions WHERE region_code = '52' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '52140', '익산시', 'SIGUNGU', region_id FROM regions WHERE region_code = '52' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+INSERT INTO regions (region_code, region_name, region_level, parent_region_id) SELECT '52710', '완주군', 'SIGUNGU', region_id FROM regions WHERE region_code = '52' AND region_level = 'SIDO' ON DUPLICATE KEY UPDATE region_name = VALUES(region_name), region_level = VALUES(region_level), parent_region_id = VALUES(parent_region_id);
+-- =========================================================
+-- HUG 피해주택 통계 148개
+-- =========================================================
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '11110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 14, '2025-12-31' FROM regions WHERE region_code = '11140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '11200' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 12, '2025-12-31' FROM regions WHERE region_code = '11215' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 30, '2025-12-31' FROM regions WHERE region_code = '11230' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 26, '2025-12-31' FROM regions WHERE region_code = '11260' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 19, '2025-12-31' FROM regions WHERE region_code = '11290' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 22, '2025-12-31' FROM regions WHERE region_code = '11305' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 22, '2025-12-31' FROM regions WHERE region_code = '11320' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '11350' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 35, '2025-12-31' FROM regions WHERE region_code = '11380' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '11410' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 24, '2025-12-31' FROM regions WHERE region_code = '11440' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 34, '2025-12-31' FROM regions WHERE region_code = '11470' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 156, '2025-12-31' FROM regions WHERE region_code = '11500' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 62, '2025-12-31' FROM regions WHERE region_code = '11530' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 75, '2025-12-31' FROM regions WHERE region_code = '11545' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 31, '2025-12-31' FROM regions WHERE region_code = '11560' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 18, '2025-12-31' FROM regions WHERE region_code = '11590' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 63, '2025-12-31' FROM regions WHERE region_code = '11620' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '11650' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '11680' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 19, '2025-12-31' FROM regions WHERE region_code = '11710' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 23, '2025-12-31' FROM regions WHERE region_code = '11740' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '26110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '26140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '26170' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '26200' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 15, '2025-12-31' FROM regions WHERE region_code = '26230' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 8, '2025-12-31' FROM regions WHERE region_code = '26260' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '26290' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '26350' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '26380' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 8, '2025-12-31' FROM regions WHERE region_code = '26410' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '26440' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '26470' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '26500' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '26530' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '27110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '27140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '27170' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '27230' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '27260' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 15, '2025-12-31' FROM regions WHERE region_code = '27290' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '27710' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '28110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '28140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 63, '2025-12-31' FROM regions WHERE region_code = '28177' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '28185' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 38, '2025-12-31' FROM regions WHERE region_code = '28200' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 53, '2025-12-31' FROM regions WHERE region_code = '28237' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 22, '2025-12-31' FROM regions WHERE region_code = '28245' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 29, '2025-12-31' FROM regions WHERE region_code = '28260' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '28710' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '29110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '29140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '29155' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '29170' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 34, '2025-12-31' FROM regions WHERE region_code = '29200' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '30110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '30140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '30170' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 19, '2025-12-31' FROM regions WHERE region_code = '30200' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '30230' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '31110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '31140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 33, '2025-12-31' FROM regions WHERE region_code = '36110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '41111' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 15, '2025-12-31' FROM regions WHERE region_code = '41113' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 16, '2025-12-31' FROM regions WHERE region_code = '41115' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 9, '2025-12-31' FROM regions WHERE region_code = '41117' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '41131' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 15, '2025-12-31' FROM regions WHERE region_code = '41133' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '41135' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 17, '2025-12-31' FROM regions WHERE region_code = '41150' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 15, '2025-12-31' FROM regions WHERE region_code = '41171' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '41173' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 32, '2025-12-31' FROM regions WHERE region_code = '41192' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '41194' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '41196' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 8, '2025-12-31' FROM regions WHERE region_code = '41220' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 21, '2025-12-31' FROM regions WHERE region_code = '41271' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '41273' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 8, '2025-12-31' FROM regions WHERE region_code = '41281' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '41285' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '41287' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '41310' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '41360' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 12, '2025-12-31' FROM regions WHERE region_code = '41370' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 13, '2025-12-31' FROM regions WHERE region_code = '41390' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '41410' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '41430' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 12, '2025-12-31' FROM regions WHERE region_code = '41450' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 14, '2025-12-31' FROM regions WHERE region_code = '41461' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 15, '2025-12-31' FROM regions WHERE region_code = '41463' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '41465' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 18, '2025-12-31' FROM regions WHERE region_code = '41480' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 10, '2025-12-31' FROM regions WHERE region_code = '41500' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '41550' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 16, '2025-12-31' FROM regions WHERE region_code = '41570' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '41593' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 9, '2025-12-31' FROM regions WHERE region_code = '41595' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 61, '2025-12-31' FROM regions WHERE region_code = '41597' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '41610' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '41630' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '41650' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '41670' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '43111' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '43112' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '43113' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '43114' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '43130' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '44133' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '44200' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '44210' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '44230' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '44270' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '44810' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 25, '2025-12-31' FROM regions WHERE region_code = '46150' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 14, '2025-12-31' FROM regions WHERE region_code = '46170' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 38, '2025-12-31' FROM regions WHERE region_code = '46230' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '46720' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '46790' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '46840' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '46880' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '47111' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '47113' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '47130' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '47150' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 6, '2025-12-31' FROM regions WHERE region_code = '47190' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '48123' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '48127' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 5, '2025-12-31' FROM regions WHERE region_code = '48170' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '48240' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 3, '2025-12-31' FROM regions WHERE region_code = '48250' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '48310' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '50110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '51110' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '51130' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '51150' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '51720' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '51770' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '51780' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '52111' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 7, '2025-12-31' FROM regions WHERE region_code = '52113' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 1, '2025-12-31' FROM regions WHERE region_code = '52130' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 4, '2025-12-31' FROM regions WHERE region_code = '52140' AND region_level = 'SIGUNGU';
+INSERT INTO fraud_damage_statistics (region_id, damage_house_count, base_date) SELECT region_id, 2, '2025-12-31' FROM regions WHERE region_code = '52710' AND region_level = 'SIGUNGU';
