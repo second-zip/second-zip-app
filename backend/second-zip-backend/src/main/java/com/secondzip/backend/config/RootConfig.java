@@ -19,7 +19,10 @@ import javax.sql.DataSource;
 
 @Configuration
 @Log4j2
-@MapperScan(basePackages = {"com.secondzip"})
+@MapperScan(
+        basePackages = "com.secondzip.backend",
+        annotationClass = org.apache.ibatis.annotations.Mapper.class
+)
 public class RootConfig {
     @Value("${DB_DRIVER}") String driver;
     @Value("${DB_URL}") String url;
