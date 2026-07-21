@@ -9,11 +9,9 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CharacterEncodingFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -25,27 +23,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    // Spring Security 동작 확인용 임시 계정
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth)
-            throws Exception {
-
-        PasswordEncoder encoder = passwordEncoder();
-
-        auth.inMemoryAuthentication()
-                .passwordEncoder(encoder)
-
-                .withUser("member")
-                .password(encoder.encode("1234"))
-                .roles("MEMBER")
-
-                .and()
-
-                .withUser("admin")
-                .password(encoder.encode("1234"))
-                .roles("ADMIN");
     }
 
     //HTTP 요청에 대한 보안 규칙 설정
