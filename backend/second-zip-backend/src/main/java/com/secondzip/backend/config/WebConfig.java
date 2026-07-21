@@ -1,7 +1,6 @@
 package com.secondzip.backend.config;
 
 import com.secondzip.backend.security.config.SecurityConfig;
-import com.secondzip.backend.security.config.SwaggerConfig;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
@@ -14,21 +13,23 @@ public class WebConfig
     protected Class<?>[] getRootConfigClasses() {
         return new Class<?>[]{
                 RootConfig.class,
-                SecurityConfig.class,
-                SwaggerConfig.class
+                SecurityConfig.class
         };
     }
 
     @Override
     protected Class<?>[] getServletConfigClasses() {
         return new Class<?>[]{
-                ServletConfig.class
+                ServletConfig.class,
+                com.secondzip.config.SwaggerConfig.class
         };
     }
 
     @Override
     protected String[] getServletMappings() {
-        return new String[]{"/"};
+        return new String[]{
+                "/"
+        };
     }
 
     @Override
