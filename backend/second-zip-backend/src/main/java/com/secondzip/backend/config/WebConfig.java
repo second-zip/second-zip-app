@@ -13,6 +13,8 @@ public class WebConfig
     protected Class<?>[] getRootConfigClasses() {
         return new Class<?>[]{
                 RootConfig.class,
+                PropertyPlaceholderConfig.class,
+                RedisConfig.class,
                 SecurityConfig.class
         };
     }
