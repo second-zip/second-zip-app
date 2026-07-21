@@ -1,14 +1,19 @@
 package com.secondzip.backend.security.config;
 
+import com.secondzip.backend.security.jwt.JwtAuthenticationFilter;
+import com.secondzip.backend.security.jwt.JwtTokenBlacklistService;
+import com.secondzip.backend.security.jwt.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -18,11 +23,23 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenBlacklistService jwtTokenBlacklistService;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(
+                jwtTokenProvider,
+                jwtTokenBlacklistService
+        );
     }
 
     //HTTP 요청에 대한 보안 규칙 설정
@@ -43,11 +60,27 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
                 // URL별 접근 권한 설정
                 .authorizeRequests()
-                .antMatchers(
-                        "/auth/login",
-                        "/auth/signup"
+
+                // CORS 사전 요청
+                .antMatchers(HttpMethod.OPTIONS, "/**")
+                .permitAll()
+                /*.antMatchers(
+                        "/api/auth/signup",
+                        "/api/auth/login",
+                        "/api/auth/reissue",
+                        "/swagger-ui.html",
+                        "/swagger-resources/**",
+                        "/v2/api-docs",
+                        "/webjars/**"
                 ).permitAll()
-                .anyRequest().authenticated();
+                .anyRequest().authenticated()*/
+                .anyRequest().permitAll()
+                .and()
+                //기본 로그인 필터보다 JWT 필터를 먼저 실행
+                .addFilterBefore(
+                        jwtAuthenticationFilter(),
+                        UsernamePasswordAuthenticationFilter.class
+                );
     }
 
     //Vue와의 통신을 위한 cors 설정

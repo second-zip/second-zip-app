@@ -51,6 +51,10 @@ dependencies {
 
     // ===== Redis =====
     implementation 'redis.clients:jedis:4.4.3'
+    implementation 'org.springframework.data:spring-data-redis:2.7.18'
+    implementation 'io.lettuce:lettuce-core:6.2.6.RELEASE'
+
+    // ==== DTO 검증 ====
 
     // ===== AWS S3 =====
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.600'

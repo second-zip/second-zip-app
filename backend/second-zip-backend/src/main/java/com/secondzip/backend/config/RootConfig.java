@@ -1,5 +1,6 @@
 package com.secondzip.backend.config;
 
+import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.log4j.Log4j2;
@@ -10,10 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
 
@@ -22,6 +25,24 @@ import javax.sql.DataSource;
 @MapperScan(
         basePackages = "com.secondzip.backend",
         annotationClass = org.apache.ibatis.annotations.Mapper.class
+)
+//Controller를 제외한 공통 Bean 등록
+@ComponentScan(
+        basePackages = "com.secondzip.backend",
+        excludeFilters = {
+                @ComponentScan.Filter(
+                        type = FilterType.ANNOTATION,
+                        classes = Controller.class
+                ),
+                @ComponentScan.Filter(
+                        type = FilterType.ANNOTATION,
+                        classes = RestController.class
+                ),
+                @ComponentScan.Filter(
+                        type = FilterType.ANNOTATION,
+                        classes = Configuration.class
+                )
+        }
 )
 public class RootConfig {
     @Value("${DB_DRIVER}") String driver;
@@ -39,37 +60,31 @@ public class RootConfig {
         return new HikariDataSource(config);
     }
 
-    @Autowired
-    ApplicationContext applicationContext;
+    @Bean
+    public JwtTokenProvider jwtTokenProvider(
+            @Value("${JWT_SECRET}") String secret,
+            @Value("${JWT_ACCESS_EXPIRATION}") long accessExpiration,
+            @Value("${JWT_REFRESH_EXPIRATION}") long refreshExpiration
+    ) {
+        return new JwtTokenProvider(secret, accessExpiration, refreshExpiration);
+    }
 
     @Bean
-    public SqlSessionFactory sqlSessionFactory() throws Exception {
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource, ApplicationContext applicationContext) throws Exception {
         SqlSessionFactoryBean sqlSessionFactory = new SqlSessionFactoryBean();
         sqlSessionFactory.setConfigLocation(applicationContext.getResource("classpath:/mybatis-config.xml"));
-        sqlSessionFactory.setDataSource(dataSource());
+        sqlSessionFactory.setDataSource(dataSource);
 
         // ===== 이 줄이 빠져있었어요 =====
         sqlSessionFactory.setMapperLocations(
                 applicationContext.getResources("classpath:/com/secondzip/mapper/**/*.xml")
         );
 
-        return (SqlSessionFactory) sqlSessionFactory.getObject();
+        return sqlSessionFactory.getObject();
     }
 
     @Bean
-    public DataSourceTransactionManager transactionManager(){
-        return new DataSourceTransactionManager(dataSource());
-    }
-
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-        PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
-
-        // 클래스패스에서 직접 찾음 -> user.dir, VM 옵션, 빌드 폴더 깊이와 완전 무관
-        configurer.setLocation(new ClassPathResource(".env"));
-        configurer.setIgnoreResourceNotFound(true);
-        configurer.setIgnoreUnresolvablePlaceholders(false);
-
-        return configurer;
+    public DataSourceTransactionManager transactionManager(DataSource dataSource){
+        return new DataSourceTransactionManager(dataSource);
     }
 }
