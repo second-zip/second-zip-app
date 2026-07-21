@@ -39,10 +39,10 @@ CREATE TABLE accounts (
     password VARCHAR(255) NOT NULL,
     nickname VARCHAR(50) NOT NULL,
     character_type ENUM(
-        'DEFAULT',
-        'CAREFUL',
-        'FRIENDLY'
-    ) NOT NULL DEFAULT 'DEFAULT',
+        'MAN',
+        'WOMAN',
+        'CAT'
+    ) NOT NULL DEFAULT 'CAT',
 
     PRIMARY KEY (account_id),
     UNIQUE KEY uk_accounts_email (email),

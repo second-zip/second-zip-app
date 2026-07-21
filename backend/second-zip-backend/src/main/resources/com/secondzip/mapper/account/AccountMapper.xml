@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.secondzip.backend.account.mapper.AccountMapper">
+
+    <resultMap
+            id="accountMap"
+            type="com.secondzip.backend.account.domain.AccountVO">
+
+        <id
+                column="account_id"
+                property="accountId"/>
+
+        <result
+                column="email"
+                property="email"/>
+
+        <result
+                column="password"
+                property="password"/>
+
+        <result
+                column="nickname"
+                property="nickname"/>
+
+        <result
+                column="character_type"
+                property="characterType"/>
+    </resultMap>
+
+    <select
+            id="countByEmail"
+            parameterType="java.lang.String"
+            resultType="java.lang.Integer">
+
+        SELECT COUNT(*)
+        FROM accounts
+        WHERE email = #{email}
+    </select>
+
+    <select
+            id="countByNickname"
+            parameterType="java.lang.String"
+            resultType="java.lang.Integer">
+
+        SELECT COUNT(*)
+        FROM accounts
+        WHERE nickname = #{nickname}
+    </select>
+
+    <insert
+            id="insert"
+            parameterType="com.secondzip.backend.account.domain.AccountVO"
+            useGeneratedKeys="true"
+            keyProperty="accountId"
+            keyColumn="account_id">
+
+        INSERT INTO accounts (
+            email,
+            password,
+            nickname,
+            character_type
+        )
+        VALUES (
+                   #{email},
+                   #{password},
+                   #{nickname},
+                   #{characterType}
+               )
+    </insert>
+
+    <select
+            id="findByEmail"
+            parameterType="java.lang.String"
+            resultMap="accountMap">
+
+        SELECT
+            account_id,
+            email,
+            password,
+            nickname,
+            character_type
+        FROM accounts
+        WHERE email = #{email}
+    </select>
+
+</mapper>
