@@ -1,4 +1,4 @@
-package com.secondzip.backend.report.external;
+package com.secondzip.backend.report.dto;
 
 import lombok.Data;
 

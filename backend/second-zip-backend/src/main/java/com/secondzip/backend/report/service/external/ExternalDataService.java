@@ -1,4 +1,8 @@
-package com.secondzip.backend.report.external;
+package com.secondzip.backend.report.service.external;
+
+import com.secondzip.backend.report.dto.BuildingData;
+import com.secondzip.backend.report.dto.PriceData;
+import com.secondzip.backend.report.dto.RegistryData;
 
 /**
  * 분석에 필요한 외부 데이터 (등기, 건축물대장, 실거래가) 조회 계층,
