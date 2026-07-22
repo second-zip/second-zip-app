@@ -3,11 +3,11 @@ package com.secondzip.backend.report.dto;
 import com.secondzip.backend.report.enums.FraudType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.List;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class FraudTypeResult {
     private FraudType fraudType;

@@ -1,8 +1,8 @@
 package com.secondzip.backend.report.dto;
 
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 public class RegistryData {
     private Long mortgageAmount;              // 근저당 총액
     private Boolean hasSeizure;               // 압류/가압류/경매 여부

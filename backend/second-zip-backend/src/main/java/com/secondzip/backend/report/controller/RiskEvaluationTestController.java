@@ -20,6 +20,6 @@ public class RiskEvaluationTestController {
         var registry = externalDataService.getRegistryData(address);
         var building = externalDataService.getBuildingData(address);
         var price = externalDataService.getPriceData(address);
-        return riskEvaluationService.evaluate(registry, building, price, deposit);
+        return riskEvaluationService.evaluate(registry, building, price, deposit, address);
     }
 }

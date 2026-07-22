@@ -2,11 +2,11 @@ package com.secondzip.backend.report.dto;
 
 import com.secondzip.backend.report.enums.RiskLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.List;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class RiskEvaluationResult {
     private RiskLevel overallRiskLevel;             // 필수 5 + 유형 3 중 최악값
