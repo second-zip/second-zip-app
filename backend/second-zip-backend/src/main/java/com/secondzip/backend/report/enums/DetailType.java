@@ -1,9 +1,15 @@
 package com.secondzip.backend.report.enums;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * 유형별 세부항목 9개. DB detail_type ENUM과 이름 일치.
- * title은 DB에 저장 안 하고 여기(코드)에서 관리.
+ * title은 DB에 저장 안 하고 코드로 관리.
  */
+
+@Getter
+@RequiredArgsConstructor
 public enum DetailType {
     HIGH_JEONSE_RATIO(FraudType.UNDERWATER_JEONSE, "높은 전세가율"),
     PRIORITY_DEBT_BURDEN(FraudType.UNDERWATER_JEONSE, "선순위채권 부담"),
@@ -19,12 +25,4 @@ public enum DetailType {
 
     private final FraudType parentType;
     private final String title;
-
-    DetailType(FraudType parentType, String title) {
-        this.parentType = parentType;
-        this.title = title;
-    }
-
-    public FraudType getParentType() { return parentType; }
-    public String getTitle() { return title; }
 }

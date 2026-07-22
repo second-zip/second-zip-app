@@ -3,9 +3,9 @@ package com.secondzip.backend.report.dto;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class DetailResult {
     private DetailType detailType;
