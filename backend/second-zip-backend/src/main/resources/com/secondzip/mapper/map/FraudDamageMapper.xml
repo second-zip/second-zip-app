@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.secondzip.backend.map.frauddamage.mapper.FraudDamageMapper">
+
+    <resultMap
+            id="fraudDamageRegionResultMap"
+            type="com.secondzip.backend.map.frauddamage.domain.FraudDamageRegionVO">
+
+        <result
+                property="regionCode"
+                column="region_code"/>
+
+        <result
+                property="regionName"
+                column="region_name"/>
+
+        <result
+                property="damageHouseCount"
+                column="damage_house_count"/>
+
+        <result
+                property="baseDate"
+                column="base_date"/>
+
+    </resultMap>
+
+
+    <!-- 가장 최신 피해통계 기준일 조회 -->
+    <select
+            id="selectLatestBaseDate"
+            resultType="java.time.LocalDate">
+
+        SELECT MAX(base_date)
+        FROM fraud_damage_statistics
+
+    </select>
+
+
+    <!-- 전국 시도별 피해주택 수 조회 -->
+    <select
+            id="selectSidoFraudDamages"
+            resultMap="fraudDamageRegionResultMap">
+
+        SELECT
+            sido.region_code,
+            sido.region_name,
+            SUM(statistics.damage_house_count) AS damage_house_count,
+            #{baseDate} AS base_date
+        FROM regions sido
+
+                 LEFT JOIN regions sigungu
+                           ON sigungu.parent_region_id = sido.region_id
+                               AND sigungu.region_level = 'SIGUNGU'
+
+                 LEFT JOIN fraud_damage_statistics statistics
+                           ON statistics.region_id = sigungu.region_id
+                               AND statistics.base_date = #{baseDate}
+
+        WHERE sido.region_level = 'SIDO'
+
+        GROUP BY
+            sido.region_id,
+            sido.region_code,
+            sido.region_name
+
+        ORDER BY sido.region_code
+
+    </select>
+
+
+    <!-- 특정 시도의 시군구별 피해주택 수 조회 -->
+    <select
+            id="selectSigunguFraudDamages"
+            resultMap="fraudDamageRegionResultMap">
+
+        SELECT
+            sigungu.region_code,
+            sigungu.region_name,
+            statistics.damage_house_count,
+            #{baseDate} AS base_date
+        FROM regions sido
+
+                 INNER JOIN regions sigungu
+                            ON sigungu.parent_region_id = sido.region_id
+                                AND sigungu.region_level = 'SIGUNGU'
+
+                 LEFT JOIN fraud_damage_statistics statistics
+                           ON statistics.region_id = sigungu.region_id
+                               AND statistics.base_date = #{baseDate}
+
+        WHERE sido.region_level = 'SIDO'
+          AND sido.region_code = #{parentRegionCode}
+
+        ORDER BY sigungu.region_code
+
+    </select>
+
+</mapper>
