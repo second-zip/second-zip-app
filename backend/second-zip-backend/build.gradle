@@ -82,7 +82,8 @@ dependencies {
     runtimeOnly "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
 
     // ===== SQL 로깅 =====
-    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4:1.16'
+    // implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4:1.16'
+    implementation 'com.lwohvye.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.18'
 
     // ===== XML 내 한글 처리 =====
     implementation 'xerces:xercesImpl:2.12.2'
@@ -93,6 +94,7 @@ dependencies {
 
     // ===== Jackson =====
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
 
     // ===== 데이터베이스 =====
     implementation 'com.mysql:mysql-connector-j:8.1.0'
