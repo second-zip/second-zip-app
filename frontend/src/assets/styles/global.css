@@ -1,0 +1,23 @@
+:root {
+  --bs-body-font-family:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+  font-family: var(--bs-body-font-family);
+}
+
+body {
+  margin: 0;
+  font-weight: 400;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}

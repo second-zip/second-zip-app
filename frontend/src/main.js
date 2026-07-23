@@ -7,6 +7,8 @@ import router from './router';
 import { useAuthStore } from './stores/auth';
 
 import '@/assets/styles/colors.css';
+import '@/assets/styles/fonts.css';
+import '@/assets/styles/global.css';
 
 // App.vue를 수정하지 않고 현재 경로의 화면을 루트에 렌더링한다.
 const app = createApp({
