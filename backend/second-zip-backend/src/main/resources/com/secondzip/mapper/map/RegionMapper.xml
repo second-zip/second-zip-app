@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.secondzip.backend.map.common.mapper.RegionMapper">
+
+    <resultMap
+            id="regionResultMap"
+            type="com.secondzip.backend.map.common.domain.RegionVO">
+
+        <id
+                property="regionId"
+                column="region_id"/>
+
+        <result
+                property="regionCode"
+                column="region_code"/>
+
+        <result
+                property="regionName"
+                column="region_name"/>
+
+        <result
+                property="regionLevel"
+                column="region_level"/>
+
+        <result
+                property="parentRegionId"
+                column="parent_region_id"/>
+
+    </resultMap>
+
+    <select
+            id="selectByRegionCode"
+            resultMap="regionResultMap">
+
+        SELECT
+            region_id,
+            region_code,
+            region_name,
+            region_level,
+            parent_region_id
+        FROM regions
+        WHERE region_code = #{regionCode}
+
+    </select>
+
+</mapper>
