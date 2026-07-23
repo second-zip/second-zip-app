@@ -1,4 +1,5 @@
 <script setup>
+import BottomNavigation from '@/components/layout/BottomNavigation.vue';
 import { RouterView } from 'vue-router';
 </script>
 
@@ -7,6 +8,7 @@ import { RouterView } from 'vue-router';
     <main class="main-content min-vh-100 bg-white overflow-x-hidden mx-auto">
       <RouterView />
     </main>
+    <BottomNavigation />
   </div>
 </template>
 
@@ -33,6 +35,7 @@ body,
 
 .main-content {
   width: 100%;
+  padding-bottom: 64px;
 }
 
 /* 태블릿·데스크톱 */
