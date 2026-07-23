@@ -3,9 +3,13 @@ package com.secondzip.backend.account.service;
 import com.secondzip.backend.account.domain.AccountVO;
 import com.secondzip.backend.account.dto.request.LoginDTO;
 import com.secondzip.backend.account.dto.request.SignupDTO;
+import com.secondzip.backend.account.dto.request.UpdateAccountDTO;
+import com.secondzip.backend.account.dto.response.AccountResponseDTO;
 import com.secondzip.backend.account.dto.response.LoginResponseDTO;
 import com.secondzip.backend.account.enums.CharacterType;
 import com.secondzip.backend.account.mapper.AccountMapper;
+import com.secondzip.backend.common.exception.BusinessException;
+import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.security.jwt.JwtTokenBlacklistService;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.secondzip.backend.security.service.RefreshTokenService;
@@ -126,4 +130,56 @@ public class AccountServiceImpl implements AccountService {
 
         refreshTokenService.delete(accountId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AccountResponseDTO getMyAccount(Long accountId) {
+
+        AccountVO account = accountMapper.findById(accountId);
+
+        if (account == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "회원정보를 찾을 수 없습니다."
+            );
+        }
+
+        return AccountResponseDTO.from(account);
+    }
+
+    @Override
+    public AccountResponseDTO updateMyAccount(Long accountId, UpdateAccountDTO updateDTO) {
+        AccountVO account = accountMapper.findById(accountId);
+
+        if (account == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "회원정보를 찾을 수 없습니다."
+            );
+        }
+
+        int nicknameCount = accountMapper.countByNicknameExcludingAccount(updateDTO.getNickname(), accountId);
+
+        if (nicknameCount > 0) {
+            throw new BusinessException(
+                    ErrorCode.DUPLICATE_RESOURCE,
+                    "이미 사용 중인 닉네임입니다."
+            );
+        }
+
+        int updatedCount = accountMapper.updateAccount(accountId, updateDTO);
+
+        if (updatedCount != 1) {
+            throw new IllegalStateException(
+                    "회원정보 수정에 실패했습니다."
+            );
+        }
+
+        AccountVO updatedAccount = accountMapper.findById(accountId);
+
+        return AccountResponseDTO.from(updatedAccount);
+
+    }
+
+
 }

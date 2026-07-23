@@ -86,4 +86,32 @@
         WHERE email = #{email}
     </select>
 
+    <select id="findById"
+            parameterType="long"
+            resultType="com.secondzip.backend.account.domain.AccountVO">
+        SELECT
+            account_id AS accountId,
+            email,
+            password,
+            nickname,
+            character_type AS characterType
+        FROM accounts
+        WHERE account_id = #{accountId}
+    </select>
+
+    <select id="countByNicknameExcludingAccount"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM accounts
+        WHERE nickname = #{nickname}
+          AND account_id != #{accountId}
+    </select>
+
+    <update id="updateAccount">
+        UPDATE accounts
+        SET
+            nickname = #{updateDTO.nickname},
+            character_type = #{updateDTO.characterType}
+        WHERE account_id = #{accountId}
+    </update>
 </mapper>
