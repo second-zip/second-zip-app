@@ -18,6 +18,6 @@ public class SignupDTO {
     @ApiModelProperty(value = "사용자 닉네임", example = "세컨드집", required = true)
     private String nickname;
 
-    @ApiModelProperty(value = "캐릭터 유형", example = "MAN", allowableValues = "MSN, WOMAN, CAT", required = true)
+    @ApiModelProperty(value = "캐릭터 유형", example = "MAN", allowableValues = "MAN, WOMAN, CAT", required = true)
     private CharacterType characterType;
 }

@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UpdateCharacterDTO {
 
-    @ApiModelProperty(value = "변경할 캐릭터 유형", example = "MAN", allowableValues = "MSN, WOMAN, CAT", required = true)
+    @ApiModelProperty(value = "변경할 캐릭터 유형", example = "MAN", allowableValues = "MAN, WOMAN, CAT", required = true)
     private CharacterType characterType;
 }
