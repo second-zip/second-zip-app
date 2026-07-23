@@ -1,12 +1,9 @@
 package com.secondzip.backend.account.service;
 
 import com.secondzip.backend.account.domain.AccountVO;
-import com.secondzip.backend.account.dto.request.LoginDTO;
-import com.secondzip.backend.account.dto.request.SignupDTO;
-import com.secondzip.backend.account.dto.request.UpdateAccountDTO;
+import com.secondzip.backend.account.dto.request.*;
 import com.secondzip.backend.account.dto.response.AccountResponseDTO;
 import com.secondzip.backend.account.dto.response.LoginResponseDTO;
-import com.secondzip.backend.account.enums.CharacterType;
 import com.secondzip.backend.account.mapper.AccountMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
@@ -181,5 +178,112 @@ public class AccountServiceImpl implements AccountService {
 
     }
 
+    @Override
+    public AccountResponseDTO updateCharacter(Long accountId, UpdateCharacterDTO updateDTO) {
+        AccountVO account = accountMapper.findById(accountId);
 
+        if (account == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "회원정보를 찾을 수 없습니다."
+            );
+        }
+
+        if (account.getCharacterType() == updateDTO.getCharacterType()) {
+            return AccountResponseDTO.from(account);
+        }
+
+        int updatedCount = accountMapper.updateCharacterType(accountId, updateDTO.getCharacterType());
+
+        if (updatedCount != 1) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
+                    "캐릭터 변경에 실패했습니다."
+            );
+        }
+
+        return AccountResponseDTO.from(accountMapper.findById(accountId));
+    }
+
+    @Override
+    public void withdraw(Long accountId, String accessToken, WithdrawAccountDTO withdrawDTO) {
+        AccountVO account = accountMapper.findById(accountId);
+
+        if (account == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "회원정보를 찾을 수 없습니다.");
+        }
+
+        boolean passwordMatches = passwordEncoder.matches(withdrawDTO.getPassword(), account.getPassword());
+
+        if (!passwordMatches) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "비밀번호가 일치하지 않습니다.");
+        }
+
+        int deletedCount = accountMapper.deleteById(accountId);
+
+        if (deletedCount != 1) {
+            throw new IllegalStateException("회원 탈퇴에 실패했습니다.");
+        }
+
+        refreshTokenService.delete(accountId);
+
+        long remainingMillis = jwtTokenProvider.getRemainingExpirationMillis(accessToken);
+
+        jwtTokenBlacklistService.add(accessToken, remainingMillis);
+
+    }
+
+    @Override
+    public void updatePassword(Long accountId, String accessToken, UpdatePasswordDTO updatePasswordDTO) {
+        AccountVO account = accountMapper.findById(accountId);
+
+        if (account == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "회원정보를 찾을 수 없습니다."
+            );
+        }
+
+        boolean currentPasswordMatches = passwordEncoder.matches(updatePasswordDTO.getCurrentPassword(), account.getPassword());
+
+        if (!currentPasswordMatches) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "현재 비밀번호가 일치하지 않습니다."
+            );
+        }
+
+        if (!updatePasswordDTO.getNewPassword()
+                .equals(updatePasswordDTO.getNewPasswordConfirm())) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "새 비밀번호와 비밀번호 확인이 일치하지 않습니다."
+            );
+        }
+
+        boolean sameAsCurrentPassword = passwordEncoder.matches(updatePasswordDTO.getNewPassword(), account.getPassword());
+
+        if (sameAsCurrentPassword) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "새 비밀번호는 현재 비밀번호와 달라야 합니다."
+            );
+        }
+
+        String encodedPassword = passwordEncoder.encode(updatePasswordDTO.getNewPassword());
+
+        int updatedCount = accountMapper.updatePassword(accountId, encodedPassword);
+
+        if (updatedCount != 1) {
+            throw new IllegalStateException(
+                    "비밀번호 변경에 실패했습니다."
+            );
+        }
+
+        refreshTokenService.delete(accountId);
+
+        long remainingMillis = jwtTokenProvider.getRemainingExpirationMillis(accessToken);
+
+        jwtTokenBlacklistService.add(accessToken, remainingMillis);
+    }
 }

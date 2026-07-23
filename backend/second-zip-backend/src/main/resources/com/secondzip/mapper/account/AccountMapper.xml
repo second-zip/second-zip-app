@@ -110,8 +110,26 @@
     <update id="updateAccount">
         UPDATE accounts
         SET
-            nickname = #{updateDTO.nickname},
-            character_type = #{updateDTO.characterType}
+            nickname = #{updateDTO.nickname}
+        WHERE account_id = #{accountId}
+    </update>
+
+    <update id="updateCharacterType">
+        UPDATE accounts
+        SET character_type = #{characterType}
+        WHERE account_id = #{accountId}
+    </update>
+
+    <delete id="deleteById"
+            parameterType="long">
+        DELETE
+        FROM accounts
+        WHERE account_id = #{accountId}
+    </delete>
+
+    <update id="updatePassword">
+        UPDATE accounts
+        SET password = #{password}
         WHERE account_id = #{accountId}
     </update>
 </mapper>
