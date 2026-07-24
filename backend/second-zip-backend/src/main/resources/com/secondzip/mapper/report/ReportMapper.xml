@@ -24,4 +24,27 @@
         VALUES (#{fraudTypeId}, #{detailType}, #{riskLevel})
     </insert>
 
+    <!-- 리포트 목록 불러오기  -->
+    <select id="findReportsByAccountId" resultType="com.secondzip.backend.report.dto.response.ReportListItem">
+        SELECT
+            analysis_report_id AS analysisReportId,
+            road_address AS roadAddress,
+            detail_address AS detailAddress,
+            risk_level AS result,
+            favorite,
+            favorited_at AS favoritedAt,
+            created_at AS createdAt
+        FROM analysis_reports
+        WHERE account_id = #{accountId}
+        ORDER BY favorite DESC, favorited_at DESC, created_at DESC
+            LIMIT 20
+    </select>
+
+    <!--  리포트 목록 개수 가져오기  -->
+    <select id="countReportsByAccountId" resultType="int">
+        SELECT COUNT(*) FROM analysis_reports WHERE account_id = #{accountId}
+    </select>
+
+
+
 </mapper>

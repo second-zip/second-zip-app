@@ -356,9 +356,6 @@ public class RiskEvaluationService {
         return registry.getHasPostTrustInfringement() ? RiskLevel.DANGER : RiskLevel.CAUTION;
     }
 
-    // =========================================================
-    // 공통 유틸
-    // =========================================================
 
     // 수도권 판별
     private static final List<String> METROPOLITAN_KEYWORDS = Arrays.asList("서울", "경기", "인천");
@@ -371,7 +368,9 @@ public class RiskEvaluationService {
         return "NON_METROPOLITAN";
     }
 
-
+    // =========================================================
+    // 공통 유틸
+    // =========================================================
     private Long pickBasePrice(PriceData price) {
         if (price == null) return null;
         if (price.getRecentSalePrice() != null) return price.getRecentSalePrice();

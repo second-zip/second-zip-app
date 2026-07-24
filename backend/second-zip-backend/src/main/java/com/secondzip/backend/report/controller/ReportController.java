@@ -2,6 +2,8 @@ package com.secondzip.backend.report.controller;
 
 import com.secondzip.backend.report.dto.request.CreateReportRequest;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
+import com.secondzip.backend.report.dto.response.ReportListResponse;
+import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.ReportService;
 import io.swagger.annotations.*;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,9 @@ import springfox.documentation.annotations.ApiIgnore;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ReportQueryService reportQueryService;
 
+    // 분석
     @PostMapping("/analyze")
     @ApiOperation(value = "전세 위험도 분석 보고서 생성", notes = "주소와 보증금 정보를 받아 전세 위험도를 분석하고 상세 보고서를 생성합니다.")
 //    @ApiResponses({
@@ -36,5 +40,13 @@ public class ReportController {
         Long accountId = Long.valueOf(authentication.getPrincipal().toString());
         ReportDetailResponse result = reportService.createReport(accountId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
+    // 리포트 목록 조회
+    @GetMapping
+    public ResponseEntity<ReportListResponse> getList(@ApiIgnore Authentication authentication) {
+        Long accountId = Long.valueOf(authentication.getPrincipal().toString());
+        ReportListResponse result = reportQueryService.getReportList(accountId);
+        return ResponseEntity.ok(result);
     }
 }
