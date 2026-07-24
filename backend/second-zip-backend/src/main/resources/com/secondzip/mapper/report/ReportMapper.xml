@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.secondzip.backend.report.mapper.ReportMapper">
+
+    <insert id="insertReportMap" useGeneratedKeys="true" keyProperty="reportId" keyColumn="analysis_report_id" parameterType="map">
+        INSERT INTO analysis_reports
+        (account_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level)
+        VALUES
+            (#{accountId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result})
+    </insert>
+
+    <insert id="insertCheckResult">
+        INSERT INTO report_check_results (analysis_report_id, check_type, risk_level)
+        VALUES (#{reportId}, #{checkType}, #{riskLevel})
+    </insert>
+
+    <insert id="insertFraudTypeMap" useGeneratedKeys="true" keyProperty="fraudTypeId" keyColumn="report_fraud_type_id" parameterType="map">
+        INSERT INTO report_fraud_types (analysis_report_id, fraud_type, risk_level)
+        VALUES (#{reportId}, #{fraudType}, #{riskLevel})
+    </insert>
+
+    <insert id="insertDetailResult">
+        INSERT INTO report_fraud_detail_results (report_fraud_type_id, detail_type, risk_level)
+        VALUES (#{fraudTypeId}, #{detailType}, #{riskLevel})
+    </insert>
+
+</mapper>
