@@ -113,6 +113,11 @@ dependencies {
     //swagger
     implementation 'io.springfox:springfox-swagger2:2.9.2'
     implementation 'io.springfox:springfox-swagger-ui:2.9.2'
+
+    //validation(dto 검증)
+    implementation 'javax.validation:validation-api:2.0.1.Final'
+    implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
+    implementation 'org.glassfish:javax.el:3.0.1-b12'
 }
 
 war {
