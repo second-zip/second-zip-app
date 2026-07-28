@@ -63,4 +63,18 @@ public class ReportController {
         ReportDetailResponse result = reportQueryService.getReportDetail(accountId, analysisReportId);
         return ResponseEntity.ok(result);
     }
+
+    @DeleteMapping("/{analysisReportId}")
+    @ApiOperation(value = "분석 보고서 삭제", notes = "분석 보고서를 삭제합니다.")
+    public ResponseEntity<Void> deleteReport(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = (Long) authentication.getPrincipal();
+        reportQueryService.validateOwnership(accountId, analysisReportId);
+        reportService.deleteReport(accountId, analysisReportId);
+        return ResponseEntity.noContent().build();
+
+    }
 }

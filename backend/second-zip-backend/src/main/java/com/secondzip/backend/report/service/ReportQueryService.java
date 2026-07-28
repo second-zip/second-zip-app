@@ -29,7 +29,7 @@ public class ReportQueryService {
     private final ReportMapper reportMapper;
     private final ObjectMapper objectMapper;
 
-    // 리포트 담당
+    // 조회 담당
 
     // === 리포트 목록 조회 ===
     public ReportListResponse getReportList(Long accountId) {

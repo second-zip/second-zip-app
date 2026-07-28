@@ -20,7 +20,7 @@ public class ReportService {
 
         // 분석 담당 (조회, 판정, 저장)
     public ReportDetailResponse createReport(Long accountId, CreateReportRequest request) {
-        // 조회
+        // 데이터 조회
         RegistryData registry = externalDataService.getRegistryData(request.getRoadAddress());
         BuildingData building = externalDataService.getBuildingData(request.getRoadAddress());
         PriceData price = externalDataService.getPriceData(request.getRoadAddress());
@@ -30,10 +30,17 @@ public class ReportService {
                 registry, building, price, request.getDeposit(), request.getRoadAddress()
         );
 
-        // 저장
+        // 리포트 저장
         return reportPersistenceService.save(
                 accountId, request.getRoadAddress(), request.getDetailAddress(),
                 request.getDeposit(), evalResult
         );
+
+
+    }
+
+    // 리포트 삭제
+    public void deleteReport(Long accountId, Long reportId) {
+        reportPersistenceService.deleteReport(accountId, reportId);
     }
 }
