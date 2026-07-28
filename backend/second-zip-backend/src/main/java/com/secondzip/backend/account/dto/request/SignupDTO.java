@@ -7,6 +7,7 @@ import org.apache.logging.log4j.core.config.plugins.validation.constraints.NotBl
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 @Getter
@@ -20,9 +21,22 @@ public class SignupDTO {
     private String email;
 
     @NotBlank(message = "비밀번호는 필수입니다.")
-    @Size(min = 8, max = 100, message = "비밀번호는 8자 이상 100자 이하로 입력해야 합니다.")
-    @ApiModelProperty(value = "로그인 비밀번호", example = "1234", required = true)
+    @Size(min = 8, max = 16, message = "비밀번호는 8자 이상 16자 이하로 입력해야 합니다.")
+    @Pattern(
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$",
+            message = "비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다"
+    )
+    @ApiModelProperty(value = "로그인 비밀번호", example = "password1!", required = true)
     private String password;
+
+    @NotBlank(message = "비밀번호 확인은 필수입니다.")
+    @Size(min = 8, max = 16, message = "비밀번호는 8자 이상 16자 이하로 입력해야 합니다.")
+    @Pattern(
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$",
+            message = "비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다"
+    )
+    @ApiModelProperty(value = "비밀번호 확인", example = "password1!", required = true)
+    private String passwordConfirm;
 
     @ApiModelProperty(value = "사용자 닉네임", example = "세컨드집", required = true)
     @NotBlank(message = "닉네임은 필수입니다.")
