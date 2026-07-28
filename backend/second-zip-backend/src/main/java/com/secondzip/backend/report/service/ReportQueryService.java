@@ -35,8 +35,7 @@ public class ReportQueryService {
     public ReportListResponse getReportList(Long accountId) {
         List<ReportListItem> reports = reportMapper.findReportsByAccountId(accountId);
         int totalCount = reportMapper.countReportsByAccountId(accountId);
-        boolean hasMore = totalCount > reports.size();
-        return new ReportListResponse(reports, totalCount, hasMore);
+        return new ReportListResponse(reports, totalCount);
     }
 
     // === 리포트 상세 조회 ===

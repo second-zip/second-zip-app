@@ -9,5 +9,4 @@ import java.util.List;
 public class ReportListResponse {
     private List<ReportListItem> reports;
     private int totalCount;
-    private boolean hasMore;
 }
