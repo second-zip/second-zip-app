@@ -51,8 +51,11 @@ public class ReportController {
         return ResponseEntity.ok(result);
     }
 
+    // 리포트 상세 조회
     @GetMapping("/{analysisReportId}")
+    @ApiOperation(value = "분석 보고서 상세 조회", notes = "분석 보고서의 상세 정보를 조회합니다.")
     public ResponseEntity<ReportDetailResponse> getDetail(
+            @ApiParam(value = "리포트 ID", required = true)
             @PathVariable Long analysisReportId,
             @ApiIgnore Authentication authentication
     ) {
