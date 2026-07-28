@@ -23,5 +23,22 @@ public enum RiskLevel {
     public static RiskLevel worstOf(RiskLevel... levels) {
         return worstOf(Arrays.asList(levels));
     }
+
+    /**
+     * 개수 기반 집계
+     * DANGER 1개 이상 → DANGER
+     * DANGER 0 & CAUTION >= dangerThreshold(3개 또는 전체) → DANGER
+     * DANGER 0 & CAUTION 1개 이상 → CAUTION
+     * 전부 SAFE → SAFE
+     */
+    public static RiskLevel aggregateByCount(List<RiskLevel> levels, int dangerThreshold) {
+        long dangerCount = levels.stream().filter(l -> l == DANGER).count();
+        if (dangerCount >= 1) return DANGER;
+
+        long cautionCount = levels.stream().filter(l -> l == CAUTION).count();
+        if (cautionCount >= dangerThreshold) return DANGER;
+        if (cautionCount >= 1) return CAUTION;
+
+        return SAFE;
+    }
 }
-//gpt에게 물어보기 enum 내부에 계산이나 서비스 로직 생성

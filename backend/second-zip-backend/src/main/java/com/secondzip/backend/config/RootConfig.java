@@ -1,5 +1,6 @@
 package com.secondzip.backend.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -38,10 +39,6 @@ import javax.sql.DataSource;
                 @ComponentScan.Filter(
                         type = FilterType.ANNOTATION,
                         classes = RestController.class
-                ),
-                @ComponentScan.Filter(
-                        type = FilterType.ANNOTATION,
-                        classes = Configuration.class
                 ),
                 @ComponentScan.Filter(
                         type = FilterType.ANNOTATION,
@@ -102,5 +99,10 @@ public class RootConfig {
         requestFactory.setReadTimeout(60_000);
 
         return new RestTemplate(requestFactory);
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 }

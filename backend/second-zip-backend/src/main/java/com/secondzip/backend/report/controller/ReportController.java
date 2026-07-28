@@ -44,9 +44,23 @@ public class ReportController {
 
     // 리포트 목록 조회
     @GetMapping
+    @ApiOperation(value = "분석 보고서 목록 조회", notes = "분석 보고서 목록을 조회합니다.")
     public ResponseEntity<ReportListResponse> getList(@ApiIgnore Authentication authentication) {
         Long accountId = Long.valueOf(authentication.getPrincipal().toString());
         ReportListResponse result = reportQueryService.getReportList(accountId);
+        return ResponseEntity.ok(result);
+    }
+
+    // 리포트 상세 조회
+    @GetMapping("/{analysisReportId}")
+    @ApiOperation(value = "분석 보고서 상세 조회", notes = "분석 보고서의 상세 정보를 조회합니다.")
+    public ResponseEntity<ReportDetailResponse> getDetail(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = Long.valueOf(authentication.getPrincipal().toString());
+        ReportDetailResponse result = reportQueryService.getReportDetail(accountId, analysisReportId);
         return ResponseEntity.ok(result);
     }
 }

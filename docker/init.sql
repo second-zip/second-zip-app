@@ -35,8 +35,8 @@ DROP TABLE IF EXISTS accounts;
 
 CREATE TABLE accounts (
     account_id BIGINT NOT NULL AUTO_INCREMENT,
-    email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    email VARCHAR(50) NOT NULL,
+    password VARCHAR(100) NOT NULL,
     nickname VARCHAR(50) NOT NULL,
     character_type ENUM(
         'MAN',
@@ -60,7 +60,7 @@ CREATE TABLE accounts (
 
 CREATE TABLE terms (
     term_id BIGINT NOT NULL AUTO_INCREMENT,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(80) NOT NULL,
     content TEXT NOT NULL,
     term_type ENUM(
         'SERVICE',
@@ -505,8 +505,8 @@ CREATE TABLE account_term_consents (
 CREATE TABLE analysis_reports (
     analysis_report_id BIGINT NOT NULL AUTO_INCREMENT,
     account_id BIGINT NOT NULL,
-    road_address VARCHAR(255) NOT NULL,
-    detail_address VARCHAR(255) NULL,
+    road_address VARCHAR(100) NOT NULL,
+    detail_address VARCHAR(100) NULL,
     deposit BIGINT NOT NULL,
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
     favorited_at DATETIME NULL,
@@ -549,7 +549,7 @@ CREATE TABLE analysis_reports (
 CREATE TABLE ai_generate_messages (
     ai_generate_message_id BIGINT NOT NULL AUTO_INCREMENT,
     analysis_report_id BIGINT NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(100) NOT NULL,
     content TEXT NOT NULL,
     reason TEXT NULL,
     
@@ -587,7 +587,8 @@ CREATE TABLE report_check_results (
         'CAUTION',
         'DANGER'
     ) NOT NULL,
-    
+    evidence JSON NULL,
+
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
@@ -600,7 +601,7 @@ CREATE TABLE report_check_results (
         check_type
     ),
 
-    CONSTRAINT fk_report_check_results_report
+    CONSTRAINT fk_report_check_results_reportㄷ
         FOREIGN KEY (analysis_report_id)
         REFERENCES analysis_reports (analysis_report_id)
         ON DELETE CASCADE

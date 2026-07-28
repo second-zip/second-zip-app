@@ -96,3 +96,14 @@ INSERT INTO test_building_data (road_address, is_illegal_building, building_use,
 VALUES ('부산광역시 해운대구 센텀로 55', FALSE, '근린생활시설', 'OFFICETEL');
 INSERT INTO test_price_data (road_address, recent_sale_price, official_price)
 VALUES ('부산광역시 해운대구 센텀로 55', NULL, NULL);
+
+-- =========================================================
+-- 시나리오 F: 확인불가+압류+소유불일치+근생 (deposit 1억)
+-- 가격 NULL → 전세가율 CAUTION, 건물주(최지훈)≠토지주(정수아)
+-- =========================================================
+INSERT INTO test_registry_data (road_address, mortgage_amount, has_seizure, has_trust_registration, owner_name, owner_type, land_owner_name, has_post_trust_infringement)
+VALUES ('서울특별시 서초구 검증로 66', 50000000, FALSE, FALSE, '검증용', 'INDIVIDUAL', '검증용', FALSE);
+INSERT INTO test_building_data (road_address, is_illegal_building, building_use, building_type)
+VALUES ('서울특별시 서초구 검증로 66', FALSE, '업무용 오피스텔', 'MULTI_FAMILY');
+INSERT INTO test_price_data (road_address, recent_sale_price, official_price)
+VALUES ('서울특별시 서초구 검증로 66', 200000000, 180000000);
