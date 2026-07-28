@@ -40,6 +40,10 @@ import javax.sql.DataSource;
                 @ComponentScan.Filter(
                         type = FilterType.ANNOTATION,
                         classes = Configuration.class
+                ),
+                @ComponentScan.Filter(
+                        type = FilterType.ANNOTATION,
+                        classes = Configuration.class
                 )
         }
 )

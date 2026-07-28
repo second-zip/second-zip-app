@@ -18,7 +18,7 @@ public class LoginDTO {
     @Email(message = "이메일 형식이 올바르지 않습니다.")
     private String email;
 
-    @ApiModelProperty(value = "회원 비밀번호", example = "1234", required = true)
+    @ApiModelProperty(value = "회원 비밀번호", example = "password1!", required = true)
     @NotBlank(message = "비밀번호는 필수입니다.")
     private String password;
 }
