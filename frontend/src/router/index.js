@@ -4,6 +4,17 @@ import { useAuthStore } from '@/stores/auth';
 
 const routes = [
   {
+    path: '/',
+    name: 'main',
+    component: () => import('@/App.vue'),
+  },
+  {
+    // 세진: 로그인 화면 경로
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+  },
+  {
     path: '/signup',
     name: 'signup',
     component: () => import('@/views/SignupView.vue'),
@@ -23,13 +34,17 @@ const router = createRouter({
   routes,
 });
 
-// 보호된 화면은 Access Token이 있을 때만 접근을 허용한다.
 router.beforeEach((to) => {
   const authStore = useAuthStore();
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // TODO: 로그인 기능과 /login 라우트 명세가 확정되면 로그인 화면으로 이동한다.
-    return false;
+    // 세진: 인증이 필요한 화면은 로그인 후 원래 경로로 돌아가도록 처리한다.
+    return {
+      name: 'login',
+      query: {
+        redirect: to.fullPath,
+      },
+    };
   }
 
   return true;

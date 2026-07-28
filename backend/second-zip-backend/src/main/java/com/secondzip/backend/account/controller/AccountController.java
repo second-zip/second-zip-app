@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 
 @Api(tags = "회원 인증 API", description = "회원가입, 로그인, 로그아웃 기능을 제공합니다.")
 @RestController
@@ -26,7 +27,7 @@ public class AccountController {
 
     @ApiOperation(value = "회원가입", notes = "이메일, 비밀번호, 닉네임, 캐릭터 유형을 입력하여 회원가입합니다.")
     @PostMapping("/signup")
-    public ResponseEntity<MessageResponseDTO> signup(@RequestBody SignupDTO signupDTO) {
+    public ResponseEntity<MessageResponseDTO> signup(@Valid @RequestBody SignupDTO signupDTO) {
         accountService.signup(signupDTO);
 
         return ResponseEntity
@@ -36,7 +37,7 @@ public class AccountController {
 
     @ApiOperation(value = "로그인", notes = "이메일과 비밀번호를 검증하고 Access Token과 Refresh Token을 발급합니다.")
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginDTO loginDTO) {
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
         return ResponseEntity.ok(accountService.login(loginDTO));
     }
 

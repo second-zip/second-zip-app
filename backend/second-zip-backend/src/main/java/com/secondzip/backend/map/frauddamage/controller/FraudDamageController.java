@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Api(tags = "지도 조회 API")
+@Api(
+        tags = "지도 - 피해현황 조회 API",
+        description = "시도 및 시군구별 전세사기 피해주택 현황을 조회합니다."
+)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/maps")
