@@ -29,6 +29,7 @@
 **/.vite/
 **/.cache/
 **/coverage/
+**/views/test/
 
 npm-debug.log*
 yarn-debug.log*
