@@ -15,7 +15,8 @@ public class WebConfig
                 RootConfig.class,
                 PropertyPlaceholderConfig.class,
                 RedisConfig.class,
-                SecurityConfig.class
+                SecurityConfig.class,
+                FlywayConfig.class
         };
     }
 

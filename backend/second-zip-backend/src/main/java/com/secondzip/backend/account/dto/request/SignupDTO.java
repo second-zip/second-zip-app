@@ -1,14 +1,14 @@
 package com.secondzip.backend.account.dto.request;
 
 import com.secondzip.backend.account.enums.CharacterType;
+import com.secondzip.backend.terms.dto.request.TermConsentRequestDTO;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.*;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.NotBlank;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import javax.validation.Valid;
+import javax.validation.constraints.*;
+import java.util.List;
 
 @Getter
 @Builder
@@ -46,4 +46,8 @@ public class SignupDTO {
     @ApiModelProperty(value = "캐릭터 유형", example = "MAN", allowableValues = "MAN, WOMAN, CAT", required = true)
     @NotNull(message = "캐릭터 유형은 필수입니다.")
     private CharacterType characterType;
+
+    @NotEmpty
+    @Valid
+    private List<TermConsentRequestDTO> termConsents;
 }

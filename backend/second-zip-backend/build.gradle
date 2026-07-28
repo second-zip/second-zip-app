@@ -22,6 +22,7 @@ ext {
     mybatisVersion = '3.5.13'
     mybatisSpringVersion = '2.1.2'
     junitVersion = '5.10.2'
+    flywayVersion = '12.10.0'
 }
 
 tasks.withType(JavaCompile) {
@@ -118,6 +119,10 @@ dependencies {
     implementation 'javax.validation:validation-api:2.0.1.Final'
     implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
     implementation 'org.glassfish:javax.el:3.0.1-b12'
+
+    // ===== Flyway =====
+    implementation "org.flywaydb:flyway-core:${flywayVersion}"
+    implementation "org.flywaydb:flyway-mysql:${flywayVersion}"
 }
 
 war {

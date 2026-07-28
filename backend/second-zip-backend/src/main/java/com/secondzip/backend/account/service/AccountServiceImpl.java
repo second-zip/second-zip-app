@@ -10,11 +10,20 @@ import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.security.jwt.JwtTokenBlacklistService;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.secondzip.backend.security.service.RefreshTokenService;
+import com.secondzip.backend.terms.domain.TermVO;
+import com.secondzip.backend.terms.dto.request.TermConsentRequestDTO;
+import com.secondzip.backend.terms.mapper.TermMapper;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,39 +34,43 @@ public class AccountServiceImpl implements AccountService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final JwtTokenBlacklistService jwtTokenBlacklistService;
+    private final TermMapper termMapper;
 
     @Override
     @Transactional
     public void signup(SignupDTO signupDTO) {
 
-        if (accountMapper.countByEmail(signupDTO.getEmail()) > 0) {
-            throw new IllegalArgumentException(
-                    "이미 사용 중인 이메일입니다."
-            );
-        }
+        validateDuplicateEmail(signupDTO.getEmail());
+        validateDuplicateNickname(signupDTO.getNickname());
 
-        if (accountMapper.countByNickname(signupDTO.getNickname()) > 0) {
-            throw new IllegalArgumentException(
-                    "이미 사용 중인 닉네임입니다."
-            );
-        }
+        List<TermVO> latestTerms = termMapper.findLatestTerms();
+
+        validateTermConsents(
+                latestTerms,
+                signupDTO.getTermConsents()
+        );
 
         AccountVO account = AccountVO.builder()
                 .email(signupDTO.getEmail())
-                .password(
-                        passwordEncoder.encode(
-                                signupDTO.getPassword()
-                        )
-                )
+                .password(passwordEncoder.encode(signupDTO.getPassword()))
                 .nickname(signupDTO.getNickname())
                 .characterType(signupDTO.getCharacterType())
                 .build();
 
-        int result = accountMapper.insert(account);
+        int insertedCount = accountMapper.insert(account);
 
-        if (result != 1) {
-            throw new IllegalStateException(
+        if (insertedCount != 1) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
                     "회원가입에 실패했습니다."
+            );
+        }
+
+        for (TermConsentRequestDTO consent : signupDTO.getTermConsents()) {
+            termMapper.upsertConsent(
+                    account.getAccountId(),
+                    consent.getTermId(),
+                    consent.getAgreed()
             );
         }
     }
@@ -121,7 +134,7 @@ public class AccountServiceImpl implements AccountService {
 
         Long accountId = Long.valueOf(claims.getSubject());
 
-        long remainingMillis = Math.max(claims.getExpiration().getTime()- System.currentTimeMillis(),0L);
+        long remainingMillis = Math.max(claims.getExpiration().getTime() - System.currentTimeMillis(), 0L);
 
         jwtTokenBlacklistService.add(accessToken, remainingMillis);
 
@@ -285,5 +298,89 @@ public class AccountServiceImpl implements AccountService {
         long remainingMillis = jwtTokenProvider.getRemainingExpirationMillis(accessToken);
 
         jwtTokenBlacklistService.add(accessToken, remainingMillis);
+    }
+
+    //==========내부 검증 로직===========
+    private void validateDuplicateEmail(String email) {
+        if (accountMapper.countByEmail(email) > 0) {
+            throw new BusinessException(
+                    ErrorCode.DUPLICATE_RESOURCE,
+                    "이미 사용 중인 이메일입니다."
+            );
+        }
+    }
+
+    private void validateDuplicateNickname(String nickname) {
+        if (accountMapper.countByNickname(nickname) > 0) {
+            throw new BusinessException(
+                    ErrorCode.DUPLICATE_RESOURCE,
+                    "이미 사용 중인 닉네임입니다."
+            );
+        }
+    }
+
+    private void validateTermConsents(
+            List<TermVO> latestTerms,
+            List<TermConsentRequestDTO> consents
+    ) {
+        if (consents == null || consents.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.REQUIRED_TERM_NOT_AGREED
+            );
+        }
+
+        Map<Long, Boolean> consentMap = new HashMap<>();
+
+        for (TermConsentRequestDTO consent : consents) {
+            Long termId = consent.getTermId();
+
+            if (termId == null || consent.getAgreed() == null) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_REQUEST,
+                        "약관 동의 정보가 올바르지 않습니다."
+                );
+            }
+
+            if (consentMap.putIfAbsent(
+                    termId,
+                    consent.getAgreed()
+            ) != null) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_REQUEST,
+                        "동일한 약관이 중복으로 전달되었습니다."
+                );
+            }
+        }
+
+        //list 형식을 stream으로 꺼내서 각각 map으로 바꾼 후 collect로 합침
+        Set<Long> latestTermIds = latestTerms.stream()
+                .map(TermVO::getTermId)
+                .collect(Collectors.toSet());
+
+        boolean containsInvalidTerm = consentMap.keySet().stream()
+                .anyMatch(termId -> !latestTermIds.contains(termId));
+
+        if (containsInvalidTerm) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "현재 적용 중인 약관이 아닙니다."
+            );
+        }
+
+        boolean hasNotAgreedRequiredTerm = latestTerms.stream()
+                .filter(term ->
+                        Boolean.TRUE.equals(term.getRequired())
+                )
+                .anyMatch(term ->
+                        !Boolean.TRUE.equals(
+                                consentMap.get(term.getTermId())
+                        )
+                );
+
+        if (hasNotAgreedRequiredTerm) {
+            throw new BusinessException(
+                    ErrorCode.REQUIRED_TERM_NOT_AGREED
+            );
+        }
     }
 }

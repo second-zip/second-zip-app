@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.secondzip.backend.terms.mapper.TermMapper">
+
+    <!-- 약관 원문 매핑 -->
+    <resultMap
+            id="termMap"
+            type="com.secondzip.backend.terms.domain.TermVO">
+
+        <id
+                column="term_id"
+                property="termId"/>
+
+        <result
+                column="title"
+                property="title"/>
+
+        <result
+                column="content"
+                property="content"/>
+
+        <result
+                column="term_type"
+                property="termType"/>
+
+        <result
+                column="is_required"
+                property="required"/>
+
+        <result
+                column="version"
+                property="version"/>
+    </resultMap>
+
+
+    <!-- 회원 약관 동의 상태 응답 매핑 -->
+    <resultMap
+            id="termConsentResponseMap"
+            type="com.secondzip.backend.terms.dto.response.TermConsentResponseDTO">
+
+        <id
+                column="term_id"
+                property="termId"/>
+
+        <result
+                column="title"
+                property="title"/>
+
+        <result
+                column="term_type"
+                property="termType"/>
+
+        <result
+                column="is_required"
+                property="required"/>
+
+        <result
+                column="agreed"
+                property="agreed"/>
+
+        <result
+                column="version"
+                property="version"/>
+
+        <result
+                column="agreed_at"
+                property="agreedAt"/>
+    </resultMap>
+
+
+    <!-- 종류별 최신 약관 조회 -->
+    <select
+            id="findLatestTerms"
+            resultMap="termMap">
+
+        SELECT
+            t.term_id,
+            t.title,
+            t.content,
+            t.term_type,
+            t.is_required,
+            t.version
+        FROM terms t
+                 INNER JOIN (
+            SELECT
+                term_type,
+                MAX(term_id) AS latest_term_id
+            FROM terms
+            GROUP BY term_type
+        ) latest
+                            ON latest.latest_term_id = t.term_id
+        ORDER BY t.term_id ASC
+    </select>
+
+
+    <!-- 약관 단건 조회 -->
+    <select
+            id="findById"
+            resultMap="termMap">
+
+        SELECT
+            term_id,
+            title,
+            content,
+            term_type,
+            is_required,
+            version
+        FROM terms
+        WHERE term_id = #{termId}
+    </select>
+
+
+    <!-- 로그인한 회원의 최신 약관별 동의 상태 조회 -->
+    <select
+            id="findConsentsByAccountId"
+            resultMap="termConsentResponseMap">
+
+        SELECT
+            t.term_id,
+            t.title,
+            t.term_type,
+            t.is_required,
+            t.version,
+            COALESCE(atc.is_agreed, 0) AS agreed,
+            atc.agreed_at
+        FROM terms t
+                 INNER JOIN (
+            SELECT
+                term_type,
+                MAX(term_id) AS latest_term_id
+            FROM terms
+            GROUP BY term_type
+        ) latest
+                            ON latest.latest_term_id = t.term_id
+                 LEFT JOIN account_term_consents atc
+                           ON atc.term_id = t.term_id
+                               AND atc.account_id = #{accountId}
+        ORDER BY t.term_id ASC
+    </select>
+
+
+    <!-- 회원의 특정 약관 동의 상태 조회 -->
+    <select
+            id="findConsent"
+            resultMap="termConsentResponseMap">
+
+        SELECT
+            t.term_id,
+            t.title,
+            t.term_type,
+            t.is_required,
+            t.version,
+            COALESCE(atc.is_agreed, 0) AS agreed,
+            atc.agreed_at
+        FROM terms t
+                 LEFT JOIN account_term_consents atc
+                           ON atc.term_id = t.term_id
+                               AND atc.account_id = #{accountId}
+        WHERE t.term_id = #{termId}
+    </select>
+
+
+    <!-- 회원 약관 동의 생성 또는 수정 -->
+    <insert id="upsertConsent">
+
+        INSERT INTO account_term_consents (
+            account_id,
+            term_id,
+            is_agreed,
+            agreed_at
+        )
+        VALUES (
+                   #{accountId},
+                   #{termId},
+                   #{agreed},
+                   CASE
+                       WHEN #{agreed} = TRUE THEN CURRENT_TIMESTAMP
+                       ELSE NULL
+                       END
+               )
+            ON DUPLICATE KEY UPDATE
+                                 is_agreed = VALUES(is_agreed),
+                                 agreed_at =
+                                 CASE
+                                 WHEN VALUES(is_agreed) = TRUE
+                                 THEN CURRENT_TIMESTAMP
+                                 ELSE NULL
+        END,
+            modified_at = CURRENT_TIMESTAMP
+    </insert>
+
+</mapper>
