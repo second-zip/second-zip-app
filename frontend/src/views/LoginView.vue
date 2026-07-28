@@ -15,6 +15,7 @@ const form = reactive({
 });
 const errorMessage = ref('');
 
+// 세진: 입력한 계정으로 로그인한 뒤 이전 페이지 또는 마이페이지로 이동한다.
 const handleLogin = async () => {
   errorMessage.value = '';
 

@@ -30,6 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  // 세진: 로그인 성공 후 토큰과 사용자 정보를 Pinia 상태에 저장한다.
   const login = async (loginData) => {
     loading.value = true;
 
@@ -51,6 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  // 세진: 저장된 토큰으로 로그인 사용자의 최신 회원정보를 불러온다.
   const fetchMyPage = async () => {
     myPageLoading.value = true;
 
@@ -63,12 +65,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  // 세진: 브라우저 토큰과 Pinia의 인증 정보를 함께 초기화한다.
   const clearAuth = () => {
     removeAccessToken();
     accessToken.value = null;
     myPage.value = null;
   };
 
+  // 세진: 서버 로그아웃 후 클라이언트 인증 정보를 제거한다.
   const logout = async () => {
     loading.value = true;
 

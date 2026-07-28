@@ -26,6 +26,7 @@ window.addEventListener(AUTH_UNAUTHORIZED_EVENT, () => {
 
   authStore.clearAuth();
 
+  // 세진: 인증 만료 시 로그인 화면으로 이동시킨다.
   if (router.currentRoute.value.name !== 'login') {
     router.replace({ name: 'login' });
   }
