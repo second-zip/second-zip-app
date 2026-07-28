@@ -1,5 +1,6 @@
 package com.secondzip.backend.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -85,5 +86,10 @@ public class RootConfig {
     @Bean
     public DataSourceTransactionManager transactionManager(DataSource dataSource){
         return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 }

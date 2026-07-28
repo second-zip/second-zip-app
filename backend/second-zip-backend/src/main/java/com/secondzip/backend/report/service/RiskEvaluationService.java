@@ -7,13 +7,14 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /** 위험도 판단 순서
- 1. 필수점검 5개 판정
- 2. 유형별 세부 9개 판정 (3개씩 묶어서 유형 3개로)
- 3. 전체(8개) 최악값 집계
- 4. 결과 반환
+ 1. 필수점검 5개 판정 → 개수기반 집계로 대표값 1개
+ 2. 유형별 세부 9개 판정 (3개씩) → 개수기반 집계로 유형 대표값 3개
+ 3. [필수점검대표값, 유형1, 유형2, 유형3] 4개 중 최악값 = 전체 결과
  **/
+
 @Service
 public class RiskEvaluationService {
 
@@ -23,28 +24,68 @@ public class RiskEvaluationService {
     // 선순위채권 부담 기준 (주택가격 90% × 60%)
     private static final double PRIORITY_DEBT_LIMIT_RATIO = 0.54;
 
+    private static final int CHECK_DANGER_THRESHOLD = 3;   // 필수점검 5개 중 3개 이상 CAUTION → DANGER
+    private static final int DETAIL_DANGER_THRESHOLD = 3;  // 유형별 세부 3개 전부 CAUTION → DANGER
+
+
     public RiskEvaluationResult evaluate(RegistryData registry, BuildingData building, PriceData price, Long deposit, String roadAddress) {
 
         String regionType = resolveRegionType(roadAddress);
-        // ===== 1. 필수점검 5개 =====
-        List<CheckResult> checkResults = new ArrayList<>();
-        checkResults.add(new CheckResult(CheckType.MORTGAGE_EXISTENCE, judgeMortgage(registry, price)));
-        checkResults.add(new CheckResult(CheckType.ILLEGAL_BUILDING, judgeIllegalBuilding(building)));
-        checkResults.add(new CheckResult(CheckType.BUILDING_USE, judgeBuildingUse(building)));
-        checkResults.add(new CheckResult(CheckType.HUG_GUARANTEE_ELIGIBILITY, judgeHugEligibility(building, price, registry, deposit, regionType)));
-        checkResults.add(new CheckResult(CheckType.RIGHTS_INFRINGEMENT, judgeRightsInfringement(registry)));
+        Long basePrice = pickBasePrice(price);
 
-        // ===== 2. 유형별 세부 9개 → 유형 3개로 묶기 =====
+        // ===== 1-1. 필수점검 5개 =====
+        List<CheckResult> checkResults = new ArrayList<>();
+        checkResults.add(new CheckResult(
+                CheckType.MORTGAGE_EXISTENCE,
+                judgeMortgage(registry, price),
+                Map.of("mortgageAmount", safeLong(registry != null ? registry.getMortgageAmount() : null))
+        ));
+
+        checkResults.add(new CheckResult(
+                CheckType.ILLEGAL_BUILDING,
+                judgeIllegalBuilding(building),
+                Map.of("isIllegalBuilding", safeBoolean(building != null ? building.getIsIllegalBuilding() : null))
+        ));
+
+        checkResults.add(new CheckResult(
+                CheckType.BUILDING_USE,
+                judgeBuildingUse(building),
+                Map.of("buildingUse", building != null && building.getBuildingUse() != null ? building.getBuildingUse() : "정보없음")
+        ));
+
+        checkResults.add(new CheckResult(
+                CheckType.HUG_GUARANTEE_ELIGIBILITY,
+                judgeHugEligibility(building, price, registry, deposit, regionType),
+                Map.of(
+                        "deposit", deposit != null ? deposit : 0,
+                        "mortgageAmount", safeLong(registry != null ? registry.getMortgageAmount() : null),
+                        "basePrice", basePrice != null ? basePrice : 0
+                )
+        ));
+
+        checkResults.add(new CheckResult(
+                CheckType.RIGHTS_INFRINGEMENT,
+                judgeRightsInfringement(registry),
+                Map.of("hasSeizure", safeBoolean(registry != null ? registry.getHasSeizure() : null))
+        ));
+
+        // ===== 1-2. 필수점검 최종 결과 (개수 기반) =====
+        RiskLevel checkOverall = RiskLevel.aggregateByCount(
+                checkResults.stream().map(CheckResult::getRiskLevel).toList(),
+                CHECK_DANGER_THRESHOLD
+        );
+
+        // ===== 2. 유형별 세부 9개 → 유형 3개 (개수 기반, 3개 전부 CAUTION이면 DANGER) =====
         List<FraudTypeResult> fraudTypeResults = new ArrayList<>();
         fraudTypeResults.add(buildUnderwaterJeonse(registry, price, deposit));
         fraudTypeResults.add(buildRightsConcealment(registry, building));
         fraudTypeResults.add(buildTrustPropertyFraud(registry));
 
-        // ===== 3. 전체 집계: 필수5 + 유형3(각 유형의 riskLevel) = 8개 중 최악값 =====
-        List<RiskLevel> allLevels = new ArrayList<>();
-        checkResults.forEach(c -> allLevels.add(c.getRiskLevel()));
-        fraudTypeResults.forEach(f -> allLevels.add(f.getRiskLevel()));
-        RiskLevel overall = RiskLevel.worstOf(allLevels);
+        // ===== 3. 전체 결과 = [필수점검최종, 유형1, 유형2, 유형3] 4개 중 최악값 =====
+        List<RiskLevel> topLevels = new ArrayList<>();
+        topLevels.add(checkOverall);
+        fraudTypeResults.forEach(f -> topLevels.add(f.getRiskLevel()));
+        RiskLevel overall = RiskLevel.worstOf(topLevels);
 
         return new RiskEvaluationResult(overall, checkResults, fraudTypeResults);
     }
@@ -76,7 +117,6 @@ public class RiskEvaluationService {
         if (building == null || building.getBuildingUse() == null) return RiskLevel.CAUTION;
 
         String use = building.getBuildingUse();
-
         // 주거 종류
         List<String> safeUses = Arrays.asList(
                 "단독주택", "다가구주택", "다세대주택", "연립주택", "아파트", "주거용 오피스텔",
@@ -98,31 +138,29 @@ public class RiskEvaluationService {
 
     // 4. HUG 보증보험 가입 가능 여부
     private RiskLevel judgeHugEligibility(BuildingData building, PriceData price, RegistryData registry, Long deposit, String regionType) {
-        if (building != null && building.getBuildingType() != null) {
-            String type = building.getBuildingType();
-            // 다가구주택이나 집합건물(다세대, 연립 등)은 HUG 심사 특성상 무조건 CAUTION 고정
-            if ("MULTI_FAMILY".equals(type) || "MULTI_HOUSEHOLD".equals(type)) {
-                return RiskLevel.CAUTION;
-            }
+        if (regionType == null) return RiskLevel.CAUTION;
+        if (building == null || building.getBuildingType() == null) {
+            return RiskLevel.CAUTION;
+        }
+        String type = building.getBuildingType();
+        // 다가구주택이나 집합건물(다세대, 연립 등)은 HUG 심사 특성상 무조건 CAUTION 고정
+        if ("MULTI_FAMILY".equals(type) || "MULTI_HOUSEHOLD".equals(type)) {
+            return RiskLevel.CAUTION;
         }
 
         Long basePrice = pickBasePrice(price);
-        if (basePrice == null || deposit == null) return RiskLevel.CAUTION;
+        if (basePrice == null || deposit == null || registry == null) return RiskLevel.CAUTION;
 
-        // 선순위채권(근저당)
-        long mortgageAmount = (registry != null && registry.getMortgageAmount() != null)
-                ? registry.getMortgageAmount() : 0L;
+        // 선순위채권(근저당) : 데이터가 없으면 0
+        long mortgageAmount = safeLong(registry.getMortgageAmount());
 
         // V = HUG 기준 주택가액 (집값의 90%)
-        double v = basePrice * 0.90;
+        double v = basePrice * 0.9;
 
         // 지역별 보증금 한도 체크 (수도권 7억, 비수도권 5억)
-        boolean isDepositValid = true;  // 한도가 넘으면 false, 한도가 안 넘으면 true
-        if ("METROPOLITAN".equals(regionType)) {
-            if (deposit > 700000000L) isDepositValid = false;
-        } else {
-            if (deposit > 500000000L) isDepositValid = false;
-        }
+        boolean isDepositValid = "METROPOLITAN".equals(regionType)
+                ? deposit <= 700_000_000L
+                : deposit <= 500_000_000L;
 
         // 조건 1: (D + S) <= V
         boolean condition1 = (deposit + mortgageAmount) <= v;
@@ -170,8 +208,13 @@ public class RiskEvaluationService {
                 new DetailResult(DetailType.PRIORITY_DEBT_BURDEN, priorityDebtBurden),
                 new DetailResult(DetailType.HUG_GUARANTEE_PRECHECK, hugPrecheck)
         );
-        RiskLevel worst = RiskLevel.worstOf(highJeonseRatio, priorityDebtBurden, hugPrecheck);
-        return new FraudTypeResult(FraudType.UNDERWATER_JEONSE, worst, details);
+
+        RiskLevel typeLevel = RiskLevel.aggregateByCount(
+                details.stream().map(DetailResult::getRiskLevel).toList(),
+                DETAIL_DANGER_THRESHOLD
+        );
+
+        return new FraudTypeResult(FraudType.UNDERWATER_JEONSE, typeLevel, details);
     }
 
 
@@ -242,11 +285,7 @@ public class RiskEvaluationService {
         long s = (registry != null && registry.getMortgageAmount() != null) ? registry.getMortgageAmount() : 0L;
         double limit = basePrice * 0.90; // 보증한도 참고금액
 
-        if ((deposit + s) <= limit) {
-            return RiskLevel.SAFE; // 예상 금액 조건 충족 (○)
-        } else {
-            return RiskLevel.DANGER; // 예상 금액 조건 초과 (×)
-        }
+        return (deposit + s) <= limit ? RiskLevel.SAFE : RiskLevel.DANGER;
     }
 
     // =========================================================
@@ -265,8 +304,14 @@ public class RiskEvaluationService {
                 new DetailResult(DetailType.FALSE_BUILDING_USE_INFORMATION, buildingUseMismatch),
                 new DetailResult(DetailType.RIGHTS_INFRINGEMENT_CONCEALMENT, rightsConcealment)
         );
-        RiskLevel worst = RiskLevel.worstOf(ownershipMismatch, buildingUseMismatch, rightsConcealment);
-        return new FraudTypeResult(FraudType.FALSE_INFORMATION_RIGHTS_CONCEALMENT, worst, details);
+
+        // 유형 판단 : 세부항목 3개 caution -> danger
+        RiskLevel typeLevel = RiskLevel.aggregateByCount(
+                details.stream().map(DetailResult::getRiskLevel).toList(),
+                DETAIL_DANGER_THRESHOLD
+        );
+
+        return new FraudTypeResult(FraudType.FALSE_INFORMATION_RIGHTS_CONCEALMENT, typeLevel, details);
     }
 
     // 2-A. 건물·토지 소유관계 불일치
@@ -301,8 +346,12 @@ public class RiskEvaluationService {
                 new DetailResult(DetailType.REGISTERED_OWNER_VERIFICATION, ownerVerification),
                 new DetailResult(DetailType.POST_TRUST_RIGHTS_INFRINGEMENT, postTrustInfringement)
         );
-        RiskLevel worst = RiskLevel.worstOf(trustRegistration, ownerVerification, postTrustInfringement);
-        return new FraudTypeResult(FraudType.TRUST_PROPERTY_FRAUD, worst, details);
+
+        RiskLevel typeLevel = RiskLevel.aggregateByCount(
+                details.stream().map(DetailResult::getRiskLevel).toList(),
+                DETAIL_DANGER_THRESHOLD
+        );
+        return new FraudTypeResult(FraudType.TRUST_PROPERTY_FRAUD, typeLevel, details);
     }
 
     // 3-A. 신탁등기 존재 여부
@@ -371,9 +420,18 @@ public class RiskEvaluationService {
     // =========================================================
     // 공통 유틸
     // =========================================================
+
+    // 기본값을 실거래가 존재하면 실거래가, 실거래가 없으면 공시가로 설정
     private Long pickBasePrice(PriceData price) {
         if (price == null) return null;
         if (price.getRecentSalePrice() != null) return price.getRecentSalePrice();
         return price.getOfficialPrice();
+    }
+
+    private long safeLong(Long value){
+        return value == null ? 0L : value;
+    }
+    private boolean safeBoolean(Boolean value){
+        return value != null && value;
     }
 }

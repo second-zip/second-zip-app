@@ -17,7 +17,7 @@
         <Logger name="org.springframework" level="INFO" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
-        <Logger name="org.springframework.web.servlet" level="DEBUG" />
-        <Logger name="org.springframework.context.annotation" level="DEBUG" />
+        <Logger name="org.springframework.web.servlet" level="INFO" />
+        <Logger name="org.springframework.context.annotation" level="WARN" />
     </Loggers>
 </Configuration>

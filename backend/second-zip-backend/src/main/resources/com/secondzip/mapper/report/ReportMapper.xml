@@ -9,9 +9,9 @@
             (#{accountId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result})
     </insert>
 
-    <insert id="insertCheckResult">
-        INSERT INTO report_check_results (analysis_report_id, check_type, risk_level)
-        VALUES (#{reportId}, #{checkType}, #{riskLevel})
+    <insert id="insertCheckResult" parameterType="map">
+        INSERT INTO report_check_results (analysis_report_id, check_type, risk_level, evidence)
+        VALUES (#{reportId}, #{checkType}, #{riskLevel}, #{evidenceJson, jdbcType=VARCHAR})
     </insert>
 
     <insert id="insertFraudTypeMap" useGeneratedKeys="true" keyProperty="fraudTypeId" keyColumn="report_fraud_type_id" parameterType="map">
@@ -45,6 +45,48 @@
         SELECT COUNT(*) FROM analysis_reports WHERE account_id = #{accountId}
     </select>
 
+    <!--  리포트 상세 조회용  -->
+    <select id="findCheckResultsByReportId" resultType="map">
+        SELECT
+            check_type AS checkType,
+            risk_level AS riskLevel,
+            evidence
+        FROM report_check_results
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findAccountIdByReportId" resultType="java.lang.Long">
+        SELECT account_id FROM analysis_reports WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findReportById" resultType="map">
+        SELECT
+            analysis_report_id AS analysisReportId,
+            road_address AS roadAddress,
+            detail_address AS detailAddress,
+            deposit,
+            risk_level AS result,
+            favorite
+        FROM analysis_reports
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findFraudTypesByReportId" resultType="map">
+        SELECT
+            report_fraud_type_id AS reportFraudTypeId,
+            fraud_type AS fraudType,
+            risk_level AS riskLevel
+        FROM report_fraud_types
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findDetailResultsByFraudTypeId" resultType="com.secondzip.backend.report.dto.DetailResult">
+        SELECT
+            detail_type AS detailType,
+            risk_level AS riskLevel
+        FROM report_fraud_detail_results
+        WHERE report_fraud_type_id = #{fraudTypeId}
+    </select>
 
 
 </mapper>

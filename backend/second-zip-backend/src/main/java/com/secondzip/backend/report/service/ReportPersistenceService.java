@@ -1,11 +1,14 @@
 package com.secondzip.backend.report.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.FraudTypeResult;
 import com.secondzip.backend.report.dto.RiskEvaluationResult;
 import com.secondzip.backend.report.dto.response.*;
 import com.secondzip.backend.report.mapper.ReportMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,9 +19,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class ReportPersistenceService {
 
     private final ReportMapper reportMapper;
+    private final ObjectMapper objectMapper;    // JSON 변환용
 
     @Transactional
     public ReportDetailResponse save(Long accountId, String roadAddress, String detailAddress,
@@ -50,8 +55,15 @@ public class ReportPersistenceService {
 
     private List<CheckResultView> insertCheckResults(Long reportId, List<CheckResult> results) {
         return results.stream().map(c -> {
-            reportMapper.insertCheckResult(reportId, c.getCheckType(), c.getRiskLevel());
-            return new CheckResultView(c.getCheckType(), c.getRiskLevel());
+            Map<String, Object> params = new HashMap<>();
+            params.put("reportId", reportId);
+            params.put("checkType", c.getCheckType());
+            params.put("riskLevel", c.getRiskLevel());
+            params.put("evidenceJson", toJson(c.getEvidence()));
+
+            reportMapper.insertCheckResult(params);
+
+            return new CheckResultView(c.getCheckType(), c.getRiskLevel(), c.getEvidence());
         }).collect(Collectors.toList());
     }
 
@@ -71,5 +83,15 @@ public class ReportPersistenceService {
 
             return new FraudTypeView(f.getFraudType(), f.getRiskLevel(), details);
         }).collect(Collectors.toList());
+    }
+
+    // 필수 점검 판단 데이터 JSON으로 변경
+    private String toJson(Map<String, Object> evidence){
+        try{
+            return objectMapper.writeValueAsString(evidence);
+        }catch (JsonProcessingException e){
+            log.error("evidence JSON 변환 실패", e);
+            return "{}";
+        }
     }
 }
