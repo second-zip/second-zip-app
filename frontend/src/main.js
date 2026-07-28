@@ -6,7 +6,6 @@ import { AUTH_UNAUTHORIZED_EVENT } from './api/instance';
 import router from './router';
 import { useAuthStore } from './stores/auth';
 
-// Bootstrap
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap';
 
@@ -14,7 +13,6 @@ import '@/assets/styles/colors.css';
 import '@/assets/styles/fonts.css';
 import '@/assets/styles/global.css';
 
-// App.vue를 수정하지 않고 현재 경로의 화면을 루트에 렌더링한다.
 const app = createApp({
   render: () => h(RouterView),
 });
@@ -23,13 +21,15 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(router);
 
-// 401 응답을 한 곳에서 처리해 Pinia와 localStorage의 인증 상태를 초기화한다.
 window.addEventListener(AUTH_UNAUTHORIZED_EVENT, () => {
   const authStore = useAuthStore();
 
   authStore.clearAuth();
 
-  // TODO: 로그인 기능과 /login 라우트 명세가 확정되면 router.replace로 이동한다.
+  // 세진: 인증 만료 시 로그인 화면으로 이동시킨다.
+  if (router.currentRoute.value.name !== 'login') {
+    router.replace({ name: 'login' });
+  }
 });
 
 app.mount('#app');
