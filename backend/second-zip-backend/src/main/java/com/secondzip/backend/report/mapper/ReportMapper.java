@@ -41,5 +41,8 @@ public interface ReportMapper {
     List<Map<String, Object>> findCheckResultsByReportId(@Param("reportId") Long reportId);
     List<Map<String, Object>> findFraudTypesByReportId(@Param("reportId") Long reportId);
     List<DetailResult> findDetailResultsByFraudTypeId(@Param("fraudTypeId") Long fraudTypeId);
+
+    // 리포트 삭제
+    void deleteReport(@Param("reportId") Long reportId);
 }
 

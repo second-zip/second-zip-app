@@ -24,7 +24,9 @@ public class ReportPersistenceService {
 
     private final ReportMapper reportMapper;
     private final ObjectMapper objectMapper;    // JSON 변환용
+    private final ReportQueryService reportQueryService;
 
+    // 작성, 수정, 삭제, 저장 담당
     @Transactional
     public ReportDetailResponse save(Long accountId, String roadAddress, String detailAddress,
                                      Long deposit, RiskEvaluationResult evalResult) {
@@ -93,5 +95,12 @@ public class ReportPersistenceService {
             log.error("evidence JSON 변환 실패", e);
             return "{}";
         }
+    }
+
+    // 리포트 삭제
+    @Transactional
+    public void deleteReport(Long accountId, Long reportId) {
+        reportQueryService.validateOwnership(accountId, reportId);
+        reportMapper.deleteReport(reportId);
     }
 }

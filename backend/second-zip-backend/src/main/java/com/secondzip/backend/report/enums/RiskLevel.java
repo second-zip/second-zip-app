@@ -20,6 +20,7 @@ public enum RiskLevel {
                 .orElse(SAFE);
     }
 
+    // worstOf(SAFE, CAUTION, DANGER)
     public static RiskLevel worstOf(RiskLevel... levels) {
         return worstOf(Arrays.asList(levels));
     }

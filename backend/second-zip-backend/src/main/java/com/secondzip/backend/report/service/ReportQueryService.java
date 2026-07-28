@@ -29,14 +29,13 @@ public class ReportQueryService {
     private final ReportMapper reportMapper;
     private final ObjectMapper objectMapper;
 
-    // 리포트 담당
+    // 조회 담당
 
     // === 리포트 목록 조회 ===
     public ReportListResponse getReportList(Long accountId) {
         List<ReportListItem> reports = reportMapper.findReportsByAccountId(accountId);
         int totalCount = reportMapper.countReportsByAccountId(accountId);
-        boolean hasMore = totalCount > reports.size();
-        return new ReportListResponse(reports, totalCount, hasMore);
+        return new ReportListResponse(reports, totalCount);
     }
 
     // === 리포트 상세 조회 ===

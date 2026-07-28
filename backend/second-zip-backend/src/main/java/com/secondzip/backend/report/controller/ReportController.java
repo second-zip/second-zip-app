@@ -37,7 +37,7 @@ public class ReportController {
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Long accountId = Long.valueOf(authentication.getPrincipal().toString());
+        Long accountId = (Long) authentication.getPrincipal();
         ReportDetailResponse result = reportService.createReport(accountId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
@@ -46,7 +46,7 @@ public class ReportController {
     @GetMapping
     @ApiOperation(value = "분석 보고서 목록 조회", notes = "분석 보고서 목록을 조회합니다.")
     public ResponseEntity<ReportListResponse> getList(@ApiIgnore Authentication authentication) {
-        Long accountId = Long.valueOf(authentication.getPrincipal().toString());
+        Long accountId = (Long) authentication.getPrincipal();
         ReportListResponse result = reportQueryService.getReportList(accountId);
         return ResponseEntity.ok(result);
     }
@@ -59,8 +59,22 @@ public class ReportController {
             @PathVariable Long analysisReportId,
             @ApiIgnore Authentication authentication
     ) {
-        Long accountId = Long.valueOf(authentication.getPrincipal().toString());
+        Long accountId = (Long) authentication.getPrincipal();
         ReportDetailResponse result = reportQueryService.getReportDetail(accountId, analysisReportId);
         return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/{analysisReportId}")
+    @ApiOperation(value = "분석 보고서 삭제", notes = "분석 보고서를 삭제합니다.")
+    public ResponseEntity<Void> deleteReport(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = (Long) authentication.getPrincipal();
+        reportQueryService.validateOwnership(accountId, analysisReportId);
+        reportService.deleteReport(accountId, analysisReportId);
+        return ResponseEntity.noContent().build();
+
     }
 }

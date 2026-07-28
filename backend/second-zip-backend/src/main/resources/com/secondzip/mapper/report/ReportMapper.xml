@@ -88,5 +88,8 @@
         WHERE report_fraud_type_id = #{fraudTypeId}
     </select>
 
+    <delete id="deleteReport">
+        DELETE FROM analysis_reports WHERE analysis_report_id = #{reportId}
+    </delete>
 
 </mapper>
