@@ -27,8 +27,8 @@ public class FraudDamageServiceImpl implements FraudDamageService {
             RegionLevel regionLevel,
             String parentRegionCode
     ) {
-        validateRegionLevel(regionLevel);
-        LocalDate latestBaseDate = getLatestBaseDate();
+        validateRegionLevel(regionLevel); //지역 단계 검증
+        LocalDate latestBaseDate = getLatestBaseDate(); //최신 통계 기준일 조회
 
         if (regionLevel == RegionLevel.SIDO){
             return getSidoFraudDamages(latestBaseDate);
