@@ -1,15 +1,30 @@
+import MainLayout from '@/layouts/MainLayout.vue';
 import { createRouter, createWebHistory } from 'vue-router';
-
 import { useAuthStore } from '@/stores/auth';
 
 const routes = [
   {
     path: '/',
-    name: 'main',
-    component: () => import('@/App.vue'),
+    component: MainLayout,
+    children: [
+      {
+        path: 'mypage',
+        name: 'mypage',
+        component: () => import('@/views/MyPageView.vue'),
+        meta: {
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'test',
+        name: 'test',
+        component: () => import('@/views/test/TestView.vue'),
+      },
+    ],
   },
+
+  // 로그인·회원가입에는 하단 네비게이션을 사용하지 않는 경우
   {
-    // 세진: 로그인 화면 경로
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView.vue'),
@@ -18,14 +33,6 @@ const routes = [
     path: '/signup',
     name: 'signup',
     component: () => import('@/views/SignupView.vue'),
-  },
-  {
-    path: '/mypage',
-    name: 'mypage',
-    component: () => import('@/views/MyPageView.vue'),
-    meta: {
-      requiresAuth: true,
-    },
   },
 ];
 
