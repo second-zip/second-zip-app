@@ -1,4 +1,6 @@
 <script setup>
+import { useRoute } from 'vue-router';
+
 import dictGray from '@/assets/icons/nav/dict-gray-22.svg';
 import dictBlue from '@/assets/icons/nav/dict-blue-22.svg';
 
@@ -13,6 +15,8 @@ import checklistBlue from '@/assets/icons/nav/checklist-blue-22.svg';
 
 import mypageGray from '@/assets/icons/nav/mypage-gray-22.svg';
 import mypageBlue from '@/assets/icons/nav/mypage-blue-22.svg';
+
+const route = useRoute();
 
 const menus = [
   {
@@ -43,13 +47,22 @@ const menus = [
   {
     label: 'MY',
     to: '/mypage',
+    activePaths: ['/login', '/signup'],
     inactiveIcon: mypageGray,
     activeIcon: mypageBlue,
   },
 ];
 
 const isMenuActive = (menu, isActive, isExactActive) => {
-  return menu.exact ? isExactActive : isActive;
+  if (menu.exact) {
+    return isExactActive;
+  }
+
+  const isAdditionalPathActive = menu.activePaths?.some((path) => {
+    return route.path === path || route.path.startsWith(`${path}/`);
+  });
+
+  return isActive || isAdditionalPathActive;
 };
 </script>
 
