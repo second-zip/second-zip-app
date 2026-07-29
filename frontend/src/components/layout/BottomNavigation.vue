@@ -1,4 +1,6 @@
 <script setup>
+import { useRoute } from 'vue-router';
+
 import dictGray from '@/assets/icons/nav/dict-gray-22.svg';
 import dictBlue from '@/assets/icons/nav/dict-blue-22.svg';
 
@@ -13,6 +15,8 @@ import checklistBlue from '@/assets/icons/nav/checklist-blue-22.svg';
 
 import mypageGray from '@/assets/icons/nav/mypage-gray-22.svg';
 import mypageBlue from '@/assets/icons/nav/mypage-blue-22.svg';
+
+const route = useRoute();
 
 const menus = [
   {
@@ -49,6 +53,8 @@ const menus = [
 ];
 
 const isMenuActive = (menu, isActive, isExactActive) => {
+  if (menu.to === '/report' && route.path.startsWith('/report')) return true;
+
   return menu.exact ? isExactActive : isActive;
 };
 </script>

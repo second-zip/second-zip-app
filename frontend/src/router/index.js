@@ -20,6 +20,15 @@ const routes = [
         name: 'test',
         component: () => import('@/views/test/TestView.vue'),
       },
+      {
+        path: 'report/analysis',
+        name: 'analysis',
+        component: () => import('@/views/report/AnalysisView.vue'),
+      },
+      {
+        path: 'analysis',
+        redirect: '/report/analysis',
+      },
     ],
   },
 
