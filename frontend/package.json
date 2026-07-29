@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/views/report/analysisLogic.test.js",
+    "test": "node --test src/views/report/analysisLogic.test.js src/views/report/analysisMapper.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

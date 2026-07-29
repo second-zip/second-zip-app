@@ -1,242 +1,124 @@
+<!-- 분석 리포트의 주소·보증금·위험 판정·예방 정보를 조회하는 공통 결과 페이지입니다. -->
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
-import BaseInput from '@/components/common/BaseInput.vue';
+import { createReport, getReport } from '@/api/report';
 import ContentBox from '@/components/common/ContentBox.vue';
 import {
+  aggregateRiskStatuses,
   formatKoreanDeposit,
+  getAggregateRiskStatus,
   selectSecretaryValue,
 } from '@/views/report/analysisLogic';
-import cautionIcon from '@/assets/icons/report/caution-yellow-22.svg';
-import dangerIcon from '@/assets/icons/report/danger-red-22.svg';
-import safeIcon from '@/assets/icons/report/safe-green-22.svg';
-import catCaution from '@/assets/images/cat-caution.png';
-import catDanger from '@/assets/images/cat-danger.png';
-import catSafe from '@/assets/images/cat-safe.png';
-import catDefault from '@/assets/images/cat.png';
-import manCaution from '@/assets/images/main-caution.png';
-import manDanger from '@/assets/images/main-danger.png';
-import manSafe from '@/assets/images/man-safe.png';
-import manDefault from '@/assets/images/man.png';
-import womanCaution from '@/assets/images/woman-caution.png';
-import womanDanger from '@/assets/images/woman-danger.png';
-import womanSafe from '@/assets/images/woman-safe.png';
-import womanDefault from '@/assets/images/woman.png';
+import {
+  DEFAULT_CHECKS,
+  DEFAULT_FRAUD_TYPES,
+  DEFAULT_SECRETARY_IMAGES,
+  DEFAULT_SPECIAL_TERMS,
+  RISK_ICONS,
+  RISK_LABELS,
+  SECRETARY_IMAGES,
+  SECRETARY_MESSAGES,
+  SPECIAL_TERMS_NOTICE,
+} from '@/views/report/analysisData';
+import { mapReportDetail } from '@/views/report/analysisMapper';
+import {
+  ANALYSIS_PREVIEW_REPORTS,
+  MOCK_REPORT_DETAIL,
+} from '@/views/report/analysisMock';
+
+const route = useRoute();
+const router = useRouter();
+
+// 개발용 분석 시나리오 A: 실제 분석 생성 API에 전달하는 안전 케이스입니다.
+const SCENARIO_A_REQUEST = Object.freeze({
+  roadAddress: '서울특별시 강남구 테헤란로 1',
+  detailAddress: '101동 101호',
+  deposit: 100_000_000,
+});
 
 // 화면 캐릭터 설정: 아래 두 값만 바꾸면 연결된 이미지와 멘트가 모두 변경됩니다.
 const analysisDisplay = ref({
   // 비서 선택값: 'cat', 'man', 'woman'
   secretary: 'woman',
-  // 위험도 선택값: 'safe', 'caution', 'danger'
-  risk: 'caution',
 });
 
 const address = ref('서울시 마포구 합정동 123-45');
 const deposit = ref('100000000');
-const isDepositEditing = ref(false);
 const openedItem = ref('mortgage');
 const openedFraudType = ref('false-information');
 const isChecklistPinned = ref(false);
 const showCopyToast = ref(false);
+const isReportLoading = ref(false);
+const reportLoadError = ref('');
 const marketPrice = 180_722_892;
 let toastTimer;
 
-const checks = ref([
-  {
-    id: 'mortgage',
-    label: '근저당',
-    status: 'safe',
-    basis: '등기부등본 기준 근저당권 설정 없음 확인',
-    amount: '0원',
-  },
-  {
-    id: 'violation',
-    label: '위반건축물 표시',
-    status: 'caution',
-    basis: '건축물대장상 위반건축물 표기 여부 확인 필요',
-    amount: '확인 필요',
-  },
-  {
-    id: 'residential',
-    label: '주거용건축물',
-    status: 'safe',
-    basis: '건축물대장 기준 주거용 용도 확인',
-    amount: '주거용',
-  },
-  {
-    id: 'hug',
-    label: 'HUG가입가능여부',
-    status: 'safe',
-    basis: '입력 정보 기준 보증 가입 가능 범위',
-    amount: '가입 가능',
-  },
-  {
-    id: 'rights',
-    label: '권리침해여부',
-    status: 'danger',
-    basis: '등기부등본상 권리침해 항목 확인 필요',
-    amount: '확인 필요',
-  },
-]);
+const checks = ref(DEFAULT_CHECKS);
 
-const fraudTypes = ref([
-  {
-    id: 'gap-investment',
-    title: '유형 1. 무자본 갭투자·깡통전세형',
-    subtitle: '전세가율·선순위채권·보증 가입 기준',
-    items: [
-      { label: 'A. 높은 전세가율', status: 'danger' },
-      { label: 'B. 선순위채권 부담', status: 'caution' },
-      { label: 'C. HUG보증보험 사전점검', status: 'safe' },
-    ],
-  },
-  {
-    id: 'false-information',
-    title: '유형 2. 허위 정보·권리 은폐형',
-    subtitle: '소유관계·용도·권리침해 기준',
-    items: [
-      { label: 'A. 건물·토지 소유관계 불일치', status: 'safe' },
-      { label: 'B. 건축물 용도 허위 안내', status: 'caution' },
-      { label: 'C. 등기상 권리침해 은폐', status: 'danger' },
-    ],
-  },
-  {
-    id: 'trust-property',
-    title: '유형 3. 신탁 부동산 사기형',
-    subtitle: '신탁등기·소유자·추가 권리침해 기준',
-    items: [
-      { label: 'A. 신탁등기 존재 여부', status: 'safe' },
-      { label: 'B. 등기상 소유자 확인', status: 'safe' },
-      { label: 'C. 신탁등기 이후 추가 권리침해 여부', status: 'caution' },
-    ],
-  },
-]);
+const fraudTypes = ref(DEFAULT_FRAUD_TYPES);
 
-// AI 연결 전 화면 확인용 특약 사항 더미 데이터
-const specialTerms = ref([
-  {
-    title: '보증금 즉시 반환 명시',
-    description:
-      '계약 해지 또는 만료 시 임대인은 잔금 지급일로부터 3영업일 이내에 보증금 전액을 임차인에게 반환해야 한다.',
-  },
-  {
-    title: '근저당 추가 설정 금지',
-    description:
-      '계약 기간 중 임대인은 해당 부동산에 신규 근저당권을 설정하거나 기존 채권최고액을 증액할 수 없다.',
-  },
-  {
-    title: '잔금일 등기부등본 재확인',
-    description:
-      '임차인은 잔금 송금 직전 해당 부동산의 등기부등본을 재발급해 이상 유무를 확인한 후 지급하여야 한다.',
-  },
-  {
-    title: '전세보증보험 가입 협조',
-    description:
-      '임대인은 임차인의 HUG·SGI 전세보증보험 가입을 위한 서류 제출 및 관련 절차에 적극 협조하여야 한다.',
-  },
-  {
-    title: '매각·양도 시 임차인 우선 보호',
-    description:
-      '계약 기간 중 임대인이 해당 부동산을 제3자에게 매각 또는 양도할 경우 임차인에게 사전 고지하고 보증금 반환 의무를 승계하도록 조치해야 한다.',
-  },
-]);
+const specialTerms = ref(DEFAULT_SPECIAL_TERMS);
+const specialTermsNotice = SPECIAL_TERMS_NOTICE;
 
-const specialTermsNotice =
-  '* 본 특약은 AI 분석에 따른 권고사항이며,\n법적 효력은 계약서 작성 시 실제 내용에 따릅니다.';
-
-const riskIcons = {
-  safe: safeIcon,
-  caution: cautionIcon,
-  danger: dangerIcon,
-};
-
-//안전도에 따른 비서 이미지출력
-// 캐릭터와 위험도별 문구를 이곳에서 직접 수정하면 화면에 반영됩니다.
-const secretaryMessages = {
-  // 고양이 분석 멘트
-  cat: {
-    safe: '안전이다냥!',
-    caution: '조금 더 살펴보자냥!',
-    danger: '위험하다냥!',
-  },
-
-  // 남자 위험 멘트
-  man: {
-    safe: '안전하네 나처럼',
-    caution: '여기는 조심하는게 좋겠어',
-    danger: '여기는 안돼!',
-  },
-
-  // 여자 위험 멘트
-  woman: {
-    safe: '안전한 집으로 추정됩니다.',
-    caution: '확실히 주의가 필요합니다.',
-    danger: '여긴 피하시길 권장합니다앗',
-  },
-};
-
-const secretaryImages = {
-  cat: {
-    safe: catSafe,
-    caution: catCaution,
-    danger: catDanger,
-  },
-  man: {
-    safe: manSafe,
-    caution: manCaution,
-    danger: manDanger,
-  },
-  woman: {
-    safe: womanSafe,
-    caution: womanCaution,
-    danger: womanDanger,
-  },
-};
+// 필수 점검·사기 유형·전체 위험도를 동일한 판정 규칙으로 집계합니다.
+const checkRisk = computed(() =>
+  aggregateRiskStatuses(checks.value.map(({ status }) => status)),
+);
+const fraudDetailStatuses = computed(() =>
+  fraudTypes.value.flatMap(({ items }) => items.map(({ status }) => status)),
+);
+const fraudRisk = computed(() =>
+  aggregateRiskStatuses(fraudDetailStatuses.value),
+);
+const overallRisk = computed(() =>
+  aggregateRiskStatuses([
+    ...checks.value.map(({ status }) => status),
+    ...fraudDetailStatuses.value,
+  ]),
+);
 
 const secretaryImage = computed(() => {
   const riskImages = selectSecretaryValue(
-    secretaryImages,
+    SECRETARY_IMAGES,
     analysisDisplay.value.secretary,
   );
 
-  return riskImages[analysisDisplay.value.risk] ?? secretaryImages.cat.safe;
+  return riskImages[overallRisk.value] ?? SECRETARY_IMAGES.cat.safe;
 });
-const defaultSecretaryImages = {
-  cat: catDefault,
-  man: manDefault,
-  woman: womanDefault,
-};
 const defaultSecretaryImage = computed(() =>
-  selectSecretaryValue(defaultSecretaryImages, analysisDisplay.value.secretary),
+  selectSecretaryValue(
+    DEFAULT_SECRETARY_IMAGES,
+    analysisDisplay.value.secretary,
+  ),
 );
 const overallIcon = computed(
-  () => riskIcons[analysisDisplay.value.risk] ?? riskIcons.safe,
+  () => RISK_ICONS[overallRisk.value] ?? RISK_ICONS.safe,
 );
 const overallMessage = computed(() => {
   const riskMessages = selectSecretaryValue(
-    secretaryMessages,
+    SECRETARY_MESSAGES,
     analysisDisplay.value.secretary,
   );
 
-  return riskMessages[analysisDisplay.value.risk] ?? secretaryMessages.cat.safe;
+  return (
+    riskMessages[overallRisk.value] ?? SECRETARY_MESSAGES.cat.safe
+  );
 });
 
 const numericDeposit = computed(
   () => Number(deposit.value.replace(/\D/g, '')) || 0,
 );
 const formattedDeposit = computed(() =>
-  formatKoreanDeposit(numericDeposit.value),
-);
-const depositInputValue = computed(() =>
-  isDepositEditing.value ? deposit.value : formattedDeposit.value,
+  deposit.value === '-' ? '-' : formatKoreanDeposit(numericDeposit.value),
 );
 const rentRatio = computed(() =>
   Math.min(Math.round((numericDeposit.value / marketPrice) * 100), 999),
 );
-
-const handleDeposit = (value) => {
-  deposit.value = value.replace(/\D/g, '');
-};
+const rentRatioDisplay = computed(() =>
+  deposit.value === '-' ? '-' : `${rentRatio.value}%`,
+);
 
 const toggleItem = (id) => {
   openedItem.value = openedItem.value === id ? '' : id;
@@ -246,15 +128,72 @@ const toggleFraudType = (id) => {
   openedFraudType.value = openedFraudType.value === id ? '' : id;
 };
 
-const getFraudTypeStatus = (items) => {
-  if (items.some((item) => item.status === 'danger')) return 'danger';
-  if (items.some((item) => item.status === 'caution')) return 'caution';
-  return 'safe';
-};
-
 const toggleChecklistPin = () => {
   isChecklistPinned.value = !isChecklistPinned.value;
 };
+
+// 상세 리포트 응답을 현재 분석 화면의 반응형 상태에 반영합니다.
+const applyReport = (report) => {
+  const mappedReport = mapReportDetail(report);
+
+  address.value = mappedReport.address;
+  deposit.value = mappedReport.deposit;
+  if (mappedReport.secretary) {
+    analysisDisplay.value.secretary = mappedReport.secretary;
+  }
+  isChecklistPinned.value = mappedReport.favorite;
+  checks.value = mappedReport.checks;
+  fraudTypes.value = mappedReport.fraudTypes;
+  // TODO: AI/ChatGPT API 연결 시 매핑된 추천 특약을 동일한 화면 구조에 반영합니다.
+  specialTerms.value = mappedReport.specialTerms.length
+    ? mappedReport.specialTerms
+    : DEFAULT_SPECIAL_TERMS;
+};
+
+// 리포트 ID가 없으면 시나리오 A를 생성하고, 있으면 저장된 상세 결과를 조회합니다.
+const loadReport = async (analysisReportId) => {
+  isReportLoading.value = true;
+  reportLoadError.value = '';
+
+  try {
+    if (route.meta.analysisPreview) {
+      const scenario =
+        typeof route.meta.analysisPreview === 'string'
+          ? route.meta.analysisPreview
+          : route.params.scenario;
+      const previewReport =
+        ANALYSIS_PREVIEW_REPORTS[scenario] ?? MOCK_REPORT_DETAIL;
+
+      applyReport(previewReport);
+      return;
+    }
+
+    if (!analysisReportId) {
+      const report = await createReport(SCENARIO_A_REQUEST);
+
+      applyReport(report);
+      await router.replace({
+        name: 'analysis',
+        params: { analysisReportId: report.analysisReportId },
+      });
+      return;
+    }
+
+    const report = await getReport(analysisReportId);
+    applyReport(report);
+  } catch {
+    reportLoadError.value = '분석 결과를 불러오지 못했습니다.';
+  } finally {
+    isReportLoading.value = false;
+  }
+};
+
+// 같은 화면에서 리포트 ID가 바뀌는 경우에도 새로운 상세 데이터를 다시 불러옵니다.
+watch(
+  () => [route.params.analysisReportId, route.params.scenario],
+  ([analysisReportId]) => loadReport(analysisReportId),
+  { immediate: true },
+);
 
 const sharePage = async () => {
   const url = window.location.href;
@@ -298,13 +237,7 @@ onBeforeUnmount(() => {
         >
           <path d="M7 3h8l4 4v14H7zM15 3v5h4M10 12h6M10 16h6" />
         </svg>
-        <BaseInput
-          id="analysis-address"
-          v-model="address"
-          name="address"
-          aria-label="분석 주소"
-          placeholder="주소를 입력해 주세요"
-        />
+        <h1 class="text-truncate mb-0">{{ address }}</h1>
       </div>
 
       <div class="header-actions d-flex flex-shrink-0">
@@ -338,15 +271,26 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
+    <!-- 상세 리포트 API의 로딩 및 오류 상태를 안내하는 영역입니다. -->
+    <div v-if="isReportLoading" class="report-feedback" role="status">
+      분석 결과를 불러오는 중입니다.
+    </div>
+    <div v-else-if="reportLoadError" class="report-feedback report-feedback--error">
+      <span>{{ reportLoadError }}</span>
+      <button type="button" @click="loadReport(route.params.analysisReportId)">
+        다시 시도
+      </button>
+    </div>
+
     <main class="analysis-content">
       <!-- 선택한 비서와 위험도에 맞는 캐릭터·판정 멘트를 표시하는 영역입니다. -->
       <section
         class="risk-summary d-flex"
-        :class="`risk-summary--${analysisDisplay.risk}`"
+        :class="`risk-summary--${overallRisk}`"
       >
         <div
           class="character-wrap d-flex align-items-center justify-content-center rounded-circle"
-          :class="`character-wrap--${analysisDisplay.risk}`"
+          :class="`character-wrap--${overallRisk}`"
         >
           <img :src="secretaryImage" alt="" />
         </div>
@@ -361,27 +305,16 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <!-- 사용자가 보증금을 입력하고 전세가율을 확인하는 요약 카드입니다. -->
+      <!-- 이전 페이지에서 입력한 보증금과 계산된 전세가율을 보여주는 읽기 전용 카드입니다. -->
       <ContentBox class="price-card">
-        <label class="price-field mb-0" for="deposit">
+        <div class="price-field">
           <span>입력한 보증금</span>
-          <span class="deposit-input-wrap">
-            <BaseInput
-              id="deposit"
-              :model-value="depositInputValue"
-              inputmode="numeric"
-              aria-label="보증금"
-              @focus="isDepositEditing = true"
-              @blur="isDepositEditing = false"
-              @update:model-value="handleDeposit"
-            />
-            <b>원</b>
-          </span>
-        </label>
+          <strong class="deposit-value">{{ formattedDeposit }}</strong>
+        </div>
         <div class="price-divider" aria-hidden="true"></div>
         <div class="ratio-field">
           <span>전세가율 <small>(80% 미만 안전)</small></span>
-          <strong>{{ rentRatio }}%</strong>
+          <strong>{{ rentRatioDisplay }}</strong>
         </div>
       </ContentBox>
 
@@ -394,8 +327,10 @@ onBeforeUnmount(() => {
         <div class="inspection-heading d-flex align-items-center">
           <span class="heading-dot" aria-hidden="true"></span>
           <h2 class="mb-0">필수 점검</h2>
-          <img :src="dangerIcon" alt="위험" />
-          <span class="danger-pill">위험</span>
+          <img :src="RISK_ICONS[checkRisk]" :alt="checkRisk" />
+          <span class="status-pill" :class="`status-pill--${checkRisk}`">
+            {{ RISK_LABELS[checkRisk] }}
+          </span>
         </div>
 
         <div class="accordion accordion-flush">
@@ -413,7 +348,7 @@ onBeforeUnmount(() => {
                 :aria-controls="`${check.id}-detail`"
                 @click="toggleItem(check.id)"
               >
-                <img :src="riskIcons[check.status]" alt="" />
+                <img :src="RISK_ICONS[check.status]" alt="" />
                 <span>{{ check.label }}</span>
               </button>
             </h3>
@@ -448,6 +383,10 @@ onBeforeUnmount(() => {
         <div class="fraud-heading d-flex align-items-center">
           <span class="heading-dot" aria-hidden="true"></span>
           <h2 class="mb-0">예방 가능한 전세사기 유형</h2>
+          <img :src="RISK_ICONS[fraudRisk]" :alt="fraudRisk" />
+          <span class="status-pill" :class="`status-pill--${fraudRisk}`">
+            {{ RISK_LABELS[fraudRisk] }}
+          </span>
         </div>
 
         <div class="accordion accordion-flush">
@@ -467,7 +406,7 @@ onBeforeUnmount(() => {
               >
                 <img
                   class="fraud-type-status"
-                  :src="riskIcons[getFraudTypeStatus(fraudType.items)]"
+                  :src="RISK_ICONS[getAggregateRiskStatus(fraudType.items)]"
                   alt=""
                 />
                 <span class="fraud-type-copy">
@@ -490,7 +429,7 @@ onBeforeUnmount(() => {
                   :class="`fraud-item--${item.status}`"
                 >
                   <span>{{ item.label }}</span>
-                  <img :src="riskIcons[item.status]" :alt="item.status" />
+                  <img :src="RISK_ICONS[item.status]" :alt="item.status" />
                 </div>
               </div>
             </div>
@@ -552,6 +491,8 @@ onBeforeUnmount(() => {
   max-width: 25.125rem;
   min-height: 100dvh;
   color: var(--black-900);
+  caret-color: transparent;
+  user-select: none;
 }
 
 /* 주소와 우측 상단 기능 버튼을 배치하는 영역입니다. */
@@ -560,31 +501,56 @@ onBeforeUnmount(() => {
   padding: 1rem 1.25rem 0.75rem;
 }
 
+/* 상세 리포트 API의 로딩 및 오류 상태를 표시하는 영역입니다. */
+.report-feedback {
+  margin: 0 1.25rem 1rem;
+  padding: 0.75rem 1rem;
+  color: var(--blue-900);
+  background: var(--blue-100);
+  border: 0.0625rem solid var(--blue-300);
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.report-feedback--error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--red-500);
+  background: var(--red-100);
+  border-color: var(--red-500);
+}
+
+.report-feedback button {
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  color: inherit;
+  background: white;
+  border: 0.0625rem solid currentColor;
+  border-radius: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
 .address {
   flex: 1;
   min-width: 0;
   gap: 0.375rem;
 }
 
-.address :deep(.base-input) {
+.address h1 {
   min-width: 0;
-  height: auto;
-  padding: 0;
+  margin: 0;
   overflow: hidden;
   color: var(--black-900);
-  background: transparent;
-  border: 0;
-  border-radius: 0;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.address :deep(.base-input:focus) {
-  background: transparent;
-  border: 0;
 }
 
 .address-icon {
@@ -763,48 +729,19 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.deposit-input-wrap,
+.deposit-value,
 .ratio-field strong {
   margin-top: 0.25rem;
-  font-size: 1.125rem;
-  line-height: 1.25;
-}
-
-.deposit-input-wrap {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  color: var(--black-900) !important;
-}
-
-.deposit-input-wrap :deep(.base-input) {
-  width: 100% !important;
-  min-width: 0;
-  height: 1.5rem;
-  padding: 0;
-  color: var(--black-900);
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  font-size: 1.125rem;
-  line-height: 1.25;
-}
-
-.deposit-input-wrap :deep(.base-input:focus) {
-  background: transparent;
-  border: 0;
-}
-
-.deposit-input-wrap b {
-  flex-shrink: 0;
   color: var(--black-900);
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.25;
 }
 
-.ratio-field strong {
-  font-weight: 600;
+.deposit-value {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .price-divider {
@@ -829,7 +766,6 @@ onBeforeUnmount(() => {
 
 /* 예방 가능한 전세사기 유형 아코디언을 담는 영역입니다. */
 .fraud-card {
-  min-height: 25rem;
   margin-top: 1rem;
   overflow: hidden;
   border-color: var(--black-100) !important;
@@ -844,6 +780,7 @@ onBeforeUnmount(() => {
 }
 
 .fraud-heading h2 {
+  flex: 1;
   font-size: 0.875rem;
   font-weight: 700;
 }
@@ -861,6 +798,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
+.fraud-heading img,
 .inspection-heading img {
   width: 1.125rem;
   height: 1.125rem;
@@ -873,13 +811,26 @@ onBeforeUnmount(() => {
   border-radius: 50%;
 }
 
-.danger-pill {
+.status-pill {
   padding: 0.125rem 0.375rem;
-  color: var(--red-500);
-  background: var(--red-100);
   border-radius: 999rem;
   font-size: 0.5625rem;
   font-weight: 700;
+}
+
+.status-pill--safe {
+  color: var(--green-500);
+  background: var(--green-100);
+}
+
+.status-pill--caution {
+  color: var(--yellow-500);
+  background: var(--yellow-100);
+}
+
+.status-pill--danger {
+  color: var(--red-500);
+  background: var(--red-100);
 }
 
 .accordion-item {
@@ -1021,27 +972,13 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 3;
   display: flex;
-  max-height: 40rem;
   flex-direction: column;
   gap: 0.875rem;
   margin: 1rem 0 0;
   padding: 0 0.375rem 0.75rem 0;
-  overflow-y: scroll;
   background: white;
   border-bottom: 0.0625rem dashed var(--black-100);
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--blue-300) transparent;
   list-style: none;
-}
-
-.special-terms-list::-webkit-scrollbar {
-  width: 0.25rem;
-}
-
-.special-terms-list::-webkit-scrollbar-thumb {
-  background: var(--blue-300);
-  border-radius: 999rem;
 }
 
 .special-term {
