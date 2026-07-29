@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { getApiError } from '@/api/utils/error';
 import { useAuthStore } from '@/stores/auth';
@@ -14,6 +15,7 @@ import BaseButton from '@/components/common/BaseButton.vue';
 import AuthIcon from '@/assets/icons/nav/mypage-blue-22.svg';
 
 const authStore = useAuthStore();
+const router = useRouter();
 
 const {
   form,
@@ -25,13 +27,11 @@ const {
 } = useSignupForm();
 
 const errorMessage = ref('');
-const successMessage = ref('');
 
 const handleSignup = async () => {
   startAllFields();
 
   errorMessage.value = '';
-  successMessage.value = '';
 
   if (!isFormValid()) {
     errorMessage.value = '입력값을 다시 확인해 주세요.';
@@ -39,9 +39,8 @@ const handleSignup = async () => {
   }
 
   try {
-    const user = await authStore.signup({ ...form });
-
-    successMessage.value = `${user.nickname}님의 회원가입이 완료되었습니다.`;
+    await authStore.signup({ ...form });
+    await router.replace('/login');
   } catch (error) {
     errorMessage.value = getApiError(error).message;
   }
@@ -70,15 +69,9 @@ const handleSignup = async () => {
         :status="getStatus(field.key)"
         @update:model-value="handleFieldInput(field.key, $event)"
       />
-
-      <p v-if="errorMessage" class="mb-0 text-danger">
+      <p v-if="errorMessage" class="error-message fs-6 mb-0 fw-semibold w-100">
         {{ errorMessage }}
       </p>
-
-      <p v-if="successMessage" class="mb-0 text-success">
-        {{ successMessage }}
-      </p>
-
       <BaseButton type="submit"> 계정 생성 </BaseButton>
     </form>
   </BottomSheetLayout>
@@ -87,5 +80,10 @@ const handleSignup = async () => {
 <style scoped>
 .signup-box {
   padding: 20px;
+}
+
+.error-message {
+  color: var(--red-500);
+  text-align: center;
 }
 </style>
