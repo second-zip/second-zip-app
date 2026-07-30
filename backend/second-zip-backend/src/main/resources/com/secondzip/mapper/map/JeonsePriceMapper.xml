@@ -159,4 +159,19 @@
 
     </select>
 
+    <select
+            id="countSidoJeonsePriceIndicesByMonth"
+            resultType="int">
+
+        SELECT COUNT(*)
+        FROM jeonse_price_indices price
+
+                 INNER JOIN regions region
+                            ON region.region_id = price.region_id
+
+        WHERE price.base_month = #{baseMonth}
+          AND region.region_level = 'SIDO'
+
+    </select>
+
 </mapper>
