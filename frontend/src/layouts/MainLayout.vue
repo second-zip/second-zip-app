@@ -4,8 +4,8 @@ import { RouterView } from 'vue-router';
 </script>
 
 <template>
-  <div class="app-layout min-vh-100">
-    <main class="main-content min-vh-100 bg-white overflow-x-hidden mx-auto">
+  <div class="app-layout">
+    <main class="main-content bg-white overflow-x-hidden mx-auto">
       <RouterView />
     </main>
     <BottomNavigation />
@@ -25,17 +25,18 @@ body,
 <style scoped>
 .app-layout,
 .main-content {
+  width: 100%;
   min-height: 100dvh;
 }
 
 .app-layout {
-  width: 100%;
   background-color: #fff;
 }
 
 .main-content {
-  width: 100%;
+  height: 100dvh;
   padding-bottom: 64px;
+  box-sizing: border-box;
 }
 
 /* 태블릿·데스크톱 */
