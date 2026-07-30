@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 
-import { AUTH_MESSAGE } from '@/constants/authMessage';
+import { AUTH_MESSAGE } from '@/constants/auth/authMessage';
 import {
   isValidNickname,
   isValidEmail,

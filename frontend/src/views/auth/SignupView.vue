@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import { getApiError } from '@/api/utils/error';
 import { useAuthStore } from '@/stores/auth';
 import { useSignupForm } from '@/composables/useSignupForm';
-import { SIGNUP_FIELDS } from '@/constants/signupFields';
+import { SIGNUP_FIELDS } from '@/constants/auth/signupFields';
 
 import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
