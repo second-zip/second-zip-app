@@ -14,7 +14,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'focus', 'blur']);
 
 const handleInput = (event) => {
   emit('update:modelValue', event.target.value);
@@ -28,6 +28,8 @@ const handleInput = (event) => {
     :value="props.modelValue"
     class="base-input form-control w-100 fw-semibold"
     @input="handleInput"
+    @focus="emit('focus', $event)"
+    @blur="emit('blur', $event)"
   />
 </template>
 

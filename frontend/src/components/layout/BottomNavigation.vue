@@ -47,6 +47,7 @@ const menus = [
   {
     label: 'MY',
     to: '/mypage',
+    activePaths: ['/login', '/signup'],
     inactiveIcon: mypageGray,
     activeIcon: mypageBlue,
   },
@@ -55,7 +56,15 @@ const menus = [
 const isMenuActive = (menu, isActive, isExactActive) => {
   if (menu.to === '/report' && route.path.startsWith('/report')) return true;
 
-  return menu.exact ? isExactActive : isActive;
+  if (menu.exact) {
+    return isExactActive;
+  }
+
+  const isAdditionalPathActive = menu.activePaths?.some((path) => {
+    return route.path === path || route.path.startsWith(`${path}/`);
+  });
+
+  return isActive || isAdditionalPathActive;
 };
 </script>
 
