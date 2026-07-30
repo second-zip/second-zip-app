@@ -9,7 +9,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="sheet-layout w-100 min-vh-100 d-flex flex-column">
+  <div class="sheet-layout w-100 h-100 d-flex flex-column">
     <header
       class="w-100 flex-shrink-0 d-flex align-items-center"
       :style="{ minHeight: `${titleRatio}dvh` }"
@@ -25,13 +25,12 @@ defineProps({
 
 <style scoped>
 .sheet-layout {
-  min-height: 100dvh;
+  min-height: 100%;
   background-color: var(--blue-100);
 }
 
 .bottom-sheet {
   min-height: 0;
-  padding-bottom: 64px;
   background-color: white;
   border-radius: 36px 36px 0 0;
   box-shadow: 0 0 32px rgb(17 17 24 / 6%);

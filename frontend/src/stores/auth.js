@@ -6,11 +6,7 @@ import {
   logout as logoutApi,
   signup as signupApi,
 } from '@/api/auth';
-import {
-  getAccessToken,
-  removeAccessToken,
-  setAccessToken,
-} from '@/api/token';
+import { getAccessToken, removeAccessToken, setAccessToken } from '@/api/token';
 import { getMyAccount } from '@/api/user';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -30,7 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // 세진: 로그인 성공 후 토큰과 사용자 정보를 Pinia 상태에 저장한다.
+  // 로그인 성공 후 토큰과 사용자 정보를 Pinia 상태에 저장
   const login = async (loginData) => {
     loading.value = true;
 
@@ -52,7 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // 세진: 저장된 토큰으로 로그인 사용자의 최신 회원정보를 불러온다.
+  // 저장된 토큰으로 로그인 사용자의 최신 회원정보 불러오기
   const fetchMyPage = async () => {
     myPageLoading.value = true;
 
@@ -65,14 +61,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // 세진: 브라우저 토큰과 Pinia의 인증 정보를 함께 초기화한다.
+  // 브라우저 토큰과 Pinia의 인증 정보를 함께 초기화
   const clearAuth = () => {
     removeAccessToken();
     accessToken.value = null;
     myPage.value = null;
   };
 
-  // 세진: 서버 로그아웃 후 클라이언트 인증 정보를 제거한다.
+  // 서버 로그아웃 후 클라이언트 인증 정보를 제거
   const logout = async () => {
     loading.value = true;
 

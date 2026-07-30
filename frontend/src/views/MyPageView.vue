@@ -17,7 +17,7 @@ onMounted(async () => {
   }
 });
 
-// 세진: 로그아웃 후 로그인 화면으로 이동한다.
+// 로그아웃 후 로그인 화면으로 이동
 const handleLogout = async () => {
   errorMessage.value = '';
 
@@ -43,7 +43,11 @@ const handleLogout = async () => {
       <p>닉네임: {{ authStore.myPage.nickname }}</p>
       <p>캐릭터: {{ authStore.myPage.characterType }}</p>
 
-      <button class="btn btn-outline-secondary" :disabled="authStore.loading" @click="handleLogout">
+      <button
+        class="btn btn-outline-secondary"
+        :disabled="authStore.loading"
+        @click="handleLogout"
+      >
         로그아웃
       </button>
     </section>
