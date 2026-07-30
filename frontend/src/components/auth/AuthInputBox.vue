@@ -66,7 +66,7 @@ const statusIcon = computed(() => {
       @focus="emit('focus', $event)"
       @blur="emit('blur', $event)"
     />
-    <div class="d-flex gap-1">
+    <div v-if="message" class="d-flex gap-1">
       <img
         :src="statusIcon"
         class="auth-input__status-icon flex-shrink-0"
