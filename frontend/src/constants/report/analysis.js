@@ -6,8 +6,8 @@ import catCaution from '@/assets/images/cat-caution.png';
 import catDanger from '@/assets/images/cat-danger.png';
 import catSafe from '@/assets/images/cat-safe.png';
 import catDefault from '@/assets/images/cat.png';
-import manCaution from '@/assets/images/main-caution.png';
-import manDanger from '@/assets/images/main-danger.png';
+import manCaution from '@/assets/images/man-caution.png';
+import manDanger from '@/assets/images/man-danger.png';
 import manSafe from '@/assets/images/man-safe.png';
 import manDefault from '@/assets/images/man.png';
 import womanCaution from '@/assets/images/woman-caution.png';
@@ -174,3 +174,11 @@ export const SECRETARY_MESSAGES = {
     danger: '여긴 피하시길 권장합니다앗',
   },
 };
+
+export const MARKET_PRICE = 180_722_892;
+
+export const ANALYSIS_REQUEST = Object.freeze({
+  roadAddress: '서울특별시 강남구 테헤란로 1',
+  detailAddress: '101동 101호',
+  deposit: 100_000_000,
+});

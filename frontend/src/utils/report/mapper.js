@@ -1,5 +1,5 @@
 // 백엔드 분석 리포트 응답을 공통 결과 화면 데이터로 변환하는 파일입니다.
-import { formatKoreanDeposit } from './analysisLogic.js';
+import { formatKoreanDeposit } from './analysis.js';
 
 const RISK_LEVELS = {
   SAFE: 'safe',

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/views/report/analysisLogic.test.js src/views/report/analysisMapper.test.js",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -18,8 +18,11 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.4",
+    "@vue/test-utils": "^2.4.11",
+    "jsdom": "^29.1.1",
     "vite": "^7.3.1",
-    "vite-plugin-vue-devtools": "^8.0.7"
+    "vite-plugin-vue-devtools": "^8.0.7",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

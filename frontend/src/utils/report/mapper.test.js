@@ -1,6 +1,6 @@
-// 분석 API·미리보기 응답이 화면 데이터로 정확히 변환되는지 검증하는 파일입니다.
+// 분석 API·미리보기 응답이 화면 데이터로 정확히 변환되는지 검증
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 
 import {
   mapCheckResults,
@@ -9,12 +9,12 @@ import {
   mapSecretary,
   mapSpecialTerms,
   toUiRisk,
-} from './analysisMapper.js';
+} from './mapper.js';
 import {
   ANALYSIS_PREVIEW_REPORTS,
   MOCK_REPORT_DETAIL,
   SCENARIO_B_REPORT_DETAIL,
-} from './analysisMock.js';
+} from '../../constants/report/mock.js';
 
 test('백엔드 위험도 enum을 화면 상태값으로 변환한다', () => {
   assert.equal(toUiRisk('SAFE'), 'safe');
@@ -148,9 +148,7 @@ test('null 근거값은 하이픈으로, null 판정은 주의로 변환한다',
 });
 
 test('AI 특약 응답과 F의 6000자 설명을 화면 구조로 변환한다', () => {
-  const terms = mapSpecialTerms(
-    ANALYSIS_PREVIEW_REPORTS.f.aiSpecialTerms,
-  );
+  const terms = mapSpecialTerms(ANALYSIS_PREVIEW_REPORTS.f.aiSpecialTerms);
 
   assert.equal(terms.length, 1);
   assert.equal(terms[0].description.length, 6000);

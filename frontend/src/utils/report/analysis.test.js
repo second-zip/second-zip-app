@@ -1,13 +1,15 @@
-// 분석 화면의 금액·비서·위험도 집계 로직을 검증하는 자동 테스트 파일입니다.
+// 분석 화면의 금액·비서·위험도 집계 로직을 검증하는 자동 테스트 파일
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 
 import {
-  formatKoreanDeposit,
   aggregateRiskStatuses,
+  formatKoreanDeposit,
   getAggregateRiskStatus,
+  getRentRatio,
   selectSecretaryValue,
-} from './analysisLogic.js';
+  toNumericAmount,
+} from './analysis.js';
 
 test('보증금을 억·만원 단위 한글 금액으로 표시한다', () => {
   assert.equal(formatKoreanDeposit(150_000_000), '1억 5000만원');
@@ -65,4 +67,18 @@ test('전체 판정도 위험 우선 및 주의 3개 이상 규칙을 적용한�
     'danger',
   );
   assert.equal(aggregateRiskStatuses(['safe', 'danger']), 'danger');
+});
+
+test('금액 문자열에서 숫자만 추출한다', () => {
+  assert.equal(toNumericAmount('100,000,000원'), 100_000_000);
+  assert.equal(toNumericAmount('보증금 50,000,000원'), 50_000_000);
+  assert.equal(toNumericAmount('-'), 0);
+  assert.equal(toNumericAmount(undefined), 0);
+});
+
+test('보증금과 시세로 전세가율을 계산한다', () => {
+  assert.equal(getRentRatio(100_000_000, 180_722_892), 55);
+  assert.equal(getRentRatio(80_000_000, 100_000_000), 80);
+  assert.equal(getRentRatio(0, 100_000_000), 0);
+  assert.equal(getRentRatio(1_000_000_000, 1), 999);
 });

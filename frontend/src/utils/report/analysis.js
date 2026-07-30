@@ -1,4 +1,4 @@
-// 보증금 표시, 비서 선택, 위험도 집계 등 분석 화면의 순수 로직을 제공하는 파일입니다.
+// 보증금 표시, 비서 선택, 위험도 집계 등 분석 화면의 순수 로직을 제공
 export const selectSecretaryValue = (
   values,
   secretary,
@@ -25,3 +25,9 @@ export const aggregateRiskStatuses = (statuses = [], dangerThreshold = 3) => {
 
 export const getAggregateRiskStatus = (items = []) =>
   aggregateRiskStatuses(items.map(({ status }) => status));
+
+export const toNumericAmount = (value) =>
+  Number(String(value).replace(/\D/g, '')) || 0;
+
+export const getRentRatio = (deposit, marketPrice) =>
+  Math.min(Math.round((deposit / marketPrice) * 100), 999);
