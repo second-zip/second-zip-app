@@ -1,6 +1,9 @@
 package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.report.dto.*;
+import com.secondzip.backend.report.dto.external.BuildingData;
+import com.secondzip.backend.report.dto.external.PriceData;
+import com.secondzip.backend.report.dto.external.RegistryData;
 import com.secondzip.backend.report.enums.*;
 import org.springframework.stereotype.Service;
 
@@ -44,7 +47,7 @@ public class RiskEvaluationService {
         checkResults.add(new CheckResult(
                 CheckType.ILLEGAL_BUILDING,
                 judgeIllegalBuilding(building),
-                Map.of("isIllegalBuilding", safeBoolean(building != null ? building.getIsIllegalBuilding() : null))
+                illegalBuildingEvidence(building)
         ));
 
         checkResults.add(new CheckResult(
@@ -88,6 +91,33 @@ public class RiskEvaluationService {
         RiskLevel overall = RiskLevel.worstOf(topLevels);
 
         return new RiskEvaluationResult(overall, checkResults, fraudTypeResults);
+    }
+
+    private Map<String, Object> illegalBuildingEvidence(BuildingData building) {
+        Map<String, Object> evidence = new java.util.LinkedHashMap<>();
+        Boolean illegal = building != null
+                ? building.getIsIllegalBuilding()
+                : null;
+        Boolean explicitVerified = building != null
+                ? building.getIllegalBuildingVerified()
+                : null;
+        boolean verified = explicitVerified != null
+                ? explicitVerified
+                : illegal != null;
+
+        evidence.put("isIllegalBuilding", illegal);
+        evidence.put("isIllegalBuildingVerified", verified);
+        evidence.put(
+                "source",
+                building != null ? building.getIllegalBuildingSource() : null
+        );
+        evidence.put(
+                "violationByDocument",
+                building != null && building.getViolationByDocument() != null
+                        ? building.getViolationByDocument()
+                        : Map.of()
+        );
+        return evidence;
     }
 
     // =========================================================
