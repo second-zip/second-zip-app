@@ -5,6 +5,8 @@ import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
 import javax.servlet.Filter;
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.ServletRegistration;
 
 public class WebConfig
         extends AbstractAnnotationConfigDispatcherServletInitializer {
@@ -16,7 +18,9 @@ public class WebConfig
                 PropertyPlaceholderConfig.class,
                 RedisConfig.class,
                 SecurityConfig.class,
-                FlywayConfig.class
+                FlywayConfig.class,
+                ClovaSpeechConfig.class,
+                ObjectStorageConfig.class
         };
     }
 
@@ -41,5 +45,20 @@ public class WebConfig
                 new CharacterEncodingFilter("UTF-8", true);
 
         return new Filter[]{filter};
+    }
+
+    @Override
+    protected void customizeRegistration(
+            ServletRegistration.Dynamic registration
+    ) {
+        MultipartConfigElement multipartConfig =
+                new MultipartConfigElement(
+                        "",
+                        200L * 1024 * 1024,
+                        200L * 1024 * 1024,
+                        0
+                );
+
+        registration.setMultipartConfig(multipartConfig);
     }
 }
