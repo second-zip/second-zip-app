@@ -24,4 +24,48 @@
                    #{status}
                )
     </insert>
+    <select id="findByIdAndAccountId"
+            resultType="com.secondzip.backend.record.domain.RecordingSessionVO">
+        SELECT
+            recording_session_id AS recordingSessionId,
+            account_id AS accountId,
+            original_file_name AS originalFileName,
+            storage_object_key AS storageObjectKey,
+            content_type AS contentType,
+            file_size AS fileSize,
+            status,
+            full_transcript AS fullTranscript,
+            failure_reason AS failureReason
+        FROM recording_sessions
+        WHERE recording_session_id = #{recordingSessionId}
+          AND account_id = #{accountId}
+    </select>
+    <update id="updateStatus">
+        UPDATE recording_sessions
+        SET status = #{status},
+            started_at = CASE
+                             WHEN #{status} = 'TRANSCRIBING' THEN CURRENT_TIMESTAMP
+                             ELSE started_at
+                END,
+            modified_at = CURRENT_TIMESTAMP
+        WHERE recording_session_id = #{recordingSessionId}
+    </update>
+
+    <update id="updateTranscript">
+        UPDATE recording_sessions
+        SET full_transcript = #{fullTranscript},
+            status = #{status},
+            ended_at = CURRENT_TIMESTAMP,
+            modified_at = CURRENT_TIMESTAMP
+        WHERE recording_session_id = #{recordingSessionId}
+    </update>
+
+    <update id="markFailed">
+        UPDATE recording_sessions
+        SET status = 'FAILED',
+            failure_reason = #{failureReason},
+            ended_at = CURRENT_TIMESTAMP,
+            modified_at = CURRENT_TIMESTAMP
+        WHERE recording_session_id = #{recordingSessionId}
+    </update>
 </mapper>

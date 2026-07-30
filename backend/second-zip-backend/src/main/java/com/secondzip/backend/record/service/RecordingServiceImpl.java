@@ -20,6 +20,8 @@ public class RecordingServiceImpl implements RecordingService {
 
     private final RecordingStorage recordingStorage;
     private final RecordingSessionMapper recordingSessionMapper;
+    private final RecordingTranscriptionService recordingTranscriptionService;
+
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
     private static final Set<String> ALLOWED_EXTENSIONS =
@@ -32,6 +34,13 @@ public class RecordingServiceImpl implements RecordingService {
             Long accountId,
             MultipartFile file
     ) {
+        if (accountId == null) {
+            throw new BusinessException(
+                    ErrorCode.UNAUTHORIZED,
+                    "로그인이 필요합니다."
+            );
+        }
+
         validateRecordingFile(file);
 
         String objectKey = recordingStorage.upload(accountId, file);
@@ -59,6 +68,44 @@ public class RecordingServiceImpl implements RecordingService {
         }
 
         return RecordingSessionResponseDTO.from(session);
+    }
+
+    @Override
+    public void startTranscription(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+        if (accountId == null) {
+            throw new BusinessException(
+                    ErrorCode.UNAUTHORIZED,
+                    "로그인이 필요합니다."
+            );
+        }
+
+        RecordingSessionVO session =
+                recordingSessionMapper.findByIdAndAccountId(
+                        recordingSessionId,
+                        accountId
+                );
+
+        if (session == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        if (session.getStatus() != RecordingStatus.UPLOADED) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "업로드가 완료된 녹음만 음성 인식을 시작할 수 있습니다."
+            );
+        }
+
+        recordingTranscriptionService.transcribe(
+                session.getRecordingSessionId(),
+                session.getStorageObjectKey()
+        );
     }
 
     private void validateRecordingFile(MultipartFile file) {

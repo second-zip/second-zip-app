@@ -10,20 +10,24 @@ public interface RecordingSessionMapper {
 
     int insert(RecordingSessionVO session);
 
-    RecordingSessionVO findById(
-            @Param("recordingSessionId") Long recordingSessionId
+    RecordingSessionVO findByIdAndAccountId(
+            @Param("recordingSessionId") Long recordingSessionId,
+            @Param("accountId") Long accountId
     );
+
     int updateStatus(
             @Param("recordingSessionId") Long recordingSessionId,
             @Param("status") RecordingStatus status
     );
-    int markFailed(
-            @Param("recordingSessionId") Long recordingSessionId,
-            @Param("failureReason") String failureReason
-    );
+
     int updateTranscript(
             @Param("recordingSessionId") Long recordingSessionId,
             @Param("fullTranscript") String fullTranscript,
             @Param("status") RecordingStatus status
+    );
+
+    int markFailed(
+            @Param("recordingSessionId") Long recordingSessionId,
+            @Param("failureReason") String failureReason
     );
 }

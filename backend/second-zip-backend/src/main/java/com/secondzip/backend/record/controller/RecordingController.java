@@ -9,10 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -35,5 +32,22 @@ public class RecordingController {
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
                 .body(response);
+    }
+
+    @ApiOperation(
+            value = "녹음 파일 음성 인식 시작",
+            notes = "업로드된 녹음 파일을 CLOVA Speech로 분석합니다."
+    )
+    @PostMapping("/{recordingSessionId}/transcribe")
+    public ResponseEntity<Void> transcribe(
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @PathVariable Long recordingSessionId
+    ) {
+        recordingService.startTranscription(
+                accountId,
+                recordingSessionId
+        );
+
+        return ResponseEntity.accepted().build();
     }
 }
