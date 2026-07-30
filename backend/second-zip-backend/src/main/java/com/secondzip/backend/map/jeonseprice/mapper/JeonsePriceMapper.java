@@ -19,4 +19,5 @@ public interface JeonsePriceMapper {
             @Param("baseMonth") LocalDate baseMonth,
             @Param("parentRegionCode") String parentRegionCode
     );
+    int countSidoJeonsePriceIndicesByMonth(@Param("baseMonth") LocalDate baseMonth);
 }

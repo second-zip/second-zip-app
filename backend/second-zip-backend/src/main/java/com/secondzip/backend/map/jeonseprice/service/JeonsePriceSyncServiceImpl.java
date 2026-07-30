@@ -168,6 +168,17 @@ public class JeonsePriceSyncServiceImpl
         return totalSavedCount;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isAlreadySynced(YearMonth targetMonth) {
+        int savedSidoCount = jeonsePriceMapper
+                        .countSidoJeonsePriceIndicesByMonth(
+                                targetMonth.atDay(1)
+                        );
+
+        return savedSidoCount == RebSidoRegion.values().length;
+    }
+
     /**
      * 우리 DB의 시군구 목록을
      * "부모 시도 코드|시군구 이름" 형태로 변환
