@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
@@ -23,6 +24,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.sql.DataSource;
 
 @Configuration
+@EnableScheduling
 @Log4j2
 @MapperScan(
         basePackages = "com.secondzip.backend",
