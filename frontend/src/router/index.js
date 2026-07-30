@@ -44,7 +44,7 @@ router.beforeEach((to) => {
   const authStore = useAuthStore();
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // 세진: 인증이 필요한 화면은 로그인 후 원래 경로로 돌아가도록 처리한다.
+    // 인증이 필요한 화면은 로그인 후 원래 경로로 돌아가도록 처리
     return {
       name: 'login',
       query: {
