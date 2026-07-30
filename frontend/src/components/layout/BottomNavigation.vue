@@ -54,6 +54,8 @@ const menus = [
 ];
 
 const isMenuActive = (menu, isActive, isExactActive) => {
+  if (menu.to === '/report' && route.path.startsWith('/report')) return true;
+
   if (menu.exact) {
     return isExactActive;
   }
