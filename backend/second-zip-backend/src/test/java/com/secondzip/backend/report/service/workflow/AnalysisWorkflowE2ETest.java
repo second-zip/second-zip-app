@@ -232,16 +232,19 @@ class AnalysisWorkflowE2ETest {
         }
 
         @Override
-        public boolean tryAcquireExecutionLock(String requestId) {
+        public String tryAcquireExecutionLock(String requestId) {
             if (locked) {
-                return false;
+                return null;
             }
             locked = true;
-            return true;
+            return "test-lock-token";
         }
 
         @Override
-        public void releaseExecutionLock(String requestId) {
+        public void releaseExecutionLock(
+                String requestId,
+                String lockToken
+        ) {
             locked = false;
         }
     }
@@ -476,6 +479,7 @@ class AnalysisWorkflowE2ETest {
         @Override
         public ReportDetailResponse save(
                 Long accountId,
+                String requestId,
                 String roadAddress,
                 String detailAddress,
                 Long deposit,
@@ -491,6 +495,14 @@ class AnalysisWorkflowE2ETest {
         private FixedQueryService(ReportDetailResponse response) {
             super(null, new ObjectMapper());
             this.response = response;
+        }
+
+        @Override
+        public Long findReportIdByRequestId(
+                Long accountId,
+                String requestId
+        ) {
+            return null;
         }
 
         @Override

@@ -152,5 +152,17 @@ class AnalysisPreparationServiceTest {
         public void delete(String requestId) {
             states.remove(requestId);
         }
+
+        @Override
+        public String tryAcquireExecutionLock(String requestId) {
+            return "test-lock-token";
+        }
+
+        @Override
+        public void releaseExecutionLock(
+                String requestId,
+                String lockToken
+        ) {
+        }
     }
 }

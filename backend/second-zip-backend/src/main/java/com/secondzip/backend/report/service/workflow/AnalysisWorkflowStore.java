@@ -9,10 +9,7 @@ public interface AnalysisWorkflowStore {
 
     void delete(String requestId);
 
-    default boolean tryAcquireExecutionLock(String requestId) {
-        return true;
-    }
+    String tryAcquireExecutionLock(String requestId);
 
-    default void releaseExecutionLock(String requestId) {
-    }
+    void releaseExecutionLock(String requestId, String lockToken);
 }

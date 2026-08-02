@@ -33,16 +33,11 @@ public class AnalysisExecutionService {
             Long accountId,
             String requestId
     ) {
-        if (!workflowStore.tryAcquireExecutionLock(requestId)) {
-            throw new BusinessException(
-                    ErrorCode.RESOURCE_CONFLICT,
-                    "같은 분석 요청이 이미 처리 중입니다."
-            );
-        }
+        String lockToken = acquireLock(requestId);
         try {
             return executeLocked(accountId, requestId);
         } finally {
-            workflowStore.releaseExecutionLock(requestId);
+            workflowStore.releaseExecutionLock(requestId, lockToken);
         }
     }
 
@@ -50,12 +45,7 @@ public class AnalysisExecutionService {
             Long accountId,
             String requestId
     ) {
-        if (!workflowStore.tryAcquireExecutionLock(requestId)) {
-            throw new BusinessException(
-                    ErrorCode.RESOURCE_CONFLICT,
-                    "같은 분석 요청이 이미 처리 중입니다."
-            );
-        }
+        String lockToken = acquireLock(requestId);
         try {
             AnalysisWorkflowState state =
                     workflowStore.findOwned(requestId, accountId);
@@ -80,7 +70,7 @@ public class AnalysisExecutionService {
             workflowStore.save(state);
             return executeLocked(accountId, requestId);
         } finally {
-            workflowStore.releaseExecutionLock(requestId);
+            workflowStore.releaseExecutionLock(requestId, lockToken);
         }
     }
 
@@ -90,6 +80,21 @@ public class AnalysisExecutionService {
     ) {
         AnalysisWorkflowState state =
                 workflowStore.findOwned(requestId, accountId);
+        Long existingReportId = reportQueryService.findReportIdByRequestId(
+                accountId,
+                requestId
+        );
+        if (existingReportId != null) {
+            state.setReportId(existingReportId);
+            state.setStatus(AnalysisRequestStatus.COMPLETED);
+            state.setFailureMessage(null);
+            state.setBuildingRegisterData(new java.util.LinkedHashMap<>());
+            workflowStore.save(state);
+            return reportQueryService.getReportDetail(
+                    accountId,
+                    existingReportId
+            );
+        }
         if (state.getStatus() == AnalysisRequestStatus.COMPLETED
                 && state.getReportId() != null) {
             return reportQueryService.getReportDetail(
@@ -157,6 +162,7 @@ public class AnalysisExecutionService {
                     );
             ReportDetailResponse report = reportPersistenceService.save(
                     accountId,
+                    requestId,
                     state.getRoadAddress(),
                     state.getDetailAddress(),
                     state.getDeposit(),
@@ -193,5 +199,16 @@ public class AnalysisExecutionService {
         return price != null
                 && (price.getRecentSalePrice() != null
                 || price.getOfficialPrice() != null);
+    }
+
+    private String acquireLock(String requestId) {
+        String lockToken = workflowStore.tryAcquireExecutionLock(requestId);
+        if (lockToken == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_CONFLICT,
+                    "같은 분석 요청이 이미 처리 중입니다."
+            );
+        }
+        return lockToken;
     }
 }

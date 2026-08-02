@@ -44,3 +44,6 @@ bin/
 
 # 로컬 전용 목업(테스트) 데이터
 **/*-test.sql
+
+# 로컬 전용 분석 워크플로 API 명세
+/analysis-workflow-api-spec.md

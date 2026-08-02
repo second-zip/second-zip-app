@@ -36,6 +36,10 @@ public interface ReportMapper {
     int countReportsByAccountId(@Param("accountId") Long accountId);
 
     // 리포트 상세 조회
+    Long findReportIdByRequestId(
+            @Param("accountId") Long accountId,
+            @Param("requestId") String requestId
+    );
     Long findAccountIdByReportId(@Param("reportId") Long reportId);
     Map<String, Object> findReportById(@Param("reportId") Long reportId);
     List<Map<String, Object>> findCheckResultsByReportId(@Param("reportId") Long reportId);

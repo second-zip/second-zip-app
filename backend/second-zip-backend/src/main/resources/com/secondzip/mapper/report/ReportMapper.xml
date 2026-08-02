@@ -4,9 +4,9 @@
 
     <insert id="insertReportMap" useGeneratedKeys="true" keyProperty="reportId" keyColumn="analysis_report_id" parameterType="map">
         INSERT INTO analysis_reports
-        (account_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level)
+        (account_id, request_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level)
         VALUES
-            (#{accountId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result})
+            (#{accountId}, #{requestId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result})
     </insert>
 
     <insert id="insertCheckResult" parameterType="map">
@@ -46,6 +46,13 @@
     </select>
 
     <!--  리포트 상세 조회용  -->
+    <select id="findReportIdByRequestId" resultType="java.lang.Long">
+        SELECT analysis_report_id
+        FROM analysis_reports
+        WHERE account_id = #{accountId}
+          AND request_id = #{requestId}
+    </select>
+
     <select id="findCheckResultsByReportId" resultType="map">
         SELECT
             check_type AS checkType,
