@@ -6,6 +6,7 @@ import lombok.Getter;
 
 import java.util.List;
 
+// 위험 분석 결과
 @Getter
 @AllArgsConstructor
 public class RiskEvaluationResult {
