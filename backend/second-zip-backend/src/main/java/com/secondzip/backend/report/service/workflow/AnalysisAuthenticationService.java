@@ -26,22 +26,27 @@ public class AnalysisAuthenticationService {
             String requestId,
             StartAnalysisAuthRequest authRequest
     ) {
-        AnalysisWorkflowState state = workflowStore.findOwned(requestId, accountId);
-        if (state.getStatus() != AnalysisRequestStatus.AUTH_REQUIRED) {
-            throw new BusinessException(
-                    ErrorCode.RESOURCE_CONFLICT,
-                    "현재 상태에서는 인증을 시작할 수 없습니다."
-            );
+        String lockToken = acquireLock(requestId);
+        try {
+            AnalysisWorkflowState state = workflowStore.findOwned(requestId, accountId);
+            if (state.getStatus() != AnalysisRequestStatus.AUTH_REQUIRED) {
+                throw new BusinessException(
+                        ErrorCode.RESOURCE_CONFLICT,
+                        "현재 상태에서는 인증을 시작할 수 없습니다."
+                );
+            }
+
+            BuildingRegisterDocumentType documentType = nextDocument(state);
+            BuildingRegisterGatewayResult result =
+                    buildingRegisterGateway.start(state, documentType, authRequest);
+
+            applyResult(state, documentType, result);
+            workflowStore.save(state);
+
+            return toResponse(state, result.getCaptchaImage());
+        } finally {
+            workflowStore.releaseExecutionLock(requestId, lockToken);
         }
-
-        BuildingRegisterDocumentType documentType = nextDocument(state);
-        BuildingRegisterGatewayResult result =
-                buildingRegisterGateway.start(state, documentType, authRequest);
-
-        applyResult(state, documentType, result);
-        workflowStore.save(state);
-
-        return toResponse(state, result.getCaptchaImage());
     }
 
     public AnalysisAuthResponse continueAuthentication(
@@ -49,21 +54,26 @@ public class AnalysisAuthenticationService {
             String requestId,
             ContinueAnalysisAuthRequest request
     ) {
-        AnalysisWorkflowState state = workflowStore.findOwned(requestId, accountId);
-        if (state.getStatus() != AnalysisRequestStatus.AUTH_PENDING
-                && state.getStatus() != AnalysisRequestStatus.SELECTION_REQUIRED) {
-            throw new BusinessException(
-                    ErrorCode.RESOURCE_CONFLICT,
-                    "현재 상태에서는 추가인증을 진행할 수 없습니다."
-            );
-        }
+        String lockToken = acquireLock(requestId);
+        try {
+            AnalysisWorkflowState state = workflowStore.findOwned(requestId, accountId);
+            if (state.getStatus() != AnalysisRequestStatus.AUTH_PENDING
+                    && state.getStatus() != AnalysisRequestStatus.SELECTION_REQUIRED) {
+                throw new BusinessException(
+                        ErrorCode.RESOURCE_CONFLICT,
+                        "현재 상태에서는 추가인증을 진행할 수 없습니다."
+                );
+            }
 
-        BuildingRegisterDocumentType documentType = state.getPendingDocument();
-        BuildingRegisterGatewayResult result =
-                buildingRegisterGateway.continueRequest(state, request);
-        applyResult(state, documentType, result);
-        workflowStore.save(state);
-        return toResponse(state, result.getCaptchaImage());
+            BuildingRegisterDocumentType documentType = state.getPendingDocument();
+            BuildingRegisterGatewayResult result =
+                    buildingRegisterGateway.continueRequest(state, request);
+            applyResult(state, documentType, result);
+            workflowStore.save(state);
+            return toResponse(state, result.getCaptchaImage());
+        } finally {
+            workflowStore.releaseExecutionLock(requestId, lockToken);
+        }
     }
 
     private void applyResult(
@@ -127,5 +137,16 @@ public class AnalysisAuthenticationService {
                 captchaImage,
                 state.getExpiresAtEpochMillis()
         );
+    }
+
+    private String acquireLock(String requestId) {
+        String lockToken = workflowStore.tryAcquireExecutionLock(requestId);
+        if (lockToken == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_CONFLICT,
+                    "같은 분석 요청이 이미 처리 중입니다."
+            );
+        }
+        return lockToken;
     }
 }

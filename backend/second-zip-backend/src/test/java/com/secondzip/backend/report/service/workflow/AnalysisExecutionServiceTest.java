@@ -91,6 +91,30 @@ class AnalysisExecutionServiceTest {
     }
 
     @Test
+    void reusesReportCreatedForSameRequestId() {
+        InMemoryStore store = new InMemoryStore(state());
+        ReportDetailResponse existing = report(99L);
+        FixedPersistenceService persistence =
+                new FixedPersistenceService(report(100L));
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                new FixedRegistryClient(),
+                new FixedPriceClient(),
+                new CapturingRiskService(),
+                persistence,
+                new FixedQueryService(existing, 99L)
+        );
+
+        ReportDetailResponse result = service.execute(1L, "request-id");
+
+        assertEquals(99L, result.getAnalysisReportId());
+        assertEquals(99L, store.state.getReportId());
+        assertEquals(AnalysisRequestStatus.COMPLETED, store.state.getStatus());
+        assertEquals(false, persistence.called);
+    }
+
+    @Test
     void failsWhenRegistryDataIsUnavailable() {
         InMemoryStore store = new InMemoryStore(state());
         RegistryDataProvider unavailableRegistry =
@@ -247,6 +271,18 @@ class AnalysisExecutionServiceTest {
         @Override
         public void delete(String requestId) {
         }
+
+        @Override
+        public String tryAcquireExecutionLock(String requestId) {
+            return "test-lock-token";
+        }
+
+        @Override
+        public void releaseExecutionLock(
+                String requestId,
+                String lockToken
+        ) {
+        }
     }
 
     private static class FixedRegistryClient extends RegistryClient {
@@ -312,6 +348,7 @@ class AnalysisExecutionServiceTest {
     private static class FixedPersistenceService
             extends ReportPersistenceService {
         private final ReportDetailResponse response;
+        private boolean called;
 
         private FixedPersistenceService(ReportDetailResponse response) {
             super(null, new ObjectMapper(), null);
@@ -321,21 +358,40 @@ class AnalysisExecutionServiceTest {
         @Override
         public ReportDetailResponse save(
                 Long accountId,
+                String requestId,
                 String roadAddress,
                 String detailAddress,
                 Long deposit,
                 RiskEvaluationResult evalResult
         ) {
+            called = true;
             return response;
         }
     }
 
     private static class FixedQueryService extends ReportQueryService {
         private final ReportDetailResponse response;
+        private final Long existingReportId;
 
         private FixedQueryService(ReportDetailResponse response) {
+            this(response, null);
+        }
+
+        private FixedQueryService(
+                ReportDetailResponse response,
+                Long existingReportId
+        ) {
             super(null, new ObjectMapper());
             this.response = response;
+            this.existingReportId = existingReportId;
+        }
+
+        @Override
+        public Long findReportIdByRequestId(
+                Long accountId,
+                String requestId
+        ) {
+            return existingReportId;
         }
 
         @Override

@@ -40,6 +40,10 @@ public class ReportQueryService {
 
     // === 리포트 상세 조회 ===
 
+    public Long findReportIdByRequestId(Long accountId, String requestId) {
+        return reportMapper.findReportIdByRequestId(accountId, requestId);
+    }
+
     // 리포트 소유자 확인
     public void validateOwnership(Long accountId, Long reportId) {
         Long ownerId = reportMapper.findAccountIdByReportId(reportId);

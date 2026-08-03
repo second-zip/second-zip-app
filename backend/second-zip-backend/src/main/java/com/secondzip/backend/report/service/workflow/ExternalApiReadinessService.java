@@ -1,6 +1,7 @@
 package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.report.dto.response.ExternalApiReadinessResponse;
+import com.secondzip.backend.report.service.external.ExternalApiModeResolver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -77,6 +78,11 @@ public class ExternalApiReadinessService {
         }
         if (!isDemoUrl(buildingRegisterBaseUrl)) {
             warnings.add("건축물대장 URL이 CODEF 데모 서버가 아닙니다.");
+        }
+
+        String mode = ExternalApiModeResolver.resolve();
+        if (!"real".equals(mode)) {
+            warnings.add("EXTERNAL_API_MODE가 'real'이 아닙니다 (현재: " + mode + ").");
         }
 
         return new ExternalApiReadinessResponse(
