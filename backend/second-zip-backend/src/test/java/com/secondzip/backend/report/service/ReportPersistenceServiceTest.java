@@ -13,6 +13,7 @@ import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.mapper.ReportMapper;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -127,6 +128,14 @@ class ReportPersistenceServiceTest {
 
         @Override
         public void deleteReport(Long reportId) {
+        }
+
+        @Override
+        public void updateFavorite(
+                Long reportId,
+                boolean favorite,
+                LocalDateTime favoritedAt
+        ) {
         }
     }
 }

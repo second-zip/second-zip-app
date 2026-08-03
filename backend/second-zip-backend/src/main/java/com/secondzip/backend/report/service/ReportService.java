@@ -13,4 +13,14 @@ public class ReportService {
     public void deleteReport(Long accountId, Long reportId) {
         reportPersistenceService.deleteReport(accountId, reportId);
     }
+
+    // 즐겨찾기 추가
+    public void addFavorite(Long accountId, Long reportId) {
+        reportPersistenceService.addFavorite(accountId, reportId);
+    }
+
+    // 즐겨찾기 해제
+    public void removeFavorite(Long accountId, Long reportId) {
+        reportPersistenceService.removeFavorite(accountId, reportId);
+    }
 }
