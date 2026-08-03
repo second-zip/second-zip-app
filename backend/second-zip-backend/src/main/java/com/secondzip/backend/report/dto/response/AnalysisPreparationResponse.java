@@ -1,5 +1,7 @@
 package com.secondzip.backend.report.dto.response;
 
+import com.secondzip.backend.report.dto.AnalysisSelectionOption;
+import com.secondzip.backend.report.enums.AnalysisNextAction;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
 import lombok.AllArgsConstructor;
@@ -19,4 +21,7 @@ public class AnalysisPreparationResponse {
     private final long expiresAtEpochMillis;
     private final Long reportId;
     private final String failureMessage;
+    private final BuildingRegisterDocumentType pendingDocument;   // 추가
+    private final AnalysisNextAction nextAction;                  // 추가
+    private final List<AnalysisSelectionOption> selectionOptions; // 추가
 }
