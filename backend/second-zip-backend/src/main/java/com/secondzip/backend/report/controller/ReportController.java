@@ -163,6 +163,30 @@ public class ReportController {
 
     }
 
+    @PostMapping("/{analysisReportId}/favorite")
+    @ApiOperation(value = "리포트 즐겨찾기 추가", notes = "분석 보고서를 즐겨찾기에 추가합니다.")
+    public ResponseEntity<Void> addFavorite(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = authenticatedAccountId(authentication);
+        reportService.addFavorite(accountId, analysisReportId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{analysisReportId}/favorite")
+    @ApiOperation(value = "리포트 즐겨찾기 해제", notes = "분석 보고서의 즐겨찾기를 해제합니다.")
+    public ResponseEntity<Void> removeFavorite(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = authenticatedAccountId(authentication);
+        reportService.removeFavorite(accountId, analysisReportId);
+        return ResponseEntity.noContent().build();
+    }
+
     private Long authenticatedAccountId(Authentication authentication) {
         if (authentication == null
                 || !authentication.isAuthenticated()
