@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import java.util.List;
 
+// 사기 유형
 @Getter
 @AllArgsConstructor
 public class FraudTypeResult {
