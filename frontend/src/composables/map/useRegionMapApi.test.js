@@ -4,11 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getFraudDamages, getJeonsePriceChanges } from '@/api/map';
 import { JEONSE_PRICE_MONTH } from '@/constants/map/regionMap';
+import { logger } from '@/utils/logger';
 import { useRegionMapApi } from './useRegionMapApi';
 
 vi.mock('@/api/map', () => ({
   getFraudDamages: vi.fn(),
   getJeonsePriceChanges: vi.fn(),
+}));
+vi.mock('@/utils/logger', () => ({
+  logger: { error: vi.fn() },
 }));
 
 const createState = (level = 'sido', sidoCode = '') => ({
@@ -142,7 +146,8 @@ describe('useRegionMapApi', () => {
   });
 
   it('탭별 데이터와 오류 상태를 서로 독립적으로 관리한다', async () => {
-    getFraudDamages.mockRejectedValueOnce(new Error('failure'));
+    const error = new Error('failure');
+    getFraudDamages.mockRejectedValueOnce(error);
     const dataType = ref('fraud-damage');
     const api = useRegionMapApi(createState(), dataType);
     await flushPromises();
@@ -151,6 +156,11 @@ describe('useRegionMapApi', () => {
       '지역 데이터를 불러오지 못했습니다.',
     );
     expect(api.currentDataMap.value.size).toBe(0);
+    expect(logger.error).toHaveBeenCalledWith(
+      'region-map.load-metric',
+      error,
+      { key: 'SIDO', dataType: 'fraud-damage' },
+    );
 
     dataType.value = 'price-index';
     await nextTick();

@@ -3,6 +3,7 @@ import { reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import MainDataTabs from '@/components/main/MainDataTabs.vue';
+import { logger } from '@/utils/logger';
 import MainPageView from './MainPageView.vue';
 
 const mocks = vi.hoisted(() => ({
@@ -15,6 +16,9 @@ vi.mock('@/stores/auth', () => ({
 }));
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: mocks.push }),
+}));
+vi.mock('@/utils/logger', () => ({
+  logger: { error: vi.fn() },
 }));
 
 const SecretaryGuideStub = {
@@ -137,14 +141,16 @@ describe('MainPageView', () => {
   });
 
   it('회원정보 조회 실패 시 CAT fallback을 유지한다', async () => {
+    const error = new Error('failure');
     mocks.authStore.isAuthenticated = true;
-    mocks.authStore.fetchMyPage.mockRejectedValue(new Error('failure'));
+    mocks.authStore.fetchMyPage.mockRejectedValue(error);
     const wrapper = mountView();
     await flushPromises();
 
     expect(wrapper.getComponent(SecretaryGuideStub).props('characterType')).toBe(
       'CAT',
     );
+    expect(logger.error).toHaveBeenCalledWith('main.fetch-user', error);
   });
 
   it('분석 및 캐릭터 변경 버튼을 요청 경로로 이동시킨다', async () => {

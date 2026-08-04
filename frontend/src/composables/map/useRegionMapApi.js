@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { getFraudDamages, getJeonsePriceChanges } from '@/api/map';
 import { JEONSE_PRICE_MONTH } from '@/constants/map/regionMap';
 import { createRegionDataMap } from '@/utils/map/regionData';
+import { logger } from '@/utils/logger';
 
 export const useRegionMapApi = (state, dataType) => {
   const fraudCache = ref(new Map());
@@ -44,7 +45,11 @@ export const useRegionMapApi = (state, dataType) => {
         throw new Error('지역 데이터 응답 형식이 올바르지 않습니다.');
       }
       setCollectionValue(cache, key, response.regions);
-    } catch {
+    } catch (error) {
+      logger.error('region-map.load-metric', error, {
+        key,
+        dataType: dataType.value,
+      });
       setCollectionValue(errors, key, '지역 데이터를 불러오지 못했습니다.');
     } finally {
       setPending(pending, key, false);

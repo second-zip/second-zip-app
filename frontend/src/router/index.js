@@ -44,7 +44,6 @@ const routes = [
         name: 'dictionary-move-in',
         component: () => import('@/views/dictionary/DictionaryGuideView.vue'),
         meta: { guideType: 'moveIn' },
->>>>>>> develop
       },
       {
         path: 'mypage',

@@ -9,6 +9,7 @@ import KoreaRegionMap from '@/components/main/map/KoreaRegionMap.vue';
 import ReportButton from '@/components/main/ReportButton.vue';
 import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
 import { useAuthStore } from '@/stores/auth';
+import { logger } from '@/utils/logger';
 
 const SECRETARY_MESSAGES = {
   'fraud-damage': {
@@ -48,7 +49,8 @@ onMounted(async () => {
 
   try {
     await authStore.fetchMyPage();
-  } catch {
+  } catch (error) {
+    logger.error('main.fetch-user', error);
     // 회원정보 조회에 실패한 동안에는 기본 CAT 캐릭터를 사용한다.
   } finally {
     isUserLoaded.value = true;

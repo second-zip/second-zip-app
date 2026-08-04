@@ -24,6 +24,8 @@ export default defineConfig({
         'src/stores/auth.js',
         'src/utils/authValidator.js',
         'src/composables/useSignupForm.js',
+        'src/composables/useDictionaryCharacter.js',
+        'src/utils/logger.js',
         'src/components/auth/AuthInputBox.vue',
         'src/views/auth/LoginView.vue',
         'src/views/auth/SignupView.vue',
