@@ -51,17 +51,19 @@ export const useRegionMapApi = (state, dataType) => {
     }
   };
   const loadCurrentLevel = () => {
-    if (state.currentLevel.value === 'district') return;
     const params = getParams();
     if (!params) return;
     const key = queryKey.value;
-    loadMetric({
-      cache: fraudCache,
-      errors: fraudErrors,
-      pending: fraudPending,
-      key,
-      request: () => getFraudDamages(params),
-    });
+    if (dataType.value === 'fraud-damage') {
+      loadMetric({
+        cache: fraudCache,
+        errors: fraudErrors,
+        pending: fraudPending,
+        key,
+        request: () => getFraudDamages(params),
+      });
+      return;
+    }
     loadMetric({
       cache: priceCache,
       errors: priceErrors,
@@ -73,7 +75,7 @@ export const useRegionMapApi = (state, dataType) => {
   };
 
   watch(
-    [state.currentLevel, state.selectedSidoRegionCode],
+    [state.currentLevel, state.selectedSidoRegionCode, dataType],
     loadCurrentLevel,
     { immediate: true },
   );

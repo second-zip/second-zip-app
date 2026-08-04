@@ -27,16 +27,13 @@ describe('useRegionMapApi', () => {
     });
   });
 
-  it('최초 진입 시 두 API를 SIDO 조건으로 함께 조회한다', async () => {
+  it('최초 진입 시 기본 피해주택 API만 SIDO 조건으로 조회한다', async () => {
     const dataType = ref('fraud-damage');
     const api = useRegionMapApi(createState(), dataType);
     await flushPromises();
 
     expect(getFraudDamages).toHaveBeenCalledWith({ level: 'SIDO' });
-    expect(getJeonsePriceChanges).toHaveBeenCalledWith({
-      level: 'SIDO',
-      month: JEONSE_PRICE_MONTH,
-    });
+    expect(getJeonsePriceChanges).not.toHaveBeenCalled();
     expect(api.currentDataMap.value.get('41')).toMatchObject({
       damageHouseCount: 10,
     });
@@ -44,7 +41,7 @@ describe('useRegionMapApi', () => {
     expect(api.currentMetricError.value).toBe('');
   });
 
-  it('시도 진입 시 백엔드 시도 코드를 parentRegionCode로 조회한다', async () => {
+  it('시도 진입 시 현재 탭만 백엔드 시도 코드를 사용해 조회한다', async () => {
     const state = createState();
     useRegionMapApi(state, ref('price-index'));
     await flushPromises();
@@ -55,10 +52,7 @@ describe('useRegionMapApi', () => {
     await nextTick();
     await flushPromises();
 
-    expect(getFraudDamages).toHaveBeenCalledWith({
-      level: 'SIGUNGU',
-      parentRegionCode: '41',
-    });
+    expect(getFraudDamages).not.toHaveBeenCalled();
     expect(getJeonsePriceChanges).toHaveBeenCalledWith({
       level: 'SIGUNGU',
       parentRegionCode: '41',
@@ -101,7 +95,50 @@ describe('useRegionMapApi', () => {
     await flushPromises();
 
     expect(getFraudDamages).toHaveBeenCalledTimes(2);
-    expect(getJeonsePriceChanges).toHaveBeenCalledTimes(2);
+    expect(getJeonsePriceChanges).not.toHaveBeenCalled();
+  });
+
+  it('탭 최초 선택 시에만 조회하고 이후에는 metric별 캐시를 재사용한다', async () => {
+    const dataType = ref('fraud-damage');
+    useRegionMapApi(createState(), dataType);
+    await flushPromises();
+    expect(getFraudDamages).toHaveBeenCalledTimes(1);
+    expect(getJeonsePriceChanges).not.toHaveBeenCalled();
+
+    dataType.value = 'price-index';
+    await nextTick();
+    await flushPromises();
+    expect(getJeonsePriceChanges).toHaveBeenCalledTimes(1);
+
+    dataType.value = 'fraud-damage';
+    await nextTick();
+    dataType.value = 'price-index';
+    await nextTick();
+    await flushPromises();
+
+    expect(getFraudDamages).toHaveBeenCalledTimes(1);
+    expect(getJeonsePriceChanges).toHaveBeenCalledTimes(1);
+  });
+
+  it('district에서 처음 선택한 탭은 해당 시도의 SIGUNGU 데이터를 조회한다', async () => {
+    const state = createState('sigungu', '41');
+    const dataType = ref('fraud-damage');
+    useRegionMapApi(state, dataType);
+    await flushPromises();
+    state.currentLevel.value = 'district';
+    await nextTick();
+    vi.clearAllMocks();
+
+    dataType.value = 'price-index';
+    await nextTick();
+    await flushPromises();
+
+    expect(getFraudDamages).not.toHaveBeenCalled();
+    expect(getJeonsePriceChanges).toHaveBeenCalledWith({
+      level: 'SIGUNGU',
+      parentRegionCode: '41',
+      month: JEONSE_PRICE_MONTH,
+    });
   });
 
   it('탭별 데이터와 오류 상태를 서로 독립적으로 관리한다', async () => {
@@ -117,6 +154,7 @@ describe('useRegionMapApi', () => {
 
     dataType.value = 'price-index';
     await nextTick();
+    await flushPromises();
     expect(api.currentMetricError.value).toBe('');
     expect(api.currentDataMap.value.get('41')).toMatchObject({
       changeRate: 0.12,
