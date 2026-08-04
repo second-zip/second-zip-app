@@ -41,11 +41,13 @@ public class RecordingController {
     @PostMapping("/{recordingSessionId}/transcribe")
     public ResponseEntity<Void> transcribe(
             @ApiIgnore @AuthenticationPrincipal Long accountId,
-            @PathVariable Long recordingSessionId
+            @PathVariable Long recordingSessionId,
+            @RequestParam String category
     ) {
         recordingService.startTranscription(
                 accountId,
-                recordingSessionId
+                recordingSessionId,
+                category
         );
 
         return ResponseEntity.accepted().build();

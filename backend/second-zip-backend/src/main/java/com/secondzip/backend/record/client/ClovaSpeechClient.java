@@ -31,6 +31,7 @@ public class ClovaSpeechClient implements SpeechToTextClient {
     @Value("${CLOVA_SPEECH_SECRET_KEY}")
     private String secretKey;
 
+    //objectKey == 음성파일
     @Override
     public String transcribe(String objectKey) {
         RestTemplate restTemplate = new RestTemplate();

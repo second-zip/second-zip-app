@@ -73,7 +73,8 @@ public class RecordingServiceImpl implements RecordingService {
     @Override
     public void startTranscription(
             Long accountId,
-            Long recordingSessionId
+            Long recordingSessionId,
+            String category
     ) {
         if (accountId == null) {
             throw new BusinessException(
@@ -103,8 +104,9 @@ public class RecordingServiceImpl implements RecordingService {
         }
 
         recordingTranscriptionService.transcribe(
-                session.getRecordingSessionId(),
-                session.getStorageObjectKey()
+                recordingSessionId,
+                session.getStorageObjectKey(),
+                category
         );
     }
 

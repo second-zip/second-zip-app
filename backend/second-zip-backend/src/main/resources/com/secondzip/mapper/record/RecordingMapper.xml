@@ -40,6 +40,28 @@
         WHERE recording_session_id = #{recordingSessionId}
           AND account_id = #{accountId}
     </select>
+    <select id="findById"
+            resultType="com.secondzip.backend.record.domain.RecordingSessionVO">
+
+        SELECT
+            recording_session_id AS recordingSessionId,
+            account_id AS accountId,
+            original_file_name AS originalFileName,
+            storage_object_key AS storageObjectKey,
+            content_type AS contentType,
+            file_size AS fileSize,
+            status,
+            full_transcript AS fullTranscript,
+            summary,
+            failure_reason AS failureReason,
+            started_at AS startedAt,
+            ended_at AS endedAt,
+            created_at AS createdAt,
+            modified_at AS modifiedAt
+        FROM recording_sessions
+        WHERE recording_session_id = #{recordingSessionId}
+
+    </select>
     <update id="updateStatus">
         UPDATE recording_sessions
         SET status = #{status},
@@ -59,7 +81,14 @@
             modified_at = CURRENT_TIMESTAMP
         WHERE recording_session_id = #{recordingSessionId}
     </update>
+    <update id="updateSummary">
 
+        UPDATE recording_sessions
+        SET summary = #{summary},
+            modified_at = CURRENT_TIMESTAMP
+        WHERE recording_session_id = #{recordingSessionId}
+
+    </update>
     <update id="markFailed">
         UPDATE recording_sessions
         SET status = 'FAILED',

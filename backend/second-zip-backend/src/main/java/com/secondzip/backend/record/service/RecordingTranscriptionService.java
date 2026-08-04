@@ -12,10 +12,12 @@ public class RecordingTranscriptionService {
 
     private final RecordingSessionMapper recordingSessionMapper;
     private final SpeechToTextClient speechToTextClient;
+    private final ChecklistAnalysisService checklistAnalysisService;
 
     public void transcribe(
             Long recordingSessionId,
-            String storageObjectKey
+            String storageObjectKey,
+            String category
     ) {
         try {
             recordingSessionMapper.updateStatus(
@@ -28,7 +30,11 @@ public class RecordingTranscriptionService {
             recordingSessionMapper.updateTranscript(
                     recordingSessionId,
                     transcript,
-                    RecordingStatus.COMPLETED
+                    RecordingStatus.ANALYZING
+            );
+            checklistAnalysisService.analyze(
+                    recordingSessionId,
+                    category
             );
         } catch (Exception e) {
             recordingSessionMapper.markFailed(

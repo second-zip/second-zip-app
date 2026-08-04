@@ -5,5 +5,5 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface RecordingService {
     RecordingSessionResponseDTO createSession(Long accountId, MultipartFile file);
-    void startTranscription(Long accountId, Long recordingSessionId);
+    void startTranscription(Long accountId, Long recordingSessionId,String category);
 }

@@ -15,6 +15,11 @@ public interface RecordingSessionMapper {
             @Param("accountId") Long accountId
     );
 
+    RecordingSessionVO findById(
+            @Param("recordingSessionId")
+            Long recordingSessionId
+    );
+
     int updateStatus(
             @Param("recordingSessionId") Long recordingSessionId,
             @Param("status") RecordingStatus status
@@ -24,6 +29,14 @@ public interface RecordingSessionMapper {
             @Param("recordingSessionId") Long recordingSessionId,
             @Param("fullTranscript") String fullTranscript,
             @Param("status") RecordingStatus status
+    );
+
+    int updateSummary(
+            @Param("recordingSessionId")
+            Long recordingSessionId,
+
+            @Param("summary")
+            String summary
     );
 
     int markFailed(

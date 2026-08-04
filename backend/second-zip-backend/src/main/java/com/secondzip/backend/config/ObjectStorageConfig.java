@@ -26,8 +26,9 @@ public class ObjectStorageConfig {
 
     @Bean
     public AmazonS3 amazonS3() {
-        BasicAWSCredentials credentials =
-                new BasicAWSCredentials(accessKey, secretKey);
+
+        //AWS 서비스 접근 권한(인증) 객체
+        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
 
         return AmazonS3ClientBuilder.standard()
                 .withEndpointConfiguration(
@@ -39,7 +40,7 @@ public class ObjectStorageConfig {
                 .withCredentials(
                         new AWSStaticCredentialsProvider(credentials)
                 )
-                .withPathStyleAccessEnabled(true)
+                .withPathStyleAccessEnabled(true) //버킷 주소를 경로 방식으로 사용하게 설정
                 .build();
     }
 }
