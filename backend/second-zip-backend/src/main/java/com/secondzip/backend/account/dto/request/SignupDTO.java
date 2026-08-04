@@ -47,6 +47,11 @@ public class SignupDTO {
     @NotNull(message = "캐릭터 유형은 필수입니다.")
     private CharacterType characterType;
 
+    @ApiModelProperty(
+            value = "약관 동의 목록",
+            required = true,
+            example = "[{\"termId\":1,\"agreed\":true},{\"termId\":2,\"agreed\":true}]"
+    )
     @NotEmpty
     @Valid
     private List<TermConsentRequestDTO> termConsents;
