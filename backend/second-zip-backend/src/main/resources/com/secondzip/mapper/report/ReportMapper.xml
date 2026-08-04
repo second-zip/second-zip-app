@@ -95,6 +95,45 @@
         WHERE report_fraud_type_id = #{fraudTypeId}
     </select>
 
+    <!-- 특약 교체 중 동일 리포트 동시 수정 방지 -->
+    <select id="lockReportById" resultType="java.lang.Long">
+        SELECT analysis_report_id
+        FROM analysis_reports
+        WHERE analysis_report_id = #{reportId}
+            FOR UPDATE
+    </select>
+
+    <!-- AI 특약 조회 -->
+    <select id="findSpecialTermsByReportId" resultType="map">
+        SELECT
+            ai_generate_message_id AS aiGenerateMessageId,
+            title,
+            content
+        FROM ai_generate_messages
+        WHERE analysis_report_id = #{reportId}
+        ORDER BY ai_generate_message_id ASC
+    </select>
+
+    <!-- AI 특약 저장 -->
+    <insert id="insertSpecialTerm">
+        INSERT INTO ai_generate_messages (
+            analysis_report_id,
+            title,
+            content
+        )
+        VALUES (
+                   #{reportId},
+                   #{title},
+                   #{content}
+               )
+    </insert>
+
+    <!-- AI 특약 전체 삭제 -->
+    <delete id="deleteSpecialTermsByReportId">
+        DELETE FROM ai_generate_messages
+        WHERE analysis_report_id = #{reportId}
+    </delete>
+
     <delete id="deleteReport">
         DELETE FROM analysis_reports WHERE analysis_report_id = #{reportId}
     </delete>

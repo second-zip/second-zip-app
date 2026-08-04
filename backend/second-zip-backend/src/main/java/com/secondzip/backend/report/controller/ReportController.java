@@ -21,8 +21,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
+import com.secondzip.backend.report.dto.response.SpecialTermView;
+import com.secondzip.backend.report.dto.response.SpecialTermsResponse;
+import com.secondzip.backend.report.service.SpecialTermService;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Api(tags="분석 보고서 API", description = "분석 보고서 생성 기능을 제공합니다.")
 @RestController
@@ -36,6 +40,7 @@ public class ReportController {
     private final AnalysisAuthenticationService analysisAuthenticationService;
     private final AnalysisExecutionService analysisExecutionService;
     private final ExternalApiReadinessService externalApiReadinessService;
+    private final SpecialTermService specialTermService;
 
     @PostMapping("/requests")
     @ApiOperation(
@@ -163,29 +168,61 @@ public class ReportController {
 
     }
 
+    // AI 추천 특약 생성 및 재생성
+    @PostMapping("/{analysisReportId}/special-terms")
+    @ApiOperation(
+            value = "AI 추천 특약 생성 및 재생성",
+            notes = "리포트 분석 결과를 기반으로 AI 추천 특약을 생성합니다. "
+                    + "기존 특약이 있으면 새 특약으로 교체합니다."
+    )
+    public ResponseEntity<SpecialTermsResponse> generateSpecialTerms(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = authenticatedAccountId(authentication);
+
+        List<SpecialTermView> specialTerms = specialTermService.generateAndSave(accountId, analysisReportId);
+
+        return ResponseEntity.ok(new SpecialTermsResponse(specialTerms));
+    }
+
+    // 리포트 즐겨찾기 추가
     @PostMapping("/{analysisReportId}/favorite")
-    @ApiOperation(value = "리포트 즐겨찾기 추가", notes = "분석 보고서를 즐겨찾기에 추가합니다.")
+    @ApiOperation(
+            value = "리포트 즐겨찾기 추가",
+            notes = "분석 보고서를 즐겨찾기에 추가합니다."
+    )
     public ResponseEntity<Void> addFavorite(
             @ApiParam(value = "리포트 ID", required = true)
             @PathVariable Long analysisReportId,
             @ApiIgnore Authentication authentication
     ) {
         Long accountId = authenticatedAccountId(authentication);
+
         reportService.addFavorite(accountId, analysisReportId);
+
         return ResponseEntity.noContent().build();
     }
 
+    // 리포트 즐겨찾기 해제
     @DeleteMapping("/{analysisReportId}/favorite")
-    @ApiOperation(value = "리포트 즐겨찾기 해제", notes = "분석 보고서의 즐겨찾기를 해제합니다.")
+    @ApiOperation(
+            value = "리포트 즐겨찾기 해제",
+            notes = "분석 보고서의 즐겨찾기를 해제합니다."
+    )
     public ResponseEntity<Void> removeFavorite(
             @ApiParam(value = "리포트 ID", required = true)
             @PathVariable Long analysisReportId,
             @ApiIgnore Authentication authentication
     ) {
         Long accountId = authenticatedAccountId(authentication);
+
         reportService.removeFavorite(accountId, analysisReportId);
+
         return ResponseEntity.noContent().build();
     }
+
 
     private Long authenticatedAccountId(Authentication authentication) {
         if (authentication == null

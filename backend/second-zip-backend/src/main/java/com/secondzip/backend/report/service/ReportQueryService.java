@@ -61,6 +61,9 @@ public class ReportQueryService {
         List<CheckResultView> checkViews = buildCheckResultViews(reportId);
         List<FraudTypeView> fraudViews = buildFraudTypeViews(reportId);
 
+        //특약
+        List<SpecialTermView> specialTermViews = buildSpecialTermViews(reportId);
+
         return new ReportDetailResponse(
                 (Long) report.get("analysisReportId"),
                 (String) report.get("roadAddress"),
@@ -69,7 +72,8 @@ public class ReportQueryService {
                 RiskLevel.valueOf(report.get("result").toString()),
                 (Boolean) report.get("favorite"),
                 checkViews,
-                fraudViews
+                fraudViews,
+                specialTermViews
         );
     }
 
@@ -99,6 +103,24 @@ public class ReportQueryService {
 
             return new FraudTypeView(fraudType, riskLevel, detailViews);
         }).collect(Collectors.toList());
+    }
+
+    // AI 추천 특약 조회
+    private List<SpecialTermView> buildSpecialTermViews(Long reportId) {
+        List<Map<String, Object>> rows =
+                reportMapper.findSpecialTermsByReportId(reportId);
+
+        return java.util.stream.IntStream.range(0, rows.size())
+                .mapToObj(index -> {
+                    Map<String, Object> row = rows.get(index);
+
+                    return new SpecialTermView(
+                            index + 1,
+                            (String) row.get("title"),
+                            (String) row.get("content")
+                    );
+                })
+                .collect(Collectors.toList());
     }
 
     // evidence JSON 파싱

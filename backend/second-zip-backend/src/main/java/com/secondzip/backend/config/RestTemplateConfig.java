@@ -31,4 +31,15 @@ public class RestTemplateConfig {
         requestFactory.setReadTimeout(300000);
         return new RestTemplate(requestFactory);
     }
+
+    @Bean("gptRestTemplate")
+    public RestTemplate gptRestTemplate() {
+        SimpleClientHttpRequestFactory requestFactory =
+                new SimpleClientHttpRequestFactory();
+
+        requestFactory.setConnectTimeout(3000);
+        requestFactory.setReadTimeout(30000);
+
+        return new RestTemplate(requestFactory);
+    }
 }
