@@ -1,5 +1,7 @@
-package com.secondzip.backend.report.dto.response;
+package com.secondzip.backend.report.dto;
 
+import com.secondzip.backend.report.dto.response.CheckResultView;
+import com.secondzip.backend.report.dto.response.FraudTypeView;
 import com.secondzip.backend.report.enums.RiskLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -8,16 +10,12 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor
-public class ReportDetailResponse {
+public class SpecialTermGenerationContext {
+
     private Long analysisReportId;
-    private String roadAddress;
-    private String detailAddress;
     private Long deposit;
-    private RiskLevel result;
-    private Boolean favorite;
+    private RiskLevel overallRiskLevel;
+    private String housingType;
     private List<CheckResultView> checkResults;
     private List<FraudTypeView> fraudTypes;
-
-    // AI 추천 특약
-    private List<SpecialTermView> specialTerms;
 }

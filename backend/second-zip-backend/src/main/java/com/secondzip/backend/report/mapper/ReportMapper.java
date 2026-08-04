@@ -46,6 +46,22 @@ public interface ReportMapper {
     List<Map<String, Object>> findFraudTypesByReportId(@Param("reportId") Long reportId);
     List<DetailResult> findDetailResultsByFraudTypeId(@Param("fraudTypeId") Long fraudTypeId);
 
+    // 특약 저장 처리 중 리포트 잠금
+    Long lockReportById(@Param("reportId") Long reportId);
+
+    // AI 특약 조회
+    List<Map<String, Object>> findSpecialTermsByReportId(@Param("reportId") Long reportId);
+
+    // AI 특약 저장
+    void insertSpecialTerm(
+            @Param("reportId") Long reportId,
+            @Param("title") String title,
+            @Param("content") String content
+    );
+
+    // AI 특약 전체 삭제
+    void deleteSpecialTermsByReportId(@Param("reportId") Long reportId);
+
     // 리포트 삭제
     void deleteReport(@Param("reportId") Long reportId);
 }

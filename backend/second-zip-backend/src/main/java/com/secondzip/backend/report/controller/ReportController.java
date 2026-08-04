@@ -21,8 +21,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
+import com.secondzip.backend.report.dto.response.SpecialTermView;
+import com.secondzip.backend.report.dto.response.SpecialTermsResponse;
+import com.secondzip.backend.report.service.SpecialTermService;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Api(tags="분석 보고서 API", description = "분석 보고서 생성 기능을 제공합니다.")
 @RestController
@@ -36,6 +40,7 @@ public class ReportController {
     private final AnalysisAuthenticationService analysisAuthenticationService;
     private final AnalysisExecutionService analysisExecutionService;
     private final ExternalApiReadinessService externalApiReadinessService;
+    private final SpecialTermService specialTermService;
 
     @PostMapping("/requests")
     @ApiOperation(
@@ -161,6 +166,25 @@ public class ReportController {
         reportService.deleteReport(accountId, analysisReportId);
         return ResponseEntity.noContent().build();
 
+    }
+
+    //AI 추천 특약 생성 및 재생성
+    @PostMapping("/{analysisReportId}/special-terms")
+    @ApiOperation(
+            value = "AI 추천 특약 생성 및 재생성",
+            notes = "리포트 분석 결과를 기반으로 AI 추천 특약을 생성합니다. "
+                    + "기존 특약이 있으면 새 특약으로 교체합니다."
+    )
+    public ResponseEntity<SpecialTermsResponse> generateSpecialTerms(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = authenticatedAccountId(authentication);
+
+        List<SpecialTermView> specialTerms = specialTermService.generateAndSave(accountId, analysisReportId);
+
+        return ResponseEntity.ok(new SpecialTermsResponse(specialTerms));
     }
 
     private Long authenticatedAccountId(Authentication authentication) {
