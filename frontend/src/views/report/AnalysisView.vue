@@ -33,7 +33,7 @@ import { mapReportDetail } from '@/utils/report/mapper';
 
 const route = useRoute();
 const router = useRouter();
-const secretary = ref('woman');
+const secretary = ref('cat');
 const address = ref('서울시 마포구 합정동 123-45');
 const deposit = ref('100000000');
 const isFavorite = ref(false);

@@ -8,6 +8,12 @@ import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore();
 const router = useRouter();
 const errorMessage = ref('');
+const characterSaving = ref(false);
+const characterOptions = [
+  { value: 'WOMAN', label: '여자' },
+  { value: 'MAN', label: '남자' },
+  { value: 'CAT', label: '고양이' },
+];
 
 onMounted(async () => {
   try {
@@ -28,6 +34,23 @@ const handleLogout = async () => {
     errorMessage.value = getApiError(error).message;
   }
 };
+
+const handleCharacterChange = async (characterType) => {
+  if (characterSaving.value || authStore.myPage?.characterType === characterType) {
+    return;
+  }
+
+  errorMessage.value = '';
+  characterSaving.value = true;
+
+  try {
+    await authStore.changeCharacter(characterType);
+  } catch (error) {
+    errorMessage.value = getApiError(error).message;
+  } finally {
+    characterSaving.value = false;
+  }
+};
 </script>
 
 <template>
@@ -42,6 +65,26 @@ const handleLogout = async () => {
       <p>이메일: {{ authStore.myPage.email }}</p>
       <p>닉네임: {{ authStore.myPage.nickname }}</p>
       <p>캐릭터: {{ authStore.myPage.characterType }}</p>
+
+      <fieldset class="mb-4" :disabled="characterSaving">
+        <legend class="h6">도감 캐릭터 테스트</legend>
+        <div class="btn-group" role="group" aria-label="캐릭터 선택">
+          <button
+            v-for="option in characterOptions"
+            :key="option.value"
+            type="button"
+            class="btn"
+            :class="authStore.myPage.characterType === option.value
+              ? 'btn-primary'
+              : 'btn-outline-primary'"
+            :aria-pressed="authStore.myPage.characterType === option.value"
+            @click="handleCharacterChange(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+        <p v-if="characterSaving" class="mt-2 mb-0">변경 중...</p>
+      </fieldset>
 
       <button
         class="btn btn-outline-secondary"

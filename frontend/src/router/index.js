@@ -9,6 +9,38 @@ const routes = [
     component: MainLayout,
     children: [
       {
+        path: 'dictionary',
+        name: 'dictionary',
+        component: () => import('@/views/dictionary/DictionaryView.vue'),
+      },
+      {
+        path: 'dictionary/words',
+        name: 'dictionary-words',
+        component: () => import('@/views/dictionary/WordDictionaryView.vue'),
+      },
+      {
+        path: 'dictionary/fraud',
+        name: 'dictionary-fraud',
+        component: () => import('@/views/dictionary/FraudDictionaryView.vue'),
+      },
+      {
+        path: 'dictionary/fraud/:typeId',
+        name: 'dictionary-fraud-video',
+        component: () => import('@/views/dictionary/FraudVideoView.vue'),
+      },
+      {
+        path: 'dictionary/register',
+        name: 'dictionary-register',
+        component: () => import('@/views/dictionary/DictionaryGuideView.vue'),
+        meta: { guideType: 'register' },
+      },
+      {
+        path: 'dictionary/move-in',
+        name: 'dictionary-move-in',
+        component: () => import('@/views/dictionary/DictionaryGuideView.vue'),
+        meta: { guideType: 'moveIn' },
+      },
+      {
         path: 'mypage',
         name: 'mypage',
         component: () => import('@/views/MyPageView.vue'),
@@ -59,17 +91,6 @@ const routes = [
           name: 'analysis',
           params: { analysisReportId: to.params.analysisReportId },
         }),
-      },
-      // 로그인·회원가입에는 하단 네비게이션을 사용하지 않는 경우
-      {
-        path: '/login',
-        name: 'login',
-        component: () => import('@/views/LoginView.vue'),
-      },
-      {
-        path: '/signup',
-        name: 'signup',
-        component: () => import('@/views/auth/SignupView.vue'),
       },
       // 로그인·회원가입에는 하단 네비게이션을 사용하지 않는 경우
       {
