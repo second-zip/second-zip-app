@@ -1,10 +1,9 @@
 import { COMIC_VIEWER_OPTIONS } from "@/constants/dictionary/guides";
 
+// 웹툰 설정과 이미지 항목을 화면에서 사용할 구조로 정규화합니다.
 export const normalizeGuideConfig = (config = {}) => ({
   pageTitle: String(config.pageTitle ?? ""),
   headerTitle: String(config.headerTitle ?? ""),
-  guideImage: config.guideImage ?? "",
-  guideMessage: String(config.guideMessage ?? ""),
   tabs: (config.tabs ?? []).map((tab, index) => ({
     id: String(tab.id ?? `guide-tab-${index + 1}`),
     label: String(tab.label ?? ""),
@@ -18,6 +17,7 @@ export const normalizeGuideConfig = (config = {}) => ({
 
 const contentRatioCache = new Map();
 
+// 픽셀을 아래에서부터 검사해 마지막 콘텐츠 행을 찾습니다.
 export const findLastContentRow = (
   pixels,
   width,
@@ -49,6 +49,7 @@ export const findLastContentRow = (
   return height - 1;
 };
 
+// 이미지별 실제 콘텐츠 높이 비율을 계산하고 재사용합니다.
 export const findImageContentRatio = (image) => {
   if (contentRatioCache.has(image.src)) return contentRatioCache.get(image.src);
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { login as loginApi, logout as logoutApi, signup as signupApi } from '@/api/auth';
 import { getAccessToken, removeAccessToken, setAccessToken } from '@/api/token';
-import { getMyAccount } from '@/api/user';
+import { getMyAccount, updateCharacter } from '@/api/user';
 import { useAuthStore } from './auth';
 
 vi.mock('@/api/auth', () => ({
@@ -18,6 +18,7 @@ vi.mock('@/api/token', () => ({
 }));
 vi.mock('@/api/user', () => ({
   getMyAccount: vi.fn(),
+  updateCharacter: vi.fn(),
 }));
 
 describe('auth store', () => {
@@ -137,5 +138,26 @@ describe('auth store', () => {
     await expect(store.logout()).rejects.toThrow('logout failed');
     expect(removeAccessToken).toHaveBeenCalledOnce();
     expect(store.loading).toBe(false);
+  });
+
+  it('캐릭터를 변경하고 최신 회원 정보를 store에 반영한다', async () => {
+    const account = { accountId: 1, characterType: 'WOMAN' };
+    updateCharacter.mockResolvedValue(account);
+    const store = useAuthStore();
+
+    await expect(store.changeCharacter('WOMAN')).resolves.toEqual(account);
+    expect(updateCharacter).toHaveBeenCalledWith({ characterType: 'WOMAN' });
+    expect(store.myPage).toEqual(account);
+  });
+
+  it('캐릭터 변경에 실패하면 기존 회원 정보를 유지한다', async () => {
+    const store = useAuthStore();
+    const existingAccount = { accountId: 1, characterType: 'CAT' };
+    getMyAccount.mockResolvedValue(existingAccount);
+    updateCharacter.mockRejectedValue(new Error('update failed'));
+    await store.fetchMyPage();
+
+    await expect(store.changeCharacter('MAN')).rejects.toThrow('update failed');
+    expect(store.myPage).toEqual(existingAccount);
   });
 });

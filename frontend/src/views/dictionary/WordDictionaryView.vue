@@ -2,14 +2,13 @@
 import AWordHeader from "@/components/dictionary/words/A_WordHeader.vue";
 import BWordList from "@/components/dictionary/words/B_WordList.vue";
 import FWordGuide from "@/components/dictionary/words/F_WordGuide.vue";
-import {
-  WORD_DICTIONARY_COPY,
-  WORD_DICTIONARY_GUIDE_IMAGE,
-  WORD_DICTIONARY_ITEMS,
-} from "@/constants/dictionary/words";
+import { useDictionaryCharacter } from "@/composables/useDictionaryCharacter";
+import { WORD_DICTIONARY_COPY, WORD_DICTIONARY_ITEMS } from "@/constants/dictionary/words";
 import { normalizeWordItems } from "@/utils/dictionary/words";
 
+// 고정 용어 데이터를 화면 출력 형식으로 정규화합니다.
 const words = normalizeWordItems(WORD_DICTIONARY_ITEMS);
+const { character } = useDictionaryCharacter();
 </script>
 <template>
   <section class="word-page">
@@ -19,8 +18,8 @@ const words = normalizeWordItems(WORD_DICTIONARY_ITEMS);
     />
     <BWordList :items="words" />
     <FWordGuide
-      :image="WORD_DICTIONARY_GUIDE_IMAGE"
-      :message="WORD_DICTIONARY_COPY.guide"
+      :image="character.guideImage"
+      :message="character.messages.words"
     />
   </section>
 </template>

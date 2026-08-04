@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import { normalizeFraudTypes } from './fraud';
+import {
+  normalizeDictionaryCharacter,
+  resolveDictionaryCharacter,
+} from './characters';
 import { findLastContentRow, normalizeGuideConfig } from './guides';
 import { normalizeDictionaryCards } from './main';
 import { normalizeWordItems } from './words';
 
 describe('dictionary data normalization', () => {
+  it('resolves authenticated character settings and defaults guests to cat', () => {
+    expect(resolveDictionaryCharacter(true, 'MAN')).toBe('man');
+    expect(resolveDictionaryCharacter(true, 'woman')).toBe('woman');
+    expect(resolveDictionaryCharacter(false, 'WOMAN')).toBe('cat');
+    expect(normalizeDictionaryCharacter('unknown')).toBe('cat');
+  });
+
   it('normalizes menu cards and falls back to a supported tone', () => {
     const [card] = normalizeDictionaryCards([
       {

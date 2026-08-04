@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 import ADictionaryHeader from "@/components/dictionary/main/A_DictionaryHeader.vue";
@@ -7,18 +8,27 @@ import CFraudCard from "@/components/dictionary/main/C_FraudCard.vue";
 import DRegisterCard from "@/components/dictionary/main/D_RegisterCard.vue";
 import EMoveInCard from "@/components/dictionary/main/E_MoveInCard.vue";
 import FDictionaryGuide from "@/components/dictionary/main/F_DictionaryGuide.vue";
+import { useDictionaryCharacter } from "@/composables/useDictionaryCharacter";
 import {
-  DICTIONARY_GUIDE_IMAGE,
   DICTIONARY_MAIN_CARDS,
   DICTIONARY_MAIN_COPY,
 } from "@/constants/dictionary/main";
 import { normalizeDictionaryCards } from "@/utils/dictionary/main";
 
 const router = useRouter();
-const cards = normalizeDictionaryCards(DICTIONARY_MAIN_CARDS);
+const { character } = useDictionaryCharacter();
 
+// 메뉴 데이터에 현재 비서 캐릭터의 구역별 이미지를 결합합니다.
+const cards = computed(() =>
+  normalizeDictionaryCards(DICTIONARY_MAIN_CARDS).map((card) => ({
+    ...card,
+    image: character.value.cardImages[card.imageKey],
+  })),
+);
+
+// 선택한 메뉴 카드에 설정된 이름으로 하위 도감 화면을 엽니다.
 const selectSection = (sectionId) => {
-  const selectedCard = cards.find((card) => card.id === sectionId);
+  const selectedCard = cards.value.find((card) => card.id === sectionId);
   if (!selectedCard?.routeName) return;
 
   router.push({ name: selectedCard.routeName });
@@ -37,8 +47,8 @@ const selectSection = (sectionId) => {
       <EMoveInCard :card="cards[3]" @select="selectSection" />
     </div>
     <FDictionaryGuide
-      :image="DICTIONARY_GUIDE_IMAGE"
-      :message="DICTIONARY_MAIN_COPY.guide"
+      :image="character.guideImage"
+      :message="character.messages.main"
     />
   </section>
 </template>

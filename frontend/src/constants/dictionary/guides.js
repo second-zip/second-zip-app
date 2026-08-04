@@ -1,16 +1,13 @@
-import catGuide from "@/assets/images/cat-main.png";
 import buildingGuide from "@/assets/images/dictionary/guides/building-2x.png";
 import registryGuide from "@/assets/images/dictionary/guides/registry-2x.png";
 import moveInGuide from "@/assets/images/dictionary/guides/move-in-2x.png";
 import fixedDateGuide from "@/assets/images/dictionary/guides/fixed-date-2x.png";
 
+// 라우트별 웹툰 탭과 원본 이미지 정보를 관리합니다.
 export const DICTIONARY_GUIDE_CONFIGS = Object.freeze({
   register: {
     pageTitle: "전세사기 도감",
     headerTitle: "등기부등본 / 건축물대장",
-    guideImage: catGuide,
-    guideMessage:
-      "Ctrl + 마우스 휠로 필요한 부분을 확대하고\n드래그해서 자세히 볼 수 있다냥!",
     tabs: [
       {
         id: "registry",
@@ -39,9 +36,6 @@ export const DICTIONARY_GUIDE_CONFIGS = Object.freeze({
   moveIn: {
     pageTitle: "전세사기 도감",
     headerTitle: "전입신고 / 확정일자 부여",
-    guideImage: catGuide,
-    guideMessage:
-      "Ctrl + 마우스 휠로 필요한 부분을 확대하고\n드래그해서 자세히 볼 수 있다냥!",
     tabs: [
       {
         id: "move-in-report",
@@ -69,6 +63,7 @@ export const DICTIONARY_GUIDE_CONFIGS = Object.freeze({
   },
 });
 
+// 웹툰 확대 범위와 하단 빈 영역 판정 기준입니다.
 export const COMIC_VIEWER_OPTIONS = Object.freeze({
   minZoom: 1,
   maxZoom: 2.5,

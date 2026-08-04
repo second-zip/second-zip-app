@@ -1,13 +1,10 @@
-import catGuide from "@/assets/images/cat-main.png";
-
+// 전세사기 유형 화면의 고정 제목입니다.
 export const FRAUD_DICTIONARY_COPY = Object.freeze({
   pageTitle: "전세사기 도감",
   sectionTitle: "전세사기 유형",
-  guide: "전세사기 유형이다냥.\n글 읽기 싫으면 쇼폼 영상으로 보라냥~",
 });
 
-export const FRAUD_DICTIONARY_GUIDE_IMAGE = catGuide;
-
+// 유형별 설명, 해시태그, 숏폼 영상 정보를 관리합니다.
 export const FRAUD_TYPES = Object.freeze([
   {
     id: "gap-investment",

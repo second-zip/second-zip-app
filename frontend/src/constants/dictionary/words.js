@@ -1,13 +1,10 @@
-import catGuide from "@/assets/images/cat-main.png";
-
+// 용어 정리 화면의 고정 제목입니다.
 export const WORD_DICTIONARY_COPY = Object.freeze({
   pageTitle: "전세사기 도감",
   sectionTitle: "용어 정리",
-  guide: "용어 정리다냥.\n꼼꼼히 읽어 보라냥! 이것만 알아도 반은 완성!",
 });
 
-export const WORD_DICTIONARY_GUIDE_IMAGE = catGuide;
-
+// 용어와 한 줄 설명으로 구성된 기본 표시 데이터입니다.
 export const WORD_DICTIONARY_ITEMS = Object.freeze([
   ["전세", "목돈을 맡기고 계약 기간 동안 거주하는 방식."],
   ["월세", "매달 임대료를 내며 거주하는 방식."],

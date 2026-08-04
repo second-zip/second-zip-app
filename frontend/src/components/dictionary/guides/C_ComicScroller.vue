@@ -13,6 +13,7 @@ const isDragging = ref(false);
 const imageMeta = reactive({});
 let dragOrigin;
 
+// 커서 위치를 기준으로 허용 범위 안에서 웹툰을 확대·축소합니다.
 const setZoom = async (nextZoom, event) => {
   const previousZoom = zoom.value;
   const clampedZoom = Math.min(
@@ -36,6 +37,7 @@ const setZoom = async (nextZoom, event) => {
   scroller.value.scrollTop = contentY * scaleChange - cursorY;
 };
 
+// Ctrl과 마우스 휠을 함께 사용한 경우에만 확대율을 변경합니다.
 const handleWheel = (event) => {
   if (!event.ctrlKey) return;
   event.preventDefault();
@@ -46,6 +48,7 @@ const handleWheel = (event) => {
   setZoom(Number((zoom.value + direction).toFixed(1)), event);
 };
 
+// 확대된 웹툰은 마우스 왼쪽 버튼 드래그로 이동할 수 있습니다.
 const startDrag = (event) => {
   if (zoom.value <= COMIC_VIEWER_OPTIONS.minZoom || event.button !== 0) return;
   isDragging.value = true;
@@ -72,6 +75,7 @@ const stopDrag = (event) => {
   }
 };
 
+// 이미지 하단의 빈 영역을 제외한 실제 콘텐츠 비율을 적용합니다.
 const trimImage = (event, imageId) => {
   const image = event.currentTarget;
   const ratio = findImageContentRatio(image);
