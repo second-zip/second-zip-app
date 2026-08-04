@@ -10,19 +10,16 @@ import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.FilterType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
+
 
 import javax.sql.DataSource;
 
+@Import(RestTemplateConfig.class)
 @Configuration
 @EnableScheduling
 @Log4j2
@@ -90,17 +87,6 @@ public class RootConfig {
     @Bean
     public DataSourceTransactionManager transactionManager(DataSource dataSource){
         return new DataSourceTransactionManager(dataSource);
-    }
-
-    @Bean
-    public RestTemplate restTemplate() {
-        SimpleClientHttpRequestFactory requestFactory =
-                new SimpleClientHttpRequestFactory();
-
-        requestFactory.setConnectTimeout(10_000);
-        requestFactory.setReadTimeout(60_000);
-
-        return new RestTemplate(requestFactory);
     }
 
     @Bean

@@ -1,13 +1,12 @@
 // 백엔드 분석 리포트 응답을 공통 결과 화면 데이터로 변환하는 파일입니다.
 import { formatKoreanDeposit } from './analysis.js';
+import { normalizeCharacterType } from '../character.js';
 
 const RISK_LEVELS = {
   SAFE: 'safe',
   CAUTION: 'caution',
   DANGER: 'danger',
 };
-const SECRETARY_TYPES = new Set(['cat', 'man', 'woman']);
-
 const CHECK_META = {
   MORTGAGE_EXISTENCE: { id: 'mortgage', label: '근저당' },
   ILLEGAL_BUILDING: { id: 'violation', label: '위반건축물 표시' },
@@ -145,11 +144,8 @@ export const mapSpecialTerms = (terms) =>
     : [];
 
 // 미리보기 또는 사용자 설정의 비서 타입을 화면에서 사용하는 값으로 변환합니다.
-export const mapSecretary = (secretary) => {
-  const normalized = String(secretary).toLowerCase();
-
-  return SECRETARY_TYPES.has(normalized) ? normalized : null;
-};
+export const mapSecretary = (secretary) =>
+  normalizeCharacterType(secretary, null);
 
 // 상세 리포트 응답에서 화면이 바로 사용할 데이터만 추출합니다.
 export const mapReportDetail = (report = {}) => ({

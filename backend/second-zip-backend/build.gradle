@@ -29,6 +29,11 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+processResources {
+    // .env는 로컬에서만 사용하고 클래스패스/WAR에는 복사하지 않는다.
+    exclude '.env'
+}
+
 dependencies {
     // ===== Spring =====
     implementation("org.springframework:spring-context:${springVersion}") {
@@ -127,6 +132,12 @@ dependencies {
 
 war {
     archiveFileName = 'secondzip.war'
+    // 로컬 개발용 비밀정보 파일이 배포 아티팩트에 포함되지 않도록 방지
+    eachFile { details ->
+        if (details.name == '.env') {
+            details.exclude()
+        }
+    }
 }
 
 test {
