@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.secondzip.backend.checklist.mapper.ChecklistItemMapper">
+    <select id="findByCategory"
+            resultType="com.secondzip.backend.record.dto.request.ChecklistItemInput">
+
+        SELECT
+            checklist_item_id AS checklistItemId,
+            contents AS contents,
+            category AS category
+        FROM checklist_items
+        WHERE category = 'COMMON'
+           OR category = #{category}
+        ORDER BY
+            CASE
+                WHEN category = 'COMMON' THEN 0
+                ELSE 1
+                END,
+            checklist_item_id ASC
+
+    </select>
+</mapper>

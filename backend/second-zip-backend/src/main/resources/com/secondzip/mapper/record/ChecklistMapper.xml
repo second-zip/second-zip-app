@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.secondzip.backend.checklist.mapper.ChecklistItemMapper">
+    <select id="findByAccountId"
+            resultType="com.secondzip.backend.record.dto.request.ChecklistItemInput">
+
+        SELECT
+            ci.checklist_item_id AS checklistItemId,
+            ci.contents AS contents,
+            ci.category AS category
+        FROM account_checklist_items aci
+                 INNER JOIN checklist_items ci
+                            ON ci.checklist_item_id = aci.checklist_item_id
+        WHERE aci.account_id = #{accountId}
+        ORDER BY ci.checklist_item_id ASC
+
+    </select>
+</mapper>
