@@ -2,6 +2,8 @@ package com.secondzip.backend.report.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.secondzip.backend.common.exception.BusinessException;
+import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.FraudTypeResult;
 import com.secondzip.backend.report.dto.RiskEvaluationResult;
@@ -12,6 +14,9 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
+import java.util.Collections;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,10 +33,18 @@ public class ReportPersistenceService {
 
     // 작성, 수정, 삭제, 저장 담당
     @Transactional
-    public ReportDetailResponse save(Long accountId, String roadAddress, String detailAddress,
+    public ReportDetailResponse save(Long accountId, String requestId,
+                                     String roadAddress, String detailAddress,
                                      Long deposit, RiskEvaluationResult evalResult) {
         // 보고서 만들고 저장 -> 그 보고서의 ID를 반환
-        Long reportId = insertReport(accountId, roadAddress, detailAddress, deposit, evalResult);
+        Long reportId = insertReport(
+                accountId,
+                requestId,
+                roadAddress,
+                detailAddress,
+                deposit,
+                evalResult
+        );
         // 해당 보고서에 필수 점검 결과 저장
         List<CheckResultView> checkViews = insertCheckResults(reportId, evalResult.getCheckResults());
         // 해당 보고서에 사기 유형과 각 유형의 판단 결과 저장
@@ -39,14 +52,16 @@ public class ReportPersistenceService {
 
         return new ReportDetailResponse(
                 reportId, roadAddress, detailAddress, deposit,
-                evalResult.getOverallRiskLevel(), false, checkViews, fraudViews
+                evalResult.getOverallRiskLevel(), false, checkViews, fraudViews, Collections.emptyList()
         );
     }
 
-    private Long insertReport(Long accountId, String roadAddress, String detailAddress,
+    private Long insertReport(Long accountId, String requestId,
+                              String roadAddress, String detailAddress,
                               Long deposit, RiskEvaluationResult evalResult) {
         Map<String, Object> params = new HashMap<>();
         params.put("accountId", accountId);
+        params.put("requestId", requestId);
         params.put("roadAddress", roadAddress);
         params.put("detailAddress", detailAddress);
         params.put("deposit", deposit);
@@ -93,7 +108,10 @@ public class ReportPersistenceService {
             return objectMapper.writeValueAsString(evidence);
         }catch (JsonProcessingException e){
             log.error("evidence JSON 변환 실패", e);
-            return "{}";
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
+                    "리포트 판단 근거를 저장하지 못했습니다."
+            );
         }
     }
 
@@ -102,5 +120,19 @@ public class ReportPersistenceService {
     public void deleteReport(Long accountId, Long reportId) {
         reportQueryService.validateOwnership(accountId, reportId);
         reportMapper.deleteReport(reportId);
+    }
+
+    // 즐겨찾기 추가
+    @Transactional
+    public void addFavorite(Long accountId, Long reportId) {
+        reportQueryService.validateOwnership(accountId, reportId);
+        reportMapper.updateFavorite(reportId, true, LocalDateTime.now());
+    }
+
+    // 즐겨찾기 해제
+    @Transactional
+    public void removeFavorite(Long accountId, Long reportId) {
+        reportQueryService.validateOwnership(accountId, reportId);
+        reportMapper.updateFavorite(reportId, false, null);
     }
 }

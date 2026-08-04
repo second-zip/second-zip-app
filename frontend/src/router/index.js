@@ -14,6 +14,39 @@ const routes = [
         component: () => import('@/views/MainPageView.vue'),
       },
       {
+        path: 'dictionary',
+        name: 'dictionary',
+        component: () => import('@/views/dictionary/DictionaryView.vue'),
+      },
+      {
+        path: 'dictionary/words',
+        name: 'dictionary-words',
+        component: () => import('@/views/dictionary/WordDictionaryView.vue'),
+      },
+      {
+        path: 'dictionary/fraud',
+        name: 'dictionary-fraud',
+        component: () => import('@/views/dictionary/FraudDictionaryView.vue'),
+      },
+      {
+        path: 'dictionary/fraud/:typeId',
+        name: 'dictionary-fraud-video',
+        component: () => import('@/views/dictionary/FraudVideoView.vue'),
+      },
+      {
+        path: 'dictionary/register',
+        name: 'dictionary-register',
+        component: () => import('@/views/dictionary/DictionaryGuideView.vue'),
+        meta: { guideType: 'register' },
+      },
+      {
+        path: 'dictionary/move-in',
+        name: 'dictionary-move-in',
+        component: () => import('@/views/dictionary/DictionaryGuideView.vue'),
+        meta: { guideType: 'moveIn' },
+>>>>>>> develop
+      },
+      {
         path: 'mypage',
         name: 'mypage',
         component: () => import('@/views/MyPageView.vue'),

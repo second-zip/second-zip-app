@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import java.util.Map;
 
+// 필수점검
 @Getter
 @AllArgsConstructor
 public class CheckResult {

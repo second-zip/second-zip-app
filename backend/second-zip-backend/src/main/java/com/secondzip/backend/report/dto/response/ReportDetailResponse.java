@@ -17,4 +17,7 @@ public class ReportDetailResponse {
     private Boolean favorite;
     private List<CheckResultView> checkResults;
     private List<FraudTypeView> fraudTypes;
+
+    // AI 추천 특약
+    private List<SpecialTermView> specialTerms;
 }
