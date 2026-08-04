@@ -13,10 +13,13 @@ import com.secondzip.backend.report.service.ReportPersistenceService;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
 import com.secondzip.backend.report.service.external.client.*;
+import com.secondzip.backend.report.service.SpecialTermService;
+import lombok.extern.slf4j.Slf4j;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnalysisExecutionService {
@@ -28,6 +31,7 @@ public class AnalysisExecutionService {
     private final RiskEvaluationService riskEvaluationService;
     private final ReportPersistenceService reportPersistenceService;
     private final ReportQueryService reportQueryService;
+    private final SpecialTermService specialTermService;
 
     public ReportDetailResponse execute(
             Long accountId,
@@ -168,17 +172,35 @@ public class AnalysisExecutionService {
                     state.getDeposit(),
                     evaluation
             );
+
+            // 리포트 저장이 완료됐으므로 분석 자체는 성공 처리
             state.setReportId(report.getAnalysisReportId());
             state.setStatus(AnalysisRequestStatus.COMPLETED);
             state.setFailureMessage(null);
             state.setBuildingRegisterData(new java.util.LinkedHashMap<>());
             workflowStore.save(state);
-            return report;
+
+            // AI 특약은 부가 기능이므로 실패해도 분석 성공에는 영향을 주지 않음
+            try {
+                specialTermService.generateAndSave(accountId, report.getAnalysisReportId());
+
+                // 생성된 특약까지 포함해서 다시 조회
+                return reportQueryService.getReportDetail(accountId, report.getAnalysisReportId());
+
+            } catch (RuntimeException e) {
+                log.warn(
+                        "AI 특약 자동 생성 실패. reportId={}, message={}",
+                        report.getAnalysisReportId(),
+                        e.getMessage(),
+                        e
+                );
+
+                // 특약 생성에 실패해도 기존 분석 결과는 정상 반환
+                return report;
+            }
         } catch (RuntimeException e) {
             state.setStatus(AnalysisRequestStatus.FAILED);
-            state.setFailureMessage(
-                    "외부 데이터 조회 또는 리포트 저장 중 오류가 발생했습니다."
-            );
+            state.setFailureMessage("외부 데이터 조회 또는 리포트 저장 중 오류가 발생했습니다.");
             workflowStore.save(state);
             throw e;
         }
