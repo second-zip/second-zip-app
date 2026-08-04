@@ -10,6 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:map": "vitest run src/api/map.test.js src/utils/map src/composables/map src/components/main src/components/common/secretary src/views/MainPageView.test.js",
+    "test:map:coverage": "npm run test:map -- --coverage",
     "map:sync-region-codes": "node scripts/maps/syncRegionCodes.mjs"
   },
   "dependencies": {

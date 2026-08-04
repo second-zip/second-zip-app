@@ -27,6 +27,9 @@ const CHARACTER_TYPES = new Set(['CAT', 'MAN', 'WOMAN']);
 const authStore = useAuthStore();
 const router = useRouter();
 const selectedDataType = ref('fraud-damage');
+const isUserLoaded = ref(
+  !authStore.isAuthenticated || Boolean(authStore.myPage),
+);
 const characterType = computed(() => {
   if (!authStore.isAuthenticated) return 'CAT';
 
@@ -47,6 +50,8 @@ onMounted(async () => {
     await authStore.fetchMyPage();
   } catch {
     // 회원정보 조회에 실패한 동안에는 기본 CAT 캐릭터를 사용한다.
+  } finally {
+    isUserLoaded.value = true;
   }
 });
 </script>
@@ -74,6 +79,7 @@ onMounted(async () => {
     <!-- 하단 남는 영역의 아래쪽 -->
     <div class="main-page__secretary-area d-flex align-items-end">
       <SecretaryGuide
+        v-if="isUserLoaded"
         :text="secretaryMessage"
         :character-type="characterType"
         change-btn
