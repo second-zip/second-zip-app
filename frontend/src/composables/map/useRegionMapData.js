@@ -5,7 +5,8 @@ import sigunguGeoJson from '@/assets/maps/korea-sigungu.json';
 import { REGION_INSET_CONFIG } from '@/constants/map/regionMap';
 import {
   createRegionGroups,
-  getFeatureCode,
+  getFeatureName,
+  getSourceRegionCode,
   isValidRegionGeoJson,
   normalizeRegionFeature,
 } from '@/utils/map/regionMap';
@@ -23,15 +24,15 @@ export const useRegionMapData = (state) => {
   );
   const filteredSigunguFeatures = computed(() =>
     sigunguFeatures.value.filter((feature) =>
-      String(getFeatureCode(feature)).startsWith(
-        String(state.selectedSidoCode.value),
+      getSourceRegionCode(feature).startsWith(
+        String(state.selectedSidoSourceCode.value),
       ),
     ),
   );
   const sigunguGroups = computed(() =>
     createRegionGroups(
       filteredSigunguFeatures.value,
-      state.selectedSidoCode.value,
+      state.selectedSidoSourceCode.value,
     ),
   );
   const currentGeoJson = computed(() => {
@@ -47,8 +48,8 @@ export const useRegionMapData = (state) => {
     if (state.currentLevel.value === 'sigungu') return sigunguGroups.value;
     return currentFeatures.value.map((feature) => ({
       type: 'region',
-      key: `region:${state.currentLevel.value}:${getFeatureCode(feature)}`,
-      name: String(feature.properties.regionName),
+      key: `region:${state.currentLevel.value}:${getSourceRegionCode(feature)}`,
+      name: getFeatureName(feature),
       features: [feature],
     }));
   });
@@ -58,7 +59,7 @@ export const useRegionMapData = (state) => {
       return geoJson;
     }
     const features = geoJson.features.filter(
-      (feature) => !REGION_INSET_CONFIG[String(getFeatureCode(feature))],
+      (feature) => !REGION_INSET_CONFIG[getSourceRegionCode(feature)],
     );
     return { ...geoJson, features: features.length ? features : geoJson.features };
   });
@@ -66,7 +67,7 @@ export const useRegionMapData = (state) => {
     () =>
       state.currentLevel.value === 'sigungu' &&
       currentFeatures.value.some(
-        (feature) => REGION_INSET_CONFIG[String(getFeatureCode(feature))],
+        (feature) => REGION_INSET_CONFIG[getSourceRegionCode(feature)],
       ),
   );
   const errorMessage = computed(() => {

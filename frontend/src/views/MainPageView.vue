@@ -25,7 +25,7 @@ const selectedDataType = ref('fraud-damage');
       <MainDataTabs v-model="selectedDataType" />
 
       <RiskMapCard>
-        <KoreaRegionMap />
+        <KoreaRegionMap :data-type="selectedDataType" />
       </RiskMapCard>
 
       <ReportButton />

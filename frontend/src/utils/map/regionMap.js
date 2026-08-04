@@ -1,6 +1,29 @@
-export const getFeatureCode = (feature) => feature?.properties?.regionCode;
+export const getSourceRegionCode = (feature) =>
+  String(feature?.properties?.sourceRegionCode ?? '');
 
-export const getFeatureName = (feature) => feature?.properties?.regionName;
+export const getRegionCode = (feature) => {
+  const code = feature?.properties?.regionCode;
+  return code == null ? '' : String(code);
+};
+
+export const getRegionCodes = (feature) => {
+  const properties = feature?.properties ?? {};
+  if (Array.isArray(properties.regionCodes)) {
+    return [
+      ...new Set(
+        properties.regionCodes
+          .filter((code) => code != null && code !== '')
+          .map(String),
+      ),
+    ];
+  }
+  return properties.regionCode == null || properties.regionCode === ''
+    ? []
+    : [String(properties.regionCode)];
+};
+
+export const getFeatureName = (feature) =>
+  String(feature?.properties?.name ?? '');
 
 const CITY_DISTRICT_PATTERN = /^(.+?시)\s+(.+?구)$/;
 
@@ -12,10 +35,10 @@ export const parseCityDistrictName = (name) => {
 };
 
 export const isValidRegionFeature = (feature) => {
-  const code = getFeatureCode(feature);
+  const code = getSourceRegionCode(feature);
   const name = getFeatureName(feature);
 
-  return code !== undefined && code !== null && name !== undefined && name !== null;
+  return Boolean(code && name && getRegionCodes(feature).length);
 };
 
 const reverseRing = (ring) => [...ring].reverse();
@@ -59,12 +82,16 @@ export const getGroupGeoJson = (group) => ({
   features: group.features,
 });
 
+export const getGroupRegionCodes = (group) => [
+  ...new Set(group.features.flatMap(getRegionCodes)),
+];
+
 export const createRegionGroups = (features, sidoCode) => {
   const groups = new Map();
 
   features.forEach((feature) => {
     const parsedName = parseCityDistrictName(getFeatureName(feature));
-    const code = String(getFeatureCode(feature));
+    const code = getSourceRegionCode(feature);
     const key = parsedName
       ? `city:${sidoCode}:${parsedName.cityName}`
       : `region:${sidoCode}:${code}`;

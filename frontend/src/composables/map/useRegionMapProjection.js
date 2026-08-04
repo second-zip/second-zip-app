@@ -11,9 +11,9 @@ import {
   SIGUNGU_LABEL_MIN_AREA,
 } from '@/constants/map/regionMap';
 import {
-  getFeatureCode,
   getFeatureName,
   getGroupGeoJson,
+  getSourceRegionCode,
   parseCityDistrictName,
 } from '@/utils/map/regionMap';
 
@@ -35,7 +35,7 @@ export const useRegionMapProjection = (state, data) => {
   const getPath = (feature) => pathGenerator.value?.(feature) || '';
   const getInsetConfig = (feature) =>
     state.currentLevel.value === 'sigungu'
-      ? REGION_INSET_CONFIG[String(getFeatureCode(feature))] || null
+      ? REGION_INSET_CONFIG[getSourceRegionCode(feature)] || null
       : null;
   const getInsetPosition = (feature, inset) => {
     if (!pathGenerator.value || !data.projectionGeoJson.value) return null;
@@ -76,7 +76,7 @@ export const useRegionMapProjection = (state, data) => {
     }
     const center = getGroupCentroid(group);
     if (!center || state.currentLevel.value !== 'sido') return center;
-    const offset = SIDO_LABEL_OFFSET_CONFIG[String(getFeatureCode(feature))];
+    const offset = SIDO_LABEL_OFFSET_CONFIG[getSourceRegionCode(feature)];
     return offset
       ? { x: center.x + offset.dx, y: center.y + offset.dy }
       : center;
@@ -94,7 +94,8 @@ export const useRegionMapProjection = (state, data) => {
     if (state.currentLevel.value !== 'sigungu') return true;
     const feature = group.features[0];
     const selected = group.features.some(
-      (item) => String(getFeatureCode(item)) === state.selectedSigunguCode.value,
+      (item) =>
+        getSourceRegionCode(item) === state.selectedSourceRegionCode.value,
     );
     if (
       getInsetConfig(feature) ||
@@ -110,7 +111,7 @@ export const useRegionMapProjection = (state, data) => {
   };
   const isSelected = (feature) =>
     state.currentLevel.value !== 'sido' &&
-    String(getFeatureCode(feature)) === state.selectedSigunguCode.value;
+    getSourceRegionCode(feature) === state.selectedSourceRegionCode.value;
   const getRegionAriaLabel = (group, feature) =>
     state.currentLevel.value === 'sigungu' && group.type === 'city'
       ? `${group.name} 하위 구 지도 보기`

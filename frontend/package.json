@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "map:sync-region-codes": "node scripts/maps/syncRegionCodes.mjs"
   },
   "dependencies": {
     "axios": "^1.18.1",

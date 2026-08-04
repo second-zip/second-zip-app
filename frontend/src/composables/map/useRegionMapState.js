@@ -1,13 +1,21 @@
 import { computed, ref } from 'vue';
 
 import { SHORT_SIDO_NAMES } from '@/constants/map/regionMap';
-import { getFeatureCode, getFeatureName } from '@/utils/map/regionMap';
+import {
+  getFeatureName,
+  getGroupRegionCodes,
+  getRegionCode,
+  getRegionCodes,
+  getSourceRegionCode,
+} from '@/utils/map/regionMap';
 
 export const useRegionMapState = () => {
   const currentLevel = ref('sido');
-  const selectedSidoCode = ref('');
+  const selectedSidoSourceCode = ref('');
+  const selectedSidoRegionCode = ref('');
   const selectedSidoName = ref('');
-  const selectedSigunguCode = ref('');
+  const selectedSourceRegionCode = ref('');
+  const selectedFeature = ref(null);
   const hoveredRegionCode = ref('');
   const selectedCityName = ref('');
   const selectedCityKey = ref('');
@@ -16,21 +24,33 @@ export const useRegionMapState = () => {
   const selectedSidoDisplayName = computed(
     () => SHORT_SIDO_NAMES[selectedSidoName.value] || selectedSidoName.value,
   );
+  const selectedRegionCodes = computed(() =>
+    selectedFeature.value ? getRegionCodes(selectedFeature.value) : [],
+  );
+  const selectedRegionCode = computed(() =>
+    selectedRegionCodes.value.length === 1 ? selectedRegionCodes.value[0] : '',
+  );
+  const selectedCityRegionCodes = computed(() =>
+    getGroupRegionCodes({ features: selectedCityFeatures.value }),
+  );
 
   const clearCity = () => {
     selectedCityName.value = '';
     selectedCityKey.value = '';
     selectedCityFeatures.value = [];
-    selectedSigunguCode.value = '';
+    selectedSourceRegionCode.value = '';
+    selectedFeature.value = null;
     hoveredRegionCode.value = '';
   };
 
   const handleRegionSelect = (group, feature) => {
-    const code = String(getFeatureCode(feature));
+    const sourceCode = getSourceRegionCode(feature);
     if (currentLevel.value === 'sido') {
-      selectedSidoCode.value = code;
+      selectedSidoSourceCode.value = sourceCode;
+      selectedSidoRegionCode.value = getRegionCode(feature);
       selectedSidoName.value = String(getFeatureName(feature));
-      selectedSigunguCode.value = '';
+      selectedSourceRegionCode.value = '';
+      selectedFeature.value = null;
       hoveredRegionCode.value = '';
       currentLevel.value = 'sigungu';
       return;
@@ -39,12 +59,14 @@ export const useRegionMapState = () => {
       selectedCityName.value = group.name;
       selectedCityKey.value = group.key;
       selectedCityFeatures.value = group.features;
-      selectedSigunguCode.value = '';
+      selectedSourceRegionCode.value = '';
+      selectedFeature.value = null;
       hoveredRegionCode.value = '';
       currentLevel.value = 'district';
       return;
     }
-    selectedSigunguCode.value = code;
+    selectedSourceRegionCode.value = sourceCode;
+    selectedFeature.value = feature;
   };
 
   const returnToSigungu = () => {
@@ -54,17 +76,23 @@ export const useRegionMapState = () => {
 
   const resetToSido = () => {
     currentLevel.value = 'sido';
-    selectedSidoCode.value = '';
+    selectedSidoSourceCode.value = '';
+    selectedSidoRegionCode.value = '';
     selectedSidoName.value = '';
     clearCity();
   };
 
   return {
     currentLevel,
-    selectedSidoCode,
+    selectedSidoSourceCode,
+    selectedSidoRegionCode,
     selectedSidoName,
     selectedSidoDisplayName,
-    selectedSigunguCode,
+    selectedSourceRegionCode,
+    selectedFeature,
+    selectedRegionCode,
+    selectedRegionCodes,
+    selectedCityRegionCodes,
     hoveredRegionCode,
     selectedCityName,
     selectedCityKey,

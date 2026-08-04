@@ -1,11 +1,18 @@
 <script setup>
-import { reactive } from 'vue';
+import { reactive, toRef } from 'vue';
 
 import { MAP_HEIGHT, MAP_WIDTH } from '@/constants/map/regionMap';
 import { useKoreaRegionMap } from '@/composables/map/useKoreaRegionMap';
-import { getFeatureCode } from '@/utils/map/regionMap';
+import { getSourceRegionCode } from '@/utils/map/regionMap';
 
-const map = reactive(useKoreaRegionMap());
+const props = defineProps({
+  dataType: {
+    type: String,
+    required: true,
+  },
+});
+
+const map = reactive(useKoreaRegionMap(toRef(props, 'dataType')));
 </script>
 
 <template>
@@ -39,6 +46,12 @@ const map = reactive(useKoreaRegionMap());
     <p v-if="map.errorMessage" class="region-map__error" role="alert">
       {{ map.errorMessage }}
     </p>
+    <p v-if="map.isCurrentMetricLoading" class="region-map__status">
+      지도 데이터를 불러오는 중입니다.
+    </p>
+    <p v-else-if="map.currentMetricError" class="region-map__status region-map__status--error" role="alert">
+      {{ map.currentMetricError }}
+    </p>
     <svg
       v-else
       class="region-map"
@@ -53,49 +66,59 @@ const map = reactive(useKoreaRegionMap());
       "
     >
       <g>
-        <g v-for="group in map.currentRenderGroups" :key="group.key">
+        <g v-for="item in map.currentRenderItems" :key="item.key">
           <g
-            v-for="feature in group.features"
-            :key="String(getFeatureCode(feature))"
+            v-for="feature in item.features"
+            :key="getSourceRegionCode(feature)"
             :transform="map.getFeatureTransform(feature)"
           >
             <path
               :d="map.getPath(feature)"
               class="region-map__area"
+              :style="{ fill: item.fill }"
               :class="{
-                'region-map__area--selected': map.isSelected(feature),
                 'region-map__area--active':
-                  map.hoveredRegionCode === group.key,
+                  map.hoveredRegionCode === item.key,
               }"
               role="button"
               tabindex="0"
-              :aria-label="map.getRegionAriaLabel(group, feature)"
-              @click="map.handleRegionSelect(group, feature)"
-              @mouseenter="map.setHoveredRegion(group)"
+              :aria-label="map.getRegionAriaLabel(item, feature)"
+              @click="map.handleRegionSelect(item, feature)"
+              @mouseenter="map.setHoveredRegion(item)"
               @mouseleave="map.clearHoveredRegion"
-              @focus="map.setHoveredRegion(group)"
+              @focus="map.setHoveredRegion(item)"
               @blur="map.clearHoveredRegion"
-              @keydown.enter.prevent="map.handleRegionSelect(group, feature)"
-              @keydown.space.prevent="map.handleRegionSelect(group, feature)"
+              @keydown.enter.prevent="map.handleRegionSelect(item, feature)"
+              @keydown.space.prevent="map.handleRegionSelect(item, feature)"
             />
           </g>
         </g>
       </g>
       <g aria-hidden="true">
         <template
-          v-for="group in map.currentRenderGroups"
-          :key="`label-${group.key}`"
+          v-for="item in map.currentRenderItems"
+          :key="`label-${item.key}`"
         >
           <text
-            v-if="
-              map.shouldShowGroupLabel(group) &&
-              map.getGroupLabelPosition(group)
-            "
+            v-if="item.showLabel && item.labelPosition"
             class="region-map__label"
-            :x="map.getGroupLabelPosition(group).x"
-            :y="map.getGroupLabelPosition(group).y"
+            :x="item.labelPosition.x"
+            :y="item.labelPosition.y"
           >
-            {{ map.getGroupDisplayName(group) }}
+            <tspan
+              :x="item.labelPosition.x"
+              dy="-0.25em"
+              class="region-map__label-name"
+            >
+              {{ item.displayName }}
+            </tspan>
+            <tspan
+              :x="item.labelPosition.x"
+              dy="1.2em"
+              class="region-map__label-value"
+            >
+              {{ item.displayValue }}
+            </tspan>
           </text>
         </template>
       </g>
