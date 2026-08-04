@@ -17,6 +17,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  characterType: {
+    type: String,
+    default: 'CAT',
+  },
 });
 
 const emit = defineEmits(['change']);
@@ -73,7 +77,11 @@ onBeforeUnmount(clearCollapseTimer);
     </button>
 
     <div class="secretary-guide__content d-flex align-items-end gap-2 w-100">
-      <SecretaryCharacter :collapsed="!isExpanded" @click="openGuide" />
+      <SecretaryCharacter
+        :character-type="props.characterType"
+        :collapsed="!isExpanded"
+        @click="openGuide"
+      />
 
       <div
         class="secretary-guide__message flex-grow-1"

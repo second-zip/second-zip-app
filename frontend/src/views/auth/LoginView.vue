@@ -26,7 +26,7 @@ const handleLogin = async () => {
   try {
     await authStore.login(form);
 
-    await router.replace('/main');
+    await router.replace('/');
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error);
   }
