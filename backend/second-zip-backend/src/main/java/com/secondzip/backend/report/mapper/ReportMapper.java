@@ -1,13 +1,12 @@
 package com.secondzip.backend.report.mapper;
 
-import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.ReportListItem;
-import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -46,6 +45,7 @@ public interface ReportMapper {
     List<Map<String, Object>> findFraudTypesByReportId(@Param("reportId") Long reportId);
     List<DetailResult> findDetailResultsByFraudTypeId(@Param("fraudTypeId") Long fraudTypeId);
 
+
     // 특약 저장 처리 중 리포트 잠금
     Long lockReportById(@Param("reportId") Long reportId);
 
@@ -61,6 +61,15 @@ public interface ReportMapper {
 
     // AI 특약 전체 삭제
     void deleteSpecialTermsByReportId(@Param("reportId") Long reportId);
+
+
+    // 즐겨찾기
+    void updateFavorite(
+            @Param("reportId") Long reportId,
+            @Param("favorite") boolean favorite,
+            @Param("favoritedAt") LocalDateTime favoritedAt
+    );
+
 
     // 리포트 삭제
     void deleteReport(@Param("reportId") Long reportId);

@@ -105,7 +105,10 @@ public class AnalysisPreparationService {
                         || state.getStatus() == AnalysisRequestStatus.AUTH_PENDING,
                 state.getExpiresAtEpochMillis(),
                 state.getReportId(),
-                state.getFailureMessage()
+                state.getFailureMessage(),
+                state.getPendingDocument(),
+                state.getNextAction(),
+                state.getSelectionOptions()
         );
     }
 }

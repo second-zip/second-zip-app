@@ -14,7 +14,9 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.util.Collections;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,5 +120,19 @@ public class ReportPersistenceService {
     public void deleteReport(Long accountId, Long reportId) {
         reportQueryService.validateOwnership(accountId, reportId);
         reportMapper.deleteReport(reportId);
+    }
+
+    // 즐겨찾기 추가
+    @Transactional
+    public void addFavorite(Long accountId, Long reportId) {
+        reportQueryService.validateOwnership(accountId, reportId);
+        reportMapper.updateFavorite(reportId, true, LocalDateTime.now());
+    }
+
+    // 즐겨찾기 해제
+    @Transactional
+    public void removeFavorite(Long accountId, Long reportId) {
+        reportQueryService.validateOwnership(accountId, reportId);
+        reportMapper.updateFavorite(reportId, false, null);
     }
 }

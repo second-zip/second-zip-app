@@ -138,4 +138,12 @@
         DELETE FROM analysis_reports WHERE analysis_report_id = #{reportId}
     </delete>
 
+    <!--  즐겨찾기  -->
+    <update id="updateFavorite">
+        UPDATE analysis_reports
+        SET favorite = #{favorite},
+            favorited_at = #{favoritedAt}
+        WHERE analysis_report_id = #{reportId}
+    </update>
+
 </mapper>
