@@ -9,6 +9,11 @@ const routes = [
     component: MainLayout,
     children: [
       {
+        path: '',
+        name: 'main',
+        component: () => import('@/views/MainPageView.vue'),
+      },
+      {
         path: 'dictionary',
         name: 'dictionary',
         component: () => import('@/views/dictionary/DictionaryView.vue'),
@@ -92,7 +97,6 @@ const routes = [
           params: { analysisReportId: to.params.analysisReportId },
         }),
       },
-      // 로그인·회원가입에는 하단 네비게이션을 사용하지 않는 경우
       {
         path: '/login',
         name: 'login',
