@@ -30,6 +30,7 @@ import {
   toNumericAmount,
 } from '@/utils/report/analysis';
 import { mapReportDetail } from '@/utils/report/mapper';
+import { logger } from '@/utils/logger';
 
 const route = useRoute();
 const router = useRouter();
@@ -123,7 +124,10 @@ const loadReport = async (analysisReportId) => {
         params: { analysisReportId: report.analysisReportId },
       });
     }
-  } catch {
+  } catch (error) {
+    logger.error('analysis.load-report', error, {
+      analysisReportId,
+    });
     reportLoadError.value = '분석 결과를 불러오지 못했습니다.';
   } finally {
     isReportLoading.value = false;
