@@ -41,5 +41,18 @@
         WHERE recording_session_id = #{recordingSessionId}
 
     </delete>
+    <select id="findByRecordingSessionId"
+            resultType="com.secondzip.backend.record.dto.response.RecordingResultResponseDTO">
 
+        SELECT
+            checklist_item_id AS checklistItemId,
+            status AS status,
+            confidence_score AS confidenceScore,
+            evidence_text AS evidenceText,
+            reason AS reason
+        FROM recording_checklist_results
+        WHERE recording_session_id = #{recordingSessionId}
+        ORDER BY checklist_item_id ASC
+
+    </select>
 </mapper>

@@ -1,6 +1,7 @@
 package com.secondzip.backend.record.controller;
 
 import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
+import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
 import com.secondzip.backend.record.service.RecordingService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -51,5 +52,23 @@ public class RecordingController {
         );
 
         return ResponseEntity.accepted().build();
+    }
+
+    @ApiOperation(
+            value = "녹음 파일 변환 진행 상태",
+            notes = "업로드된 녹음 파일을 CLOVA Speech로 변환 진행 상태를 보여줍니다."
+    )
+    @GetMapping("/{recordingSessionId}")
+    public ResponseEntity<RecordingStatusResponseDTO> getRecordingStatus(
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @PathVariable Long recordingSessionId
+    ) {
+
+        return ResponseEntity.ok(
+                recordingService.getRecordingStatus(
+                        accountId,
+                        recordingSessionId
+                )
+        );
     }
 }

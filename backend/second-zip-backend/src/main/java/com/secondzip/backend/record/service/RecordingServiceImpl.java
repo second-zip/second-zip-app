@@ -4,6 +4,7 @@ import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.record.domain.RecordingSessionVO;
 import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
+import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
 import com.secondzip.backend.record.enums.RecordingStatus;
 import com.secondzip.backend.record.mapper.RecordingSessionMapper;
 import com.secondzip.backend.record.storage.RecordingStorage;
@@ -20,7 +21,7 @@ public class RecordingServiceImpl implements RecordingService {
 
     private final RecordingStorage recordingStorage;
     private final RecordingSessionMapper recordingSessionMapper;
-    private final RecordingTranscriptionService recordingTranscriptionService;
+    private final RecordingAsyncService recordingAsyncService;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
@@ -103,7 +104,7 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        recordingTranscriptionService.transcribe(
+        recordingAsyncService.transcribe(
                 recordingSessionId,
                 session.getStorageObjectKey(),
                 category
@@ -144,5 +145,42 @@ public class RecordingServiceImpl implements RecordingService {
                     "지원하지 않는 녹음 파일 형식입니다."
             );
         }
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public RecordingStatusResponseDTO getRecordingStatus(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        RecordingSessionVO session =
+                recordingSessionMapper.findByIdAndAccountId(
+                        recordingSessionId,
+                        accountId
+                );
+
+        if (session == null) {
+            throw new IllegalStateException(
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        return RecordingStatusResponseDTO.builder()
+                .recordingSessionId(
+                        session.getRecordingSessionId()
+                )
+                .status(
+                        session.getStatus()
+                )
+                .transcript(
+                        session.getFullTranscript()
+                )
+                .summary(
+                        session.getSummary()
+                )
+                .failureReason(
+                        session.getFailureReason()
+                )
+                .build();
     }
 }

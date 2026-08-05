@@ -11,13 +11,24 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RecordingSessionVO {
+
     private Long recordingSessionId;
+
     private Long accountId;
+
     private String originalFileName;
+
     private String storageObjectKey;
+
     private String contentType;
+
     private Long fileSize;
+
     private RecordingStatus status;
+
     private String fullTranscript;
+
+    private String summary;
+
     private String failureReason;
 }

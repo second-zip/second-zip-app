@@ -20,7 +20,8 @@ public class WebConfig
                 SecurityConfig.class,
                 FlywayConfig.class,
                 ClovaSpeechConfig.class,
-                ObjectStorageConfig.class
+                ObjectStorageConfig.class,
+                AsyncConfig.class
         };
     }
 
