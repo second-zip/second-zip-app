@@ -1,10 +1,27 @@
 <script setup>
 import PlusIcon from '@/assets/icons/report/plus-white-14.svg';
 import ReportImage from '@/assets/images/report-banner.png';
+
+defineProps({
+  showButton: {
+    type: Boolean,
+    default: true,
+  },
+  embedded: {
+    type: Boolean,
+    default: false,
+  },
+});
 </script>
 
 <template>
-  <section class="report-create-box position-relative w-100 overflow-hidden">
+  <section
+    class="report-create-box position-relative w-100 overflow-hidden"
+    :class="{
+      'report-create-box--compact': !showButton,
+      'report-create-box--embedded': embedded,
+    }"
+  >
     <div
       class="report-create-box__content position-relative h-100 d-flex flex-column justify-content-center"
     >
@@ -16,13 +33,17 @@ import ReportImage from '@/assets/images/report-banner.png';
         <span>리포트</span>를 만들어 보세요
       </h2>
 
-      <p class="report-create-box__description fw-medium mb-3">
+      <p
+        class="report-create-box__description fw-medium"
+        :class="showButton ? 'mb-3' : 'mb-0'"
+      >
         위험도를 분석하여<br />
         안전한 선택을 도와드려요.
       </p>
 
       <RouterLink
-        to="/reports/create"
+        v-if="showButton"
+        to="/report/create"
         class="report-create-box__button d-flex align-items-center justify-content-center fw-semibold text-decoration-none"
       >
         <img :src="PlusIcon" class="report-create-box__button-icon" alt="" />
@@ -45,6 +66,16 @@ import ReportImage from '@/assets/images/report-banner.png';
   padding: 16px 24px;
   background-color: var(--blue-100);
   border-radius: 24px;
+}
+
+.report-create-box--compact {
+  height: 150px;
+}
+
+.report-create-box--embedded {
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .report-create-box__content {
@@ -79,11 +110,11 @@ import ReportImage from '@/assets/images/report-banner.png';
   width: fit-content;
   height: 34px;
   padding: 0 18px;
-  color: white;
+  gap: 6px;
+  color: #fff;
   font-size: 0.75rem;
   background-color: var(--blue-900);
   border-radius: 14px;
-  gap: 6px;
 }
 
 .report-create-box__button-icon {
@@ -96,7 +127,11 @@ import ReportImage from '@/assets/images/report-banner.png';
   right: 12px;
   width: 100px;
   height: auto;
-  transform: translateY(-50%);
   object-fit: contain;
+  transform: translateY(-50%);
+}
+
+.report-create-box--embedded .report-create-box__image {
+  right: 0;
 }
 </style>

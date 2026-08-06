@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, test } from 'vitest';
 
-import ReportCreateBox from './ReportCreateBox.vue';
+import ReportCreateBox from '../ReportCreateBox.vue';
 
 const RouterLinkStub = {
   name: 'RouterLink',

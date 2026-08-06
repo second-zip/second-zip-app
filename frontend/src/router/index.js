@@ -62,6 +62,11 @@ const routes = [
             component: () => import('@/views/report/ReportListView.vue'),
           },
           {
+            path: 'create',
+            name: 'report-create',
+            component: () => import('@/views/report/ReportCreateView.vue'),
+          },
+          {
             path: 'analysis/preview',
             redirect: {
               name: 'analysis-preview',
