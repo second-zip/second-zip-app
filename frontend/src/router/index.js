@@ -54,35 +54,45 @@ const routes = [
         },
       },
       {
-        path: 'report/analysis/preview',
-        redirect: {
-          name: 'analysis-preview',
-          params: { scenario: 'a' },
-        },
-      },
-      {
-        path: 'report/analysis/preview/:scenario([a-f])',
-        name: 'analysis-preview',
-        component: () => import('@/views/report/AnalysisView.vue'),
-        meta: {
-          analysisPreview: true,
-        },
-      },
-      {
-        path: 'report/analysis',
-        name: 'analysis-create',
-        component: () => import('@/views/report/AnalysisView.vue'),
-        meta: {
-          requiresAuth: true,
-        },
-      },
-      {
-        path: 'report/analysis/:analysisReportId(\\d+)',
-        name: 'analysis',
-        component: () => import('@/views/report/AnalysisView.vue'),
-        meta: {
-          requiresAuth: true,
-        },
+        path: 'report',
+        children: [
+          {
+            path: '',
+            name: 'report-list',
+            component: () => import('@/views/report/ReportListView.vue'),
+          },
+          {
+            path: 'analysis/preview',
+            redirect: {
+              name: 'analysis-preview',
+              params: { scenario: 'a' },
+            },
+          },
+          {
+            path: 'analysis/preview/:scenario([a-f])',
+            name: 'analysis-preview',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              analysisPreview: true,
+            },
+          },
+          {
+            path: 'analysis',
+            name: 'analysis-create',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              requiresAuth: true,
+            },
+          },
+          {
+            path: 'analysis/:analysisReportId(\\d+)',
+            name: 'analysis',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              requiresAuth: true,
+            },
+          },
+        ],
       },
       {
         path: 'analysis',
