@@ -29,7 +29,8 @@ public class WebConfig
     protected Class<?>[] getServletConfigClasses() {
         return new Class<?>[]{
                 ServletConfig.class,
-                com.secondzip.backend.config.SwaggerConfig.class
+                com.secondzip.backend.config.SwaggerConfig.class,
+                RecordingWebSocketConfig.class
         };
     }
 

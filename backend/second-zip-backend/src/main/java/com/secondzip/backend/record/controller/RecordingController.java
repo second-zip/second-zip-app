@@ -1,5 +1,6 @@
 package com.secondzip.backend.record.controller;
 
+import com.secondzip.backend.record.dto.response.RecordingLiveStartResponseDTO;
 import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
 import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
 import com.secondzip.backend.record.service.RecordingService;
@@ -70,5 +71,25 @@ public class RecordingController {
                         recordingSessionId
                 )
         );
+    }
+
+    @ApiOperation(
+            value = "실시간 녹음 시작",
+            notes = "실시간 녹음을 시작합니다."
+    )
+    @PostMapping("/live")
+    public ResponseEntity<RecordingLiveStartResponseDTO>
+    startLiveRecording(
+            @ApiIgnore @AuthenticationPrincipal Long accountId
+    ) {
+
+        RecordingLiveStartResponseDTO response =
+                recordingService.startLiveRecording(
+                        accountId
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 }

@@ -3,6 +3,7 @@ package com.secondzip.backend.record.service;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.dto.response.RecordingLiveStartResponseDTO;
 import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
 import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
 import com.secondzip.backend.record.enums.RecordingStatus;
@@ -181,6 +182,36 @@ public class RecordingServiceImpl implements RecordingService {
                 .failureReason(
                         session.getFailureReason()
                 )
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public RecordingLiveStartResponseDTO startLiveRecording(
+            Long accountId
+    ) {
+
+        if (accountId == null) {
+            throw new BusinessException(
+                    ErrorCode.UNAUTHORIZED
+            );
+        }
+
+        RecordingSessionVO session =
+                RecordingSessionVO.builder()
+                        .accountId(accountId)
+                        .status(RecordingStatus.RECORDING)
+                        .build();
+
+        recordingSessionMapper.insertLiveSession(
+                session
+        );
+
+        return RecordingLiveStartResponseDTO.builder()
+                .recordingSessionId(
+                        session.getRecordingSessionId()
+                )
+                .status(session.getStatus())
                 .build();
     }
 }

@@ -43,4 +43,8 @@ public interface RecordingSessionMapper {
             @Param("recordingSessionId") Long recordingSessionId,
             @Param("failureReason") String failureReason
     );
+
+    int insertLiveSession(
+            RecordingSessionVO session
+    );
 }

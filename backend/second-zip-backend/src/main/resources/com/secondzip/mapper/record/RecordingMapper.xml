@@ -100,4 +100,23 @@
             modified_at = CURRENT_TIMESTAMP
         WHERE recording_session_id = #{recordingSessionId}
     </update>
+    <insert id="insertLiveSession"
+            parameterType="com.secondzip.backend.record.domain.RecordingSessionVO"
+            useGeneratedKeys="true"
+            keyProperty="recordingSessionId">
+
+        INSERT INTO recording_sessions (
+            account_id,
+            status,
+            created_at,
+            modified_at
+        )
+        VALUES (
+                   #{accountId},
+                   #{status},
+                   NOW(),
+                   NOW()
+               )
+
+    </insert>
 </mapper>
