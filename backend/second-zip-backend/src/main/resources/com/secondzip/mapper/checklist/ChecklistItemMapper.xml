@@ -4,7 +4,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.secondzip.backend.checklist.mapper.ChecklistItemMapper">
+<mapper namespace="com.secondzip.backend.record.mapper.ChecklistItemMapper">
     <select id="findByCategory"
             resultType="com.secondzip.backend.record.dto.request.ChecklistItemInput">
 

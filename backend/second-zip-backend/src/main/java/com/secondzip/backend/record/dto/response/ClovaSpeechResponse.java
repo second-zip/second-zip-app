@@ -21,6 +21,6 @@ public class ClovaSpeechResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Segment {
 
-        private String text;
+        private String text; //녹취 기록 분할
     }
 }

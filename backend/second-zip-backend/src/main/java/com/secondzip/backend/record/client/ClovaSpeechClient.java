@@ -31,7 +31,7 @@ public class ClovaSpeechClient implements SpeechToTextClient {
     @Value("${CLOVA_SPEECH_SECRET_KEY}")
     private String secretKey;
 
-    //objectKey == 음성파일
+    //objectKey == 음성 파일의 주소 이름
     @Override
     public String transcribe(String objectKey) {
         RestTemplate restTemplate = new RestTemplate();
@@ -60,7 +60,7 @@ public class ClovaSpeechClient implements SpeechToTextClient {
 
             return extractTranscript(response.getBody());
 
-        } catch (HttpStatusCodeException e) {
+        } catch (HttpStatusCodeException e) { //서버 측 오류
             throw new IllegalStateException(
                     "CLOVA Speech 요청에 실패했습니다. "
                             + "status="
@@ -69,7 +69,7 @@ public class ClovaSpeechClient implements SpeechToTextClient {
                             + e.getResponseBodyAsString(),
                     e
             );
-        } catch (Exception e) {
+        } catch (Exception e) { //일반 예외
             throw new IllegalStateException(
                     "CLOVA Speech 처리 중 오류가 발생했습니다.",
                     e

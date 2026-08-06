@@ -1,7 +1,7 @@
 package com.secondzip.backend.record.service;
 
 import com.secondzip.backend.checklist.mapper.AccountChecklistItemMapper;
-import com.secondzip.backend.checklist.mapper.ChecklistItemMapper;
+import com.secondzip.backend.record.mapper.ChecklistItemMapper;
 import com.secondzip.backend.record.client.ChecklistAnalysisClient;
 import com.secondzip.backend.record.domain.RecordingSessionVO;
 import com.secondzip.backend.record.dto.request.ChecklistItemInput;

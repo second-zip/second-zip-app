@@ -201,7 +201,7 @@ public class GptChecklistAnalysisClient
             );
 
 
-            ResponseEntity<JsonNode> response =
+            ResponseEntity<JsonNode> response = //JSON 전체 구조를 트리 형태로 자유롭게 탐색
                     restTemplate.postForEntity(
                             OPENAI_RESPONSES_URL,
                             request,
@@ -210,7 +210,7 @@ public class GptChecklistAnalysisClient
 
 
             JsonNode responseBody =
-                    response.getBody();
+                    response.getBody(); //OpenAI 응답 JSON 전체
 
 
             if (responseBody == null) {
@@ -224,7 +224,7 @@ public class GptChecklistAnalysisClient
 
             String outputText =
                     extractOutputText(
-                            responseBody
+                            responseBody //실제 AI 출력 문자열 추출
                     );
 
 

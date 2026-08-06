@@ -1,4 +1,4 @@
-package com.secondzip.backend.checklist.mapper;
+package com.secondzip.backend.record.mapper;
 
 import com.secondzip.backend.record.dto.request.ChecklistItemInput;
 import org.apache.ibatis.annotations.Mapper;
