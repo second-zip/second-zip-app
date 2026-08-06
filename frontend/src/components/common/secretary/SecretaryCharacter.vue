@@ -1,8 +1,22 @@
 <script setup>
-defineProps({
+import catImage from '@/assets/images/cat-main.png';
+import manImage from '@/assets/images/man-main.png';
+import womanImage from '@/assets/images/woman-main.png';
+
+const CHARACTER_IMAGES = {
+  CAT: catImage,
+  MAN: manImage,
+  WOMAN: womanImage,
+};
+
+const props = defineProps({
   collapsed: {
     type: Boolean,
     default: false,
+  },
+  characterType: {
+    type: String,
+    default: 'CAT',
   },
 });
 
@@ -18,7 +32,7 @@ defineEmits(['click']);
     @click="$emit('click')"
   >
     <img
-      src="@/assets/images/cat-main.png"
+      :src="CHARACTER_IMAGES[props.characterType] || CHARACTER_IMAGES.CAT"
       alt=""
       class="d-block w-100 h-100"
     />

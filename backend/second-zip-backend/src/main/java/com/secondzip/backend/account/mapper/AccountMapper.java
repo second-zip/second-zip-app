@@ -2,6 +2,7 @@ package com.secondzip.backend.account.mapper;
 
 import com.secondzip.backend.account.domain.AccountVO;
 import com.secondzip.backend.account.dto.request.UpdateAccountDTO;
+import com.secondzip.backend.account.dto.response.ActivitySummaryDTO;
 import com.secondzip.backend.account.enums.CharacterType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -28,4 +29,6 @@ public interface AccountMapper {
     int deleteById(Long accountId);
 
     int updatePassword(@Param("accountId") Long accountId, @Param("password") String password);
+
+    ActivitySummaryDTO findActivitySummaryByAccountId(@Param("accountId") Long accountId);
 }

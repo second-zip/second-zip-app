@@ -37,7 +37,7 @@ describe('LoginView', () => {
       email: 'user@example.com',
       password: 'Password1!',
     });
-    expect(mocks.replace).toHaveBeenCalledWith('/main');
+    expect(mocks.replace).toHaveBeenCalledWith('/');
   });
 
   it('로그인 실패 메시지를 화면에 표시하고 이동하지 않는다', async () => {

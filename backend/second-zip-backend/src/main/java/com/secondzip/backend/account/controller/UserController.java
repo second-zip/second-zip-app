@@ -6,6 +6,7 @@ import com.secondzip.backend.account.dto.request.UpdatePasswordDTO;
 import com.secondzip.backend.account.dto.request.WithdrawAccountDTO;
 import com.secondzip.backend.account.dto.response.AccountResponseDTO;
 import com.secondzip.backend.account.dto.response.MessageResponseDTO;
+import com.secondzip.backend.account.dto.response.MyPageResponseDTO;
 import com.secondzip.backend.account.service.AccountService;
 import com.secondzip.backend.security.jwt.JwtTokenResolver;
 import io.swagger.annotations.Api;
@@ -67,5 +68,12 @@ public class UserController {
         accountService.updatePassword(accountId, accessToken, updatePasswordDTO);
 
         return ResponseEntity.ok(new MessageResponseDTO("비밀번호 변경을 완료했습니다. 다시 로그인해 주세요."));
+    }
+
+    @ApiOperation(value = "마이페이지 조회", notes = "로그인한 회원의 기본 정보와 리포트 활동 요약을 조회합니다."
+    )
+    @GetMapping("/mypage")
+    public ResponseEntity<MyPageResponseDTO> getMyPage(@ApiIgnore @AuthenticationPrincipal Long accountId) {
+        return ResponseEntity.ok(accountService.getMyPage(accountId));
     }
 }

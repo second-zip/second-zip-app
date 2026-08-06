@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 import AuthInputBox from '@/components/auth/AuthInputBox.vue';
 import BaseButton from '@/components/common/BaseButton.vue';
 
-import LoginImage from '@/assets/images/second-zip.png';
+import LoginImage from '@/assets/images/main-illust.png';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -26,7 +26,7 @@ const handleLogin = async () => {
   try {
     await authStore.login(form);
 
-    await router.replace('/main');
+    await router.replace('/');
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error);
   }
@@ -38,7 +38,7 @@ const handleLogin = async () => {
     <div
       class="login-page__visual position-absolute w-100 d-flex align-items-center justify-content-center"
     >
-      <img :src="LoginImage" alt="이번집 서비스 소개" />
+      <img :src="LoginImage" alt="이번집 서비스 소개" width="256" />
     </div>
 
     <form
