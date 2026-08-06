@@ -3,13 +3,10 @@ package com.secondzip.backend.report.controller;
 import com.secondzip.backend.report.dto.request.CreateReportRequest;
 import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
-import com.secondzip.backend.report.dto.response.AnalysisAuthResponse;
-import com.secondzip.backend.report.dto.response.AnalysisPreparationResponse;
-import com.secondzip.backend.report.dto.response.ReportDetailResponse;
-import com.secondzip.backend.report.dto.response.ReportListResponse;
-import com.secondzip.backend.report.dto.response.ExternalApiReadinessResponse;
+import com.secondzip.backend.report.dto.response.*;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.ReportService;
+import com.secondzip.backend.report.service.ReportShareService;
 import com.secondzip.backend.report.service.workflow.AnalysisPreparationService;
 import com.secondzip.backend.report.service.workflow.AnalysisAuthenticationService;
 import com.secondzip.backend.report.service.workflow.AnalysisExecutionService;
@@ -21,8 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
-import com.secondzip.backend.report.dto.response.SpecialTermView;
-import com.secondzip.backend.report.dto.response.SpecialTermsResponse;
 import com.secondzip.backend.report.service.SpecialTermService;
 
 import javax.validation.Valid;
@@ -41,6 +36,7 @@ public class ReportController {
     private final AnalysisExecutionService analysisExecutionService;
     private final ExternalApiReadinessService externalApiReadinessService;
     private final SpecialTermService specialTermService;
+    private final ReportShareService reportShareService;
 
     @PostMapping("/requests")
     @ApiOperation(
@@ -223,7 +219,42 @@ public class ReportController {
         return ResponseEntity.noContent().build();
     }
 
+    // 공유 링크
+    @PostMapping("/{analysisReportId}/share")
+    @ApiOperation(
+            value = "리포트 공유 링크 생성",
+            notes = "리포트를 공유할 수 있는 토큰을 발급합니다. 유효한 링크가 있으면 재사용합니다."
+    )
+    public ResponseEntity<ShareResponse> createShareLink(
+            @ApiParam(value = "리포트 ID", required = true)
+            @PathVariable Long analysisReportId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long accountId = authenticatedAccountId(authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                reportShareService.createShareLink(accountId, analysisReportId)
+        );
+    }
 
+    @GetMapping("/shared/{shareToken}")
+    @ApiOperation(
+            value = "공유된 리포트 열람",
+            notes = "공유 토큰으로 리포트를 조회합니다. 로그인이 필요하지 않습니다."
+    )
+    public ResponseEntity<ReportDetailResponse> getSharedReport(
+            @ApiParam(value = "공유 토큰", required = true)
+            @PathVariable String shareToken
+    ) {
+        return ResponseEntity.ok(
+                reportShareService.getSharedReport(shareToken)
+        );
+    }
+
+
+
+
+
+    // 계정 ID 가져오기
     private Long authenticatedAccountId(Authentication authentication) {
         if (authentication == null
                 || !authentication.isAuthenticated()
