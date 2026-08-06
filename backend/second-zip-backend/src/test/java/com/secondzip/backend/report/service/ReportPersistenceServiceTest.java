@@ -11,6 +11,7 @@ import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.mapper.ReportMapper;
+import com.secondzip.backend.report.mapper.StubReportMapper;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -24,7 +25,7 @@ class ReportPersistenceServiceTest {
 
     @Test
     void failsReportCreationWhenEvidenceCannotBeSerialized() {
-        StubReportMapper mapper = new StubReportMapper();
+        CountingStubMapper mapper = new CountingStubMapper();
         ObjectMapper failingObjectMapper = new ObjectMapper() {
             @Override
             public String writeValueAsString(Object value)
@@ -61,7 +62,7 @@ class ReportPersistenceServiceTest {
         assertEquals(0, mapper.insertedCheckResults);
     }
 
-    private static class StubReportMapper implements ReportMapper {
+    private static class CountingStubMapper extends StubReportMapper {
         private int insertedCheckResults;
 
         @Override
@@ -70,72 +71,8 @@ class ReportPersistenceServiceTest {
         }
 
         @Override
-        public void insertFraudTypeMap(Map<String, Object> params) {
-        }
-
-        @Override
-        public void insertDetailResult(
-                Long fraudTypeId,
-                DetailType detailType,
-                RiskLevel riskLevel
-        ) {
-        }
-
-        @Override
         public void insertReportMap(Map<String, Object> params) {
             params.put("reportId", 1L);
-        }
-
-        @Override
-        public List<ReportListItem> findReportsByAccountId(Long accountId) {
-            return List.of();
-        }
-
-        @Override
-        public int countReportsByAccountId(Long accountId) {
-            return 0;
-        }
-
-        @Override
-        public Long findReportIdByRequestId(Long accountId, String requestId) {
-            return null;
-        }
-
-        @Override
-        public Long findAccountIdByReportId(Long reportId) {
-            return null;
-        }
-
-        @Override
-        public Map<String, Object> findReportById(Long reportId) {
-            return Map.of();
-        }
-
-        @Override
-        public List<Map<String, Object>> findCheckResultsByReportId(Long reportId) {
-            return List.of();
-        }
-
-        @Override
-        public List<Map<String, Object>> findFraudTypesByReportId(Long reportId) {
-            return List.of();
-        }
-
-        @Override
-        public List<DetailResult> findDetailResultsByFraudTypeId(Long fraudTypeId) {
-            return List.of();
-        }
-
-        @Override
-        public void deleteReport(Long reportId) {
-        }
-
-        @Override
-        public void updateFavorite(
-                Long reportId,
-                boolean favorite,
-                LocalDateTime favoritedAt
-        ) {
         }
     }
 }
