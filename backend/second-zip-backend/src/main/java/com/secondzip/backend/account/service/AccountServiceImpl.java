@@ -3,7 +3,9 @@ package com.secondzip.backend.account.service;
 import com.secondzip.backend.account.domain.AccountVO;
 import com.secondzip.backend.account.dto.request.*;
 import com.secondzip.backend.account.dto.response.AccountResponseDTO;
+import com.secondzip.backend.account.dto.response.ActivitySummaryDTO;
 import com.secondzip.backend.account.dto.response.LoginResponseDTO;
+import com.secondzip.backend.account.dto.response.MyPageResponseDTO;
 import com.secondzip.backend.account.mapper.AccountMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
@@ -298,6 +300,25 @@ public class AccountServiceImpl implements AccountService {
         long remainingMillis = jwtTokenProvider.getRemainingExpirationMillis(accessToken);
 
         jwtTokenBlacklistService.add(accessToken, remainingMillis);
+    }
+
+    //마이페이지
+    @Override
+    @Transactional(readOnly = true)
+    public MyPageResponseDTO getMyPage(Long accountId) {
+
+        AccountVO account = accountMapper.findById(accountId);
+
+        if (account == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "회원정보를 찾을 수 없습니다."
+            );
+        }
+
+        ActivitySummaryDTO activitySummary = accountMapper.findActivitySummaryByAccountId(accountId);
+
+        return MyPageResponseDTO.of(account, activitySummary);
     }
 
     //==========내부 검증 로직===========
