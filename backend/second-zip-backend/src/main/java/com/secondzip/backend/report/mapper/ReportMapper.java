@@ -70,6 +70,15 @@ public interface ReportMapper {
             @Param("favoritedAt") LocalDateTime favoritedAt
     );
 
+    // 공유
+    void updateShareToken(
+            @Param("reportId") Long reportId,
+            @Param("shareToken") String shareToken,
+            @Param("shareExpiresAt") LocalDateTime shareExpiresAt
+    );
+    Map<String, Object> findShareInfoByReportId(@Param("reportId") Long reportId);
+    Long findReportIdByShareToken(@Param("shareToken") String shareToken);
+
 
     // 리포트 삭제
     void deleteReport(@Param("reportId") Long reportId);

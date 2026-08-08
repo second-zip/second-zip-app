@@ -47,3 +47,7 @@ bin/
 
 # 로컬 전용 분석 워크플로 API 명세
 /analysis-workflow-api-spec.md
+
+# 로컬 전용 리포트 즐겨찾기 명세
+/re14-15-favorite-functional-spec.md
+/re14-15-favorite-api-spec.md

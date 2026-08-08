@@ -8,12 +8,14 @@ import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
+import com.secondzip.backend.report.dto.response.SpecialTermView;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.service.ReportPersistenceService;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
+import com.secondzip.backend.report.service.SpecialTermService;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterDataParser;
 import com.secondzip.backend.report.service.external.client.CodefTokenProvider;
 import com.secondzip.backend.report.service.external.client.PriceClient;
@@ -47,7 +49,8 @@ class AnalysisExecutionServiceTest {
                 new FixedPriceClient(),
                 riskService,
                 new FixedPersistenceService(saved),
-                new FixedQueryService(saved)
+                new FixedQueryService(saved),
+                new StubSpecialTermService()
         );
 
         ReportDetailResponse result =
@@ -79,7 +82,8 @@ class AnalysisExecutionServiceTest {
                 new FixedPriceClient(),
                 new CapturingRiskService(),
                 new FixedPersistenceService(saved),
-                new FixedQueryService(saved)
+                new FixedQueryService(saved),
+                new StubSpecialTermService()
         );
 
         ReportDetailResponse result =
@@ -103,7 +107,8 @@ class AnalysisExecutionServiceTest {
                 new FixedPriceClient(),
                 new CapturingRiskService(),
                 persistence,
-                new FixedQueryService(existing, 99L)
+                new FixedQueryService(existing, 99L),
+                new StubSpecialTermService()
         );
 
         ReportDetailResponse result = service.execute(1L, "request-id");
@@ -126,7 +131,8 @@ class AnalysisExecutionServiceTest {
                 new FixedPriceClient(),
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(90L)),
-                new FixedQueryService(report(90L))
+                new FixedQueryService(report(90L)),
+                new StubSpecialTermService()
         );
 
         assertThrows(
@@ -151,7 +157,8 @@ class AnalysisExecutionServiceTest {
                 new FixedPriceClient(),
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(92L)),
-                new FixedQueryService(report(92L))
+                new FixedQueryService(report(88L)),
+                new StubSpecialTermService()
         );
 
         assertThrows(
@@ -178,7 +185,8 @@ class AnalysisExecutionServiceTest {
                 unavailablePrice,
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(91L)),
-                new FixedQueryService(report(91L))
+                new FixedQueryService(report(91L)),
+                new StubSpecialTermService()
         );
 
         assertThrows(
@@ -243,6 +251,7 @@ class AnalysisExecutionServiceTest {
                 500_000_000L,
                 RiskLevel.DANGER,
                 false,
+                List.of(),
                 List.of(),
                 List.of()
         );
@@ -400,6 +409,17 @@ class AnalysisExecutionServiceTest {
                 Long reportId
         ) {
             return response;
+        }
+    }
+
+    private static class StubSpecialTermService extends SpecialTermService {
+        private StubSpecialTermService() {
+            super(null, null, null, null, null);
+        }
+
+        @Override
+        public List<SpecialTermView> generateAndSave(Long accountId, Long reportId) {
+            return List.of();
         }
     }
 }
