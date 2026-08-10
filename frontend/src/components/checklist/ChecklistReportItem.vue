@@ -30,6 +30,10 @@ const formattedCreatedAt = computed(() =>
 const createdAtDateTime = computed(() =>
   toReportDateTime(props.report.createdAt),
 );
+const detailRoute = computed(() => ({
+  name: 'checklist-detail',
+  params: { analysisReportId: props.report.analysisReportId },
+}));
 </script>
 
 <template>
@@ -37,9 +41,7 @@ const createdAtDateTime = computed(() =>
     <ReportListStatusIcon :result="report.result" />
 
     <div class="checklist-report-item__content flex-grow-1 overflow-hidden">
-      <p
-        class="checklist-report-item__address fw-semibold mb-0"
-      >
+      <p class="checklist-report-item__address fw-semibold mb-0">
         {{ address }}
       </p>
       <time
@@ -50,9 +52,11 @@ const createdAtDateTime = computed(() =>
       </time>
     </div>
 
-    <div
+    <RouterLink
       v-if="isCreationInProgress"
-      class="checklist-report-item__progress d-flex flex-shrink-0 align-items-center"
+      :to="detailRoute"
+      class="checklist-report-item__progress d-flex flex-shrink-0 align-items-center text-decoration-none"
+      :aria-label="`${address} 체크리스트 상세 보기`"
     >
       <CircularProgress :value="progress" :size="20" />
       <span class="checklist-report-item__percent fw-semibold">
@@ -63,7 +67,7 @@ const createdAtDateTime = computed(() =>
         class="checklist-report-item__chevron"
         alt=""
       />
-    </div>
+    </RouterLink>
 
     <ChecklistCreateButton v-else @create="emit('create', report)" />
   </article>

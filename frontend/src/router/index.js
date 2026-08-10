@@ -47,9 +47,21 @@ const routes = [
       },
       {
         path: 'checklist',
-        name: 'checklist-list',
-        component: () => import('@/views/checklist/ChecklistListView.vue'),
-        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'checklist-list',
+            component: () => import('@/views/checklist/ChecklistListView.vue'),
+            meta: { requiresAuth: true },
+          },
+          {
+            path: ':analysisReportId(\\d+)',
+            name: 'checklist-detail',
+            component: () =>
+              import('@/views/checklist/ChecklistDetailView.vue'),
+            meta: { requiresAuth: true },
+          },
+        ],
       },
       {
         path: 'mypage',
