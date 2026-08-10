@@ -28,8 +28,7 @@ const {
 } = useReportList();
 
 const characterType = computed(() => {
-  if (!authStore.isAuthenticated) return 'CAT';
-  const type = authStore.myPage?.characterType;
+  const type = authStore.characterType ?? authStore.myPage?.characterType;
   return REPORT_CHARACTER_TYPES.has(type) ? type : 'CAT';
 });
 const secretaryMessage = computed(

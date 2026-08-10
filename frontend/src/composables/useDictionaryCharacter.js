@@ -2,7 +2,7 @@ import { computed, onMounted } from "vue";
 
 import { DICTIONARY_CHARACTERS } from "@/constants/dictionary/characters";
 import { useAuthStore } from "@/stores/auth";
-import { resolveDictionaryCharacter } from "@/utils/dictionary/characters";
+import { normalizeDictionaryCharacter } from "@/utils/dictionary/characters";
 import { logger } from "@/utils/logger";
 
 export const useDictionaryCharacter = () => {
@@ -10,9 +10,10 @@ export const useDictionaryCharacter = () => {
 
   // 비로그인은 고양이, 로그인 사용자는 프로필의 비서 설정을 사용합니다.
   const characterKey = computed(() =>
-    resolveDictionaryCharacter(
-      authStore.isAuthenticated,
-      authStore.myPage?.characterType,
+    normalizeDictionaryCharacter(
+      authStore.isAuthenticated
+        ? authStore.characterType ?? authStore.myPage?.characterType
+        : undefined,
     ),
   );
   const character = computed(

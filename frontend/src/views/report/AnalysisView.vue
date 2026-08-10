@@ -1,6 +1,6 @@
 <!-- 분석 메인화면:분석결과들 임포트해와서 조립해서 보여주는 곳-->
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { createReport, getReport } from '@/api/report';
@@ -31,10 +31,19 @@ import {
 } from '@/utils/report/analysis';
 import { mapReportDetail } from '@/utils/report/mapper';
 import { logger } from '@/utils/logger';
+import { normalizeCharacterType } from '@/utils/character';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 const secretary = ref('cat');
+const activeSecretary = computed(() =>
+  normalizeCharacterType(
+    authStore.characterType ?? authStore.myPage?.characterType,
+    secretary.value,
+  ),
+);
 const address = ref('서울시 마포구 합정동 123-45');
 const deposit = ref('100000000');
 const isFavorite = ref(false);
@@ -45,6 +54,17 @@ const checks = ref(DEFAULT_CHECKS);
 const fraudTypes = ref(DEFAULT_FRAUD_TYPES);
 const specialTerms = ref(DEFAULT_SPECIAL_TERMS);
 let toastTimer;
+
+onMounted(async () => {
+  if (!authStore.isAuthenticated || authStore.myPage) return;
+
+  try {
+    await authStore.fetchMyPage();
+  } catch (error) {
+    logger.error('analysis.fetch-user', error);
+    // 조회 실패 시에는 리포트에 저장된 비서 값으로 안전하게 대체합니다.
+  }
+});
 
 const checkRisk = computed(() =>
   aggregateRiskStatuses(checks.value.map(({ status }) => status)),
@@ -60,18 +80,18 @@ const overallRisk = computed(() =>
   ]),
 );
 const secretaryImage = computed(() => {
-  const images = selectSecretaryValue(SECRETARY_IMAGES, secretary.value);
+  const images = selectSecretaryValue(SECRETARY_IMAGES, activeSecretary.value);
 
   return images[overallRisk.value] ?? SECRETARY_IMAGES.cat.safe;
 });
 const defaultSecretaryImage = computed(() =>
-  selectSecretaryValue(DEFAULT_SECRETARY_IMAGES, secretary.value),
+  selectSecretaryValue(DEFAULT_SECRETARY_IMAGES, activeSecretary.value),
 );
 const overallIcon = computed(
   () => RISK_ICONS[overallRisk.value] ?? RISK_ICONS.safe,
 );
 const overallMessage = computed(() => {
-  const messages = selectSecretaryValue(SECRETARY_MESSAGES, secretary.value);
+  const messages = selectSecretaryValue(SECRETARY_MESSAGES, activeSecretary.value);
 
   return messages[overallRisk.value] ?? SECRETARY_MESSAGES.cat.safe;
 });

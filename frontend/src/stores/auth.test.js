@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { login as loginApi, logout as logoutApi, signup as signupApi } from '@/api/auth';
 import { getAccessToken, removeAccessToken, setAccessToken } from '@/api/token';
-import { getMyAccount, updateCharacter } from '@/api/user';
+import {
+  getMyAccount,
+  updateCharacter,
+  updateMyAccount,
+  updatePassword,
+  withdraw,
+} from '@/api/user';
 import { useAuthStore } from './auth';
 
 vi.mock('@/api/auth', () => ({
@@ -19,6 +25,9 @@ vi.mock('@/api/token', () => ({
 vi.mock('@/api/user', () => ({
   getMyAccount: vi.fn(),
   updateCharacter: vi.fn(),
+  updateMyAccount: vi.fn(),
+  updatePassword: vi.fn(),
+  withdraw: vi.fn(),
 }));
 
 describe('auth store', () => {
@@ -159,5 +168,48 @@ describe('auth store', () => {
 
     await expect(store.changeCharacter('MAN')).rejects.toThrow('update failed');
     expect(store.myPage).toEqual(existingAccount);
+  });
+  it('회원정보 수정 응답을 Store에 반영한다', async () => {
+    const account = { accountId: 1, nickname: '새닉네임' };
+    updateMyAccount.mockResolvedValue(account);
+    const store = useAuthStore();
+
+    await expect(store.updateProfile('새닉네임')).resolves.toEqual(account);
+    expect(updateMyAccount).toHaveBeenCalledWith({ nickname: '새닉네임' });
+    expect(store.myPage).toEqual(account);
+  });
+
+  it('비밀번호 변경 성공 시 인증정보를 지운다', async () => {
+    updatePassword.mockResolvedValue({ message: '변경 완료' });
+    const store = useAuthStore();
+
+    await store.changePassword({ currentPassword: 'old', newPassword: 'new' });
+
+    expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(store.isAuthenticated).toBe(false);
+    expect(store.loading).toBe(false);
+  });
+
+  it('회원탈퇴 실패 시 로그인 상태를 유지한다', async () => {
+    getAccessToken.mockReturnValue('saved-token');
+    withdraw.mockRejectedValue(new Error('wrong password'));
+    const store = useAuthStore();
+
+    await expect(store.withdraw('wrong')).rejects.toThrow('wrong password');
+
+    expect(removeAccessToken).not.toHaveBeenCalled();
+    expect(store.isAuthenticated).toBe(true);
+  });
+
+  it('회원탈퇴 성공 시 인증정보를 지운다', async () => {
+    getAccessToken.mockReturnValue('saved-token');
+    withdraw.mockResolvedValue({ message: '탈퇴 완료' });
+    const store = useAuthStore();
+
+    await store.withdraw('password1!');
+
+    expect(withdraw).toHaveBeenCalledWith({ password: 'password1!' });
+    expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(store.isAuthenticated).toBe(false);
   });
 });
