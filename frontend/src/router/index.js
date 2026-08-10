@@ -46,6 +46,12 @@ const routes = [
         meta: { guideType: 'moveIn' },
       },
       {
+        path: 'checklist',
+        name: 'checklist-list',
+        component: () => import('@/views/checklist/ChecklistListView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'mypage',
         name: 'mypage',
         component: () => import('@/views/MyPageView.vue'),
