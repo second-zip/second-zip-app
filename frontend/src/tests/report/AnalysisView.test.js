@@ -43,6 +43,7 @@ describe('분석 결과 화면', () => {
     replace.mockReset();
     route.meta = {};
     route.params = { analysisReportId: '12', scenario: undefined };
+    window.history.replaceState({}, '');
   });
 
   test('라우트의 보고서 ID로 상세 결과를 조회한다', async () => {
@@ -88,5 +89,26 @@ describe('분석 결과 화면', () => {
       error,
       { analysisReportId: '12' },
     );
+  });
+
+  test('분석 진행 화면에서 전달한 분석·특약 응답을 우선 사용한다', async () => {
+    window.history.replaceState(
+      {
+        analysisResult: report,
+        specialTermsResult: {
+          specialTerms: [
+            { sequence: 1, title: '전달된 특약', content: '특약 내용' },
+          ],
+        },
+      },
+      '',
+    );
+
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    expect(getReport).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('서울시 마포구 101호');
+    expect(wrapper.text()).toContain('전달된 특약');
   });
 });
