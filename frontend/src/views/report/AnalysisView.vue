@@ -31,6 +31,10 @@ import {
 } from '@/utils/report/analysis';
 import { mapReportDetail } from '@/utils/report/mapper';
 import { logger } from '@/utils/logger';
+import {
+  ANALYSIS_AND_CHECKLIST_NOTICE,
+  GUARANTEE_ELIGIBILITY_NOTICE,
+} from '@/constants/legalNotices';
 
 const route = useRoute();
 const router = useRouter();
@@ -249,6 +253,11 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
       :default-secretary-image
     />
 
+    <aside class="legal-notices" aria-label="분석 결과 이용 시 유의사항">
+      <p>{{ ANALYSIS_AND_CHECKLIST_NOTICE }}</p>
+      <p>{{ GUARANTEE_ELIGIBILITY_NOTICE }}</p>
+    </aside>
+
     <Transition name="toast">
       <div
         v-if="showCopyToast"
@@ -287,6 +296,24 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
+}
+
+.legal-notices {
+  margin: 1rem 1.25rem 2rem;
+  padding: 1rem;
+  color: var(--gray-700);
+  background: var(--gray-100);
+  border-radius: 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.legal-notices p {
+  margin: 0;
+}
+
+.legal-notices p + p {
+  margin-top: 0.5rem;
 }
 
 .report-feedback--error {

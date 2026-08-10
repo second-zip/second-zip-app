@@ -21,10 +21,7 @@ describe('useSignupForm', () => {
       passwordConfirm: '',
       nickname: '',
     });
-    expect(form.termConsents).toEqual([
-      { agreed: true, termId: 1 },
-      { agreed: true, termId: 2 },
-    ]);
+    expect(form.termConsents).toEqual([]);
   });
 
   it('입력 전에는 기본 상태와 안내 문구를 반환한다', () => {

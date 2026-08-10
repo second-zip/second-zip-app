@@ -1,11 +1,12 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { getApiError } from '@/api/utils/error';
 import { useAuthStore } from '@/stores/auth';
 import { useSignupForm } from '@/composables/useSignupForm';
 import { SIGNUP_FIELDS } from '@/constants/auth/signupFields';
+import { SIGNUP_TERMS } from '@/constants/auth/signupTerms';
 
 import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
@@ -27,6 +28,34 @@ const {
 } = useSignupForm();
 
 const errorMessage = ref('');
+const expandedTermType = ref('');
+
+form.termConsents = SIGNUP_TERMS.map(({ termId }) => ({
+  termId,
+  agreed: false,
+}));
+
+const getConsent = (termId) =>
+  form.termConsents.find((consent) => consent.termId === termId);
+
+const hasRequiredConsents = computed(() =>
+  SIGNUP_TERMS.every(({ termId }) => getConsent(termId)?.agreed),
+);
+
+const toggleTerm = (termType) => {
+  expandedTermType.value =
+    expandedTermType.value === termType ? '' : termType;
+};
+
+const confirmTerm = (term) => {
+  const consent = getConsent(term.termId);
+
+  if (consent) {
+    consent.agreed = true;
+  }
+
+  expandedTermType.value = '';
+};
 
 const handleSignup = async () => {
   startAllFields();
@@ -35,6 +64,11 @@ const handleSignup = async () => {
 
   if (!isFormValid()) {
     errorMessage.value = '입력값을 다시 확인해 주세요.';
+    return;
+  }
+
+  if (!hasRequiredConsents.value) {
+    errorMessage.value = '필수 약관을 모두 확인하고 동의해 주세요.';
     return;
   }
 
@@ -69,10 +103,74 @@ const handleSignup = async () => {
         :status="getStatus(field.key)"
         @update:model-value="handleFieldInput(field.key, $event)"
       />
+
+      <section class="terms-section" aria-labelledby="terms-heading">
+        <h2 id="terms-heading" class="terms-title fw-bold mb-1">
+          약관 동의
+        </h2>
+        <p class="terms-description mb-3">
+          필수 약관을 확인하고 동의해 주세요.
+        </p>
+        <div class="term-list">
+          <article
+            v-for="term in SIGNUP_TERMS"
+            :key="term.termId"
+            class="term-item"
+          >
+            <button
+              class="term-row d-flex align-items-center"
+              type="button"
+              role="checkbox"
+              :aria-checked="Boolean(getConsent(term.termId)?.agreed)"
+              :aria-expanded="expandedTermType === term.termType"
+              @click="toggleTerm(term.termType)"
+            >
+              <span
+                class="term-checkbox"
+                :class="{
+                  'term-checkbox--checked': getConsent(term.termId)?.agreed,
+                }"
+                aria-hidden="true"
+              >
+                ✓
+              </span>
+              <span class="term-label"> [필수] {{ term.title }} 동의 </span>
+              <span class="term-open-button" aria-hidden="true">
+                <span
+                  class="term-chevron"
+                  :class="{
+                    'term-chevron--expanded':
+                      expandedTermType === term.termType,
+                  }"
+                >
+                  ›
+                </span>
+              </span>
+            </button>
+            <div
+              v-if="expandedTermType === term.termType"
+              class="term-accordion"
+            >
+              <div class="term-content" tabindex="0">
+                <pre>{{ term.content }}</pre>
+              </div>
+              <button
+                class="term-inline-confirm"
+                type="button"
+                @click="confirmTerm(term)"
+              >
+                동의하고 확인
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
       <p v-if="errorMessage" class="error-message fs-6 mb-0 fw-semibold w-100">
         {{ errorMessage }}
       </p>
-      <BaseButton type="submit"> 계정 생성 </BaseButton>
+      <BaseButton type="submit" :disabled="!hasRequiredConsents">
+        계정 생성
+      </BaseButton>
     </form>
   </BottomSheetLayout>
 </template>
@@ -86,4 +184,129 @@ const handleSignup = async () => {
   color: var(--red-500);
   text-align: center;
 }
+
+.terms-section {
+  padding: 1.25rem;
+  background: var(--gray-50, #f8f9fb);
+  border-radius: 1rem;
+}
+
+.terms-title {
+  color: var(--black-900);
+  font-size: 1rem;
+}
+
+.terms-description {
+  color: var(--black-500);
+  font-size: 0.75rem;
+}
+
+.term-list {
+  padding-top: 0.25rem;
+}
+
+.term-item {
+  min-height: 2.75rem;
+}
+
+.term-row {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  gap: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.term-row:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
+.term-label {
+  flex: 1;
+  color: var(--black-700);
+  font-size: 0.8125rem;
+}
+
+.term-open-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--gray-500);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.term-chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.term-chevron--expanded {
+  transform: rotate(90deg);
+}
+
+.term-checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: white;
+  background: var(--gray-300, #d9dde5);
+  border-radius: 50%;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.term-checkbox--checked {
+  background: var(--blue-900, #075ef1);
+}
+
+.term-accordion {
+  width: 100%;
+  margin: 0.25rem 0 0.75rem 1.625rem;
+}
+
+.term-content {
+  max-height: 14rem;
+  padding: 0.875rem;
+  overflow: auto;
+  color: var(--black-700);
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 0.75rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.term-content::-webkit-scrollbar {
+  display: none;
+}
+
+.term-content pre {
+  margin: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.term-inline-confirm {
+  width: 100%;
+  height: 2.5rem;
+  margin-top: 0.625rem;
+  color: white;
+  background: var(--blue-900, #075ef1);
+  border: 0;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
 </style>

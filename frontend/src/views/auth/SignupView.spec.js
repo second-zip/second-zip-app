@@ -38,16 +38,27 @@ const fillValidForm = async (wrapper) => {
   await wrapper.get('#passwordConfirm').setValue('Password1!');
 };
 
+const agreeRequiredTerms = async (wrapper) => {
+  for (const row of wrapper.findAll('.term-row')) {
+    await row.trigger('click');
+    await wrapper.get('.term-inline-confirm').trigger('click');
+  }
+};
+
 describe('SignupView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('네 개의 회원가입 입력 필드를 렌더링한다', () => {
+  it('네 개의 회원가입 입력 필드를 렌더링한다', async () => {
     const wrapper = mountView();
 
+    await flushPromises();
+
     expect(wrapper.findAll('.auth-input')).toHaveLength(4);
-    expect(wrapper.findAll('label').map((label) => label.text())).toEqual([
+    expect(
+      wrapper.findAll('.auth-input label').map((label) => label.text()),
+    ).toEqual([
       '닉네임',
       '이메일',
       '비밀번호',
@@ -55,8 +66,80 @@ describe('SignupView', () => {
     ]);
   });
 
+  it('두 개의 필수 동의 항목만 렌더링한다', async () => {
+    const wrapper = mountView();
+
+    await flushPromises();
+
+    expect(wrapper.findAll('.term-checkbox')).toHaveLength(2);
+    expect(wrapper.findAll('.term-label').map((label) => label.text())).toEqual([
+      '[필수] 서비스 이용약관 동의',
+      '[필수] 개인정보 수집·이용 동의',
+    ]);
+    expect(wrapper.find('.privacy-policy').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('마케팅 정보 수신');
+  });
+
+  it('상단 체크를 누르면 동의 처리 전 약관 설명부터 펼친다', async () => {
+    const wrapper = mountView();
+
+    await flushPromises();
+    await wrapper.findAll('.term-checkbox')[0].trigger('click');
+
+    expect(wrapper.get('.term-accordion').text()).toContain(
+      '제1조 목적',
+    );
+    expect(wrapper.findAll('.term-row')[0].attributes('aria-checked')).toBe(
+      'false',
+    );
+    expect(wrapper.findAll('.term-row')[0].attributes('aria-expanded')).toBe(
+      'true',
+    );
+  });
+
+  it('펼친 약관에서 확인하면 해당 동의를 자동 선택하고 접는다', async () => {
+    const wrapper = mountView();
+
+    await flushPromises();
+    await wrapper.findAll('.term-open-button')[0].trigger('click');
+    await wrapper.get('.term-inline-confirm').trigger('click');
+
+    expect(wrapper.findAll('.term-row')[0].attributes('aria-checked')).toBe(
+      'true',
+    );
+    expect(wrapper.find('.term-accordion').exists()).toBe(false);
+  });
+
+  it('다른 약관을 열면 기존 아코디언을 닫고 선택한 약관만 표시한다', async () => {
+    const wrapper = mountView();
+    const rows = wrapper.findAll('.term-row');
+
+    await rows[0].trigger('click');
+    await rows[1].trigger('click');
+
+    expect(wrapper.findAll('.term-accordion')).toHaveLength(1);
+    expect(wrapper.get('.term-accordion').text()).toContain(
+      '개인정보 수집·이용 동의',
+    );
+    expect(rows[0].attributes('aria-expanded')).toBe('false');
+    expect(rows[1].attributes('aria-expanded')).toBe('true');
+  });
+
+  it('두 약관을 확인하기 전에는 계정 생성 버튼을 비활성화한다', async () => {
+    const wrapper = mountView();
+    const submitButton = wrapper.get('button[type="submit"]');
+
+    expect(submitButton.attributes('disabled')).toBeDefined();
+
+    await agreeRequiredTerms(wrapper);
+
+    expect(submitButton.attributes('disabled')).toBeUndefined();
+  });
+
   it('유효하지 않은 폼은 제출하지 않고 검증 메시지를 표시한다', async () => {
     const wrapper = mountView();
+
+    await flushPromises();
 
     await wrapper.get('form').trigger('submit');
 
@@ -68,7 +151,9 @@ describe('SignupView', () => {
   it('유효한 폼으로 회원가입하고 로그인 화면으로 이동한다', async () => {
     mocks.authStore.signup.mockResolvedValue({ accountId: 1 });
     const wrapper = mountView();
+    await flushPromises();
     await fillValidForm(wrapper);
+    await agreeRequiredTerms(wrapper);
 
     await wrapper.get('form').trigger('submit');
     await flushPromises();
@@ -92,7 +177,9 @@ describe('SignupView', () => {
       response: { data: { message: '이미 사용 중인 이메일입니다.' } },
     });
     const wrapper = mountView();
+    await flushPromises();
     await fillValidForm(wrapper);
+    await agreeRequiredTerms(wrapper);
 
     await wrapper.get('form').trigger('submit');
     await flushPromises();
