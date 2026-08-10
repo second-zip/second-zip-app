@@ -13,38 +13,53 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
+  errorMessage: {
+    type: String,
+    default: '',
+  },
 });
 
-const emit = defineEmits(['update:modelValue', 'search', 'select']);
+const emit = defineEmits(['update:modelValue', 'search', 'select', 'clear']);
 
 const isResultsOpen = ref(false);
+const hasSearched = ref(false);
 
 const hasKeyword = computed(() => props.modelValue.trim().length > 0);
 
 const showResults = computed(
-  () => isResultsOpen.value && props.results.length > 0,
+  () =>
+    isResultsOpen.value &&
+    (hasSearched.value || props.isLoading || Boolean(props.errorMessage)),
 );
 
 const updateKeyword = (event) => {
   emit('update:modelValue', event.target.value);
-  isResultsOpen.value = true;
+  hasSearched.value = false;
+  isResultsOpen.value = false;
 };
 
 const clearKeyword = () => {
-  emit('update:modelValue', '');
+  emit('clear');
+  hasSearched.value = false;
   isResultsOpen.value = false;
 };
 
 const searchAddress = () => {
   if (!hasKeyword.value) return;
 
+  hasSearched.value = true;
   isResultsOpen.value = true;
   emit('search', props.modelValue.trim());
 };
 
 const selectAddress = (address) => {
-  emit('update:modelValue', address.roadAddress);
+  emit('update:modelValue', address.roadAddress || address.jibunAddress);
   emit('select', address);
+  hasSearched.value = false;
   isResultsOpen.value = false;
 };
 
@@ -52,6 +67,7 @@ watch(
   () => props.modelValue,
   (value) => {
     if (!value.trim()) {
+      hasSearched.value = false;
       isResultsOpen.value = false;
     }
   },
@@ -73,7 +89,6 @@ watch(
           placeholder="도로명 또는 지번 주소"
           aria-label="주소 검색어"
           @input="updateKeyword"
-          @focus="isResultsOpen = hasKeyword"
           @keydown.enter.prevent="searchAddress"
         />
 
@@ -103,21 +118,48 @@ watch(
         role="listbox"
         aria-label="주소 검색 결과"
       >
-        <button
-          v-for="(address, index) in results"
-          :key="address.id ?? index"
-          type="button"
-          class="address-search__result w-100 border-0 text-start"
-          @click="selectAddress(address)"
+        <p
+          v-if="isLoading"
+          class="address-search__status mb-0"
+          role="status"
         >
-          <strong class="address-search__road d-block fw-medium text-truncate">
-            {{ address.roadAddress }}
-          </strong>
+          주소를 검색하고 있어요.
+        </p>
 
-          <span class="address-search__jibun d-block fw-normal text-truncate">
-            {{ address.jibunAddress }}
-          </span>
-        </button>
+        <p
+          v-else-if="errorMessage"
+          class="address-search__status address-search__status--error mb-0"
+          role="alert"
+        >
+          {{ errorMessage }}
+        </p>
+
+        <template v-else-if="results.length > 0">
+          <button
+            v-for="(address, index) in results"
+            :key="address.id ?? index"
+            type="button"
+            class="address-search__result w-100 border-0 text-start"
+            @click="selectAddress(address)"
+          >
+            <strong
+              class="address-search__road d-block fw-medium text-truncate"
+            >
+              {{ address.roadAddress || address.jibunAddress }}
+            </strong>
+
+            <span
+              v-if="address.roadAddress && address.jibunAddress"
+              class="address-search__jibun d-block fw-normal text-truncate"
+            >
+              {{ address.jibunAddress }}
+            </span>
+          </button>
+        </template>
+
+        <p v-else class="address-search__status mb-0" role="status">
+          검색 결과가 없습니다.
+        </p>
       </div>
     </div>
   </section>
@@ -178,10 +220,21 @@ watch(
 }
 
 .address-search__results {
-  max-height: 240px;
+  max-height: 220px;
   overflow-y: auto;
   overscroll-behavior: contain;
   border-top: 1px solid var(--black-100);
+}
+
+.address-search__status {
+  padding: 18px 16px;
+  color: var(--black-500);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.address-search__status--error {
+  color: var(--black-700);
 }
 
 .address-search__result {

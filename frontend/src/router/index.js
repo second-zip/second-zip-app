@@ -67,6 +67,15 @@ const routes = [
             component: () => import('@/views/report/ReportCreateView.vue'),
           },
           {
+            path: 'analysis/progress',
+            name: 'analysis-progress',
+            component: () =>
+              import('@/views/report/AnalysisProgressView.vue'),
+            meta: {
+              requiresAuth: true,
+            },
+          },
+          {
             path: 'analysis/preview',
             redirect: {
               name: 'analysis-preview',

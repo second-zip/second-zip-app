@@ -1,54 +1,95 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 import PlusIcon from '@/assets/icons/report/plus-white-14.svg';
 
+import {
+  KAKAO_API_KEY_MISSING_ERROR,
+  searchKakaoAddress,
+} from '@/api/address';
 import ReportCreateBox from '@/components/report/ReportCreateBox.vue';
 import ReportAddressSearch from './ReportAddressSearch.vue';
+import ReportDetailAddressInput from './ReportDetailAddressInput.vue';
 import ReportDepositInput from './ReportDepositInput.vue';
 
 const emit = defineEmits(['submit']);
 
 const addressKeyword = ref('');
+const addressResults = ref([]);
 const selectedAddress = ref(null);
+const isAddressLoading = ref(false);
+const addressErrorMessage = ref('');
+const dong = ref('');
+const ho = ref('');
 const deposit = ref('');
 
-const addressResults = [
-  {
-    id: 1,
-    roadAddress: '오금로 34길 4',
-    jibunAddress: '서울특별시 송파구 가락동 3-15',
-  },
-  {
-    id: 2,
-    roadAddress: '오금로 34길 4-3(가락동, 목화5차빌라)',
-    jibunAddress: '서울특별시 송파구 가락동 4-1 목화5차빌라',
-  },
-  {
-    id: 3,
-    roadAddress: '오금로 34길 4-4(가락동)',
-    jibunAddress: '서울특별시 송파구 가락동 3-14',
-  },
-  {
-    id: 4,
-    roadAddress: '오금로 34길 6',
-    jibunAddress: '서울특별시 송파구 가락동 3-18',
-  },
-  {
-    id: 5,
-    roadAddress: '오금로 34길 8',
-    jibunAddress: '서울특별시 송파구 가락동 3-20',
-  },
-];
+let addressSearchRequestId = 0;
+
+const getAddressLabel = (address) =>
+  address?.roadAddress || address?.jibunAddress || '';
+
+const handleSearchAddress = async (query) => {
+  const keyword = query.trim();
+  const requestId = ++addressSearchRequestId;
+
+  if (!keyword) {
+    addressResults.value = [];
+    addressErrorMessage.value = '';
+    return;
+  }
+
+  isAddressLoading.value = true;
+  addressErrorMessage.value = '';
+
+  try {
+    const results = await searchKakaoAddress(keyword);
+
+    if (requestId === addressSearchRequestId) {
+      addressResults.value = results;
+    }
+  } catch (error) {
+    if (requestId !== addressSearchRequestId) return;
+
+    addressResults.value = [];
+    addressErrorMessage.value =
+      error?.code === KAKAO_API_KEY_MISSING_ERROR
+        ? '주소 검색 설정을 확인해주세요.'
+        : '주소를 검색하지 못했습니다.';
+  } finally {
+    if (requestId === addressSearchRequestId) {
+      isAddressLoading.value = false;
+    }
+  }
+};
 
 const handleSelectAddress = (address) => {
   selectedAddress.value = address;
 };
 
+const handleClearAddress = () => {
+  addressSearchRequestId += 1;
+  addressKeyword.value = '';
+  addressResults.value = [];
+  selectedAddress.value = null;
+  isAddressLoading.value = false;
+  addressErrorMessage.value = '';
+};
+
+watch(addressKeyword, (value) => {
+  if (
+    selectedAddress.value &&
+    value !== getAddressLabel(selectedAddress.value)
+  ) {
+    selectedAddress.value = null;
+  }
+});
+
 const handleSubmit = () => {
   emit('submit', {
     address: selectedAddress.value,
     addressKeyword: addressKeyword.value,
+    dong: dong.value.trim(),
+    ho: ho.value.trim(),
     deposit: Number(deposit.value),
   });
 };
@@ -64,8 +105,14 @@ const handleSubmit = () => {
     <ReportAddressSearch
       v-model="addressKeyword"
       :results="addressResults"
+      :is-loading="isAddressLoading"
+      :error-message="addressErrorMessage"
+      @search="handleSearchAddress"
       @select="handleSelectAddress"
+      @clear="handleClearAddress"
     />
+
+    <ReportDetailAddressInput v-model:dong="dong" v-model:ho="ho" />
 
     <ReportDepositInput v-model="deposit" />
 
