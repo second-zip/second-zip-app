@@ -23,6 +23,7 @@ public class RecordingServiceImpl implements RecordingService {
     private final RecordingStorage recordingStorage;
     private final RecordingSessionMapper recordingSessionMapper;
     private final RecordingAsyncService recordingAsyncService;
+    private final LiveRecordingContextManager contextManager;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
@@ -188,7 +189,8 @@ public class RecordingServiceImpl implements RecordingService {
     @Override
     @Transactional
     public RecordingLiveStartResponseDTO startLiveRecording(
-            Long accountId
+            Long accountId,
+            String category
     ) {
 
         if (accountId == null) {
@@ -205,6 +207,11 @@ public class RecordingServiceImpl implements RecordingService {
 
         recordingSessionMapper.insertLiveSession(
                 session
+        );
+
+        contextManager.create(
+                session.getRecordingSessionId(),
+                category
         );
 
         return RecordingLiveStartResponseDTO.builder()

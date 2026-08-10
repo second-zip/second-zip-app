@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+//녹음이 끝난 후 전체 transcript를 GPT로 최종 분석하고 DB 및 회원 체크리스트까지 최종 반영
 @Service
 @RequiredArgsConstructor
 public class ChecklistAnalysisService {

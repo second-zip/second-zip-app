@@ -1,5 +1,6 @@
 package com.secondzip.backend.record.controller;
 
+import com.secondzip.backend.record.dto.request.RecordingLiveStartRequestDTO;
 import com.secondzip.backend.record.dto.response.RecordingLiveStartResponseDTO;
 import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
 import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
@@ -23,7 +24,7 @@ public class RecordingController {
 
     private final RecordingService recordingService;
 
-    @ApiOperation(value = "녹음 파일 업로드", notes = "녹음 파일을 업로드하고 분석 세션을 생성합니다.")
+    @ApiOperation(value = "녹음 파일 업로드(파일 방식)", notes = "녹음 파일을 업로드하고 분석 세션을 생성합니다.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RecordingSessionResponseDTO>
     uploadRecording(@ApiIgnore @AuthenticationPrincipal Long accountId,
@@ -56,7 +57,7 @@ public class RecordingController {
     }
 
     @ApiOperation(
-            value = "녹음 파일 변환 진행 상태",
+            value = "녹음 파일 변환 진행 상태(파일 방식)",
             notes = "업로드된 녹음 파일을 CLOVA Speech로 변환 진행 상태를 보여줍니다."
     )
     @GetMapping("/{recordingSessionId}")
@@ -80,12 +81,13 @@ public class RecordingController {
     @PostMapping("/live")
     public ResponseEntity<RecordingLiveStartResponseDTO>
     startLiveRecording(
-            @ApiIgnore @AuthenticationPrincipal Long accountId
-    ) {
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @RequestBody RecordingLiveStartRequestDTO request
+            ) {
 
         RecordingLiveStartResponseDTO response =
                 recordingService.startLiveRecording(
-                        accountId
+                        accountId,request.getCategory()
                 );
 
         return ResponseEntity

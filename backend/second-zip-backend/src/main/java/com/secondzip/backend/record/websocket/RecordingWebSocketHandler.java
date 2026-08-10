@@ -1,5 +1,7 @@
 package com.secondzip.backend.record.websocket;
 
+import com.secondzip.backend.record.service.LiveTranscriptionService;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
@@ -11,8 +13,11 @@ import java.nio.ByteBuffer;
 
 @Slf4j
 @Component
+@AllArgsConstructor
 public class RecordingWebSocketHandler
         extends BinaryWebSocketHandler {
+
+    private final LiveTranscriptionService liveTranscriptionService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -23,6 +28,9 @@ public class RecordingWebSocketHandler
                 "실시간 녹음 WebSocket 연결. recordingSessionId={}, wsSessionId={}",
                 recordingSessionId,
                 session.getId()
+        );
+        liveTranscriptionService.start(
+                recordingSessionId
         );
     }
 
@@ -44,6 +52,11 @@ public class RecordingWebSocketHandler
                 "음성 chunk 수신. recordingSessionId={}, size={} bytes",
                 recordingSessionId,
                 audioChunk.length
+        );
+
+        liveTranscriptionService.acceptAudio(
+                recordingSessionId,
+                audioChunk
         );
     }
 

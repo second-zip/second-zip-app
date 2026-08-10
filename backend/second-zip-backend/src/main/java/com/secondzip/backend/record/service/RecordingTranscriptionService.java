@@ -6,6 +6,7 @@ import com.secondzip.backend.record.mapper.RecordingSessionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+//Object Storage의 녹음 파일 → CLOVA STT → 전체 녹취 저장 → 최종 GPT 분석 실행(파일 방식 전용)
 @Service
 @RequiredArgsConstructor
 public class RecordingTranscriptionService {
