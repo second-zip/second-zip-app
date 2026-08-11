@@ -32,9 +32,7 @@ const isUserLoaded = ref(
   !authStore.isAuthenticated || Boolean(authStore.myPage),
 );
 const characterType = computed(() => {
-  if (!authStore.isAuthenticated) return 'CAT';
-
-  const type = authStore.myPage?.characterType;
+  const type = authStore.characterType ?? authStore.myPage?.characterType;
   return CHARACTER_TYPES.has(type) ? type : 'CAT';
 });
 const secretaryMessage = computed(

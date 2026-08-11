@@ -54,6 +54,24 @@ const routes = [
         },
       },
       {
+        path: 'mypage/profile',
+        name: 'mypage-profile',
+        component: () => import('@/views/mypage/ProfileEditView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'mypage/secretary',
+        name: 'mypage-secretary',
+        component: () => import('@/views/mypage/SecretaryChangeView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'mypage/withdraw',
+        name: 'mypage-withdraw',
+        component: () => import('@/views/mypage/WithdrawView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'report',
         children: [
           {

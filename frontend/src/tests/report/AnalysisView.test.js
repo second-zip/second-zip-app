@@ -4,7 +4,13 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import AnalysisView from '@/views/report/AnalysisView.vue';
 import { logger } from '@/utils/logger';
 
-const { getReport, replace, route } = vi.hoisted(() => ({
+const { authStore, getReport, replace, route } = vi.hoisted(() => ({
+  authStore: {
+    characterType: 'CAT',
+    fetchMyPage: vi.fn(),
+    isAuthenticated: false,
+    myPage: null,
+  },
   getReport: vi.fn(),
   replace: vi.fn(),
   route: {
@@ -24,6 +30,9 @@ vi.mock('vue-router', () => ({
 }));
 vi.mock('@/utils/logger', () => ({
   logger: { error: vi.fn() },
+}));
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => authStore,
 }));
 
 const report = {

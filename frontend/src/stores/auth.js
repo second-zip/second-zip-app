@@ -7,7 +7,13 @@ import {
   signup as signupApi,
 } from '@/api/auth';
 import { getAccessToken, removeAccessToken, setAccessToken } from '@/api/token';
-import { getMyAccount, updateCharacter as updateCharacterApi } from '@/api/user';
+import {
+  getMyAccount,
+  updateCharacter as updateCharacterApi,
+  updateMyAccount,
+  updatePassword as updatePasswordApi,
+  withdraw as withdrawApi,
+} from '@/api/user';
 
 export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false);
@@ -15,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref(getAccessToken());
   const myPage = ref(null);
   const isAuthenticated = computed(() => Boolean(accessToken.value));
+  const characterType = computed(() => myPage.value?.characterType ?? 'CAT');
 
   const signup = async (signupData) => {
     loading.value = true;
@@ -69,6 +76,35 @@ export const useAuthStore = defineStore('auth', () => {
     return updatedAccount;
   };
 
+  const updateProfile = async (nickname) => {
+    const updatedAccount = await updateMyAccount({ nickname });
+    myPage.value = updatedAccount;
+    return updatedAccount;
+  };
+
+  const withdraw = async (password) => {
+    loading.value = true;
+    try {
+      const result = await withdrawApi({ password });
+      clearAuth();
+      return result;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const changePassword = async (passwordData) => {
+    loading.value = true;
+    try {
+      const result = await updatePasswordApi(passwordData);
+      // 백엔드에서 비밀번호 변경과 동시에 기존 토큰을 무효화합니다.
+      clearAuth();
+      return result;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   // 브라우저 토큰과 Pinia의 인증 정보를 함께 초기화
   const clearAuth = () => {
     removeAccessToken();
@@ -92,12 +128,16 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     myPageLoading,
     myPage,
+    characterType,
     isAuthenticated,
     signup,
     login,
     logout,
     fetchMyPage,
     changeCharacter,
+    updateProfile,
+    changePassword,
+    withdraw,
     clearAuth,
   };
 });

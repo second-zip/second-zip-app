@@ -128,6 +128,9 @@ dependencies {
     // ===== Flyway =====
     implementation "org.flywaydb:flyway-core:${flywayVersion}"
     implementation "org.flywaydb:flyway-mysql:${flywayVersion}"
+
+    // ===== websocket =====
+    implementation 'org.springframework:spring-websocket:5.3.37'
 }
 
 war {
