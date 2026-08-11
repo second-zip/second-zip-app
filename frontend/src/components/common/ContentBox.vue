@@ -8,13 +8,20 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  flush: {
+    type: Boolean,
+    default: false,
+  },
 });
 </script>
 
 <template>
   <div
     class="container d-flex flex-column rounded-4"
-    :class="{ 'container-shadow': shadow }"
+    :class="{
+      'container-shadow': shadow,
+      'container-flush': flush,
+    }"
     :style="{ gap: `${gap}px` }"
   >
     <slot />
@@ -24,6 +31,10 @@ defineProps({
 <style scoped>
 .container {
   border: 1px solid var(--black-100);
+}
+
+.container-flush {
+  padding: 0;
 }
 
 .container-shadow {

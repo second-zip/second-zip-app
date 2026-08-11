@@ -146,4 +146,27 @@
         WHERE analysis_report_id = #{reportId}
     </update>
 
+    <!--  공유  -->
+    <update id="updateShareToken">
+        UPDATE analysis_reports
+        SET share_token = #{shareToken},
+            share_expires_at = #{shareExpiresAt}
+        WHERE analysis_report_id = #{reportId}
+    </update>
+
+    <select id="findShareInfoByReportId" resultType="map">
+        SELECT
+            share_token AS shareToken,
+            share_expires_at AS shareExpiresAt
+        FROM analysis_reports
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findReportIdByShareToken" resultType="java.lang.Long">
+        SELECT analysis_report_id
+        FROM analysis_reports
+        WHERE share_token = #{shareToken}
+          AND share_expires_at &gt; NOW()
+    </select>
+
 </mapper>

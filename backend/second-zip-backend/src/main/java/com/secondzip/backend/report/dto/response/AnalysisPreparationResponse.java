@@ -21,7 +21,7 @@ public class AnalysisPreparationResponse {
     private final long expiresAtEpochMillis;
     private final Long reportId;
     private final String failureMessage;
-    private final BuildingRegisterDocumentType pendingDocument;   // 추가
-    private final AnalysisNextAction nextAction;                  // 추가
-    private final List<AnalysisSelectionOption> selectionOptions; // 추가
+    private final BuildingRegisterDocumentType pendingDocument;
+    private final AnalysisNextAction nextAction;
+    private final List<AnalysisSelectionOption> selectionOptions;
 }

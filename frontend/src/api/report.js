@@ -14,6 +14,24 @@ export const getReport = async (analysisReportId) => {
   return response.data;
 };
 
+// Swagger 기준: 리포트 즐겨찾기 추가
+export const addReportFavorite = async (analysisReportId) => {
+  const response = await api.post(
+    `/analysis-reports/${analysisReportId}/favorite`,
+  );
+
+  return response.data;
+};
+
+// Swagger 기준: 리포트 즐겨찾기 해제
+export const deleteReportFavorite = async (analysisReportId) => {
+  const response = await api.delete(
+    `/analysis-reports/${analysisReportId}/favorite`,
+  );
+
+  return response.data;
+};
+
 // Swagger 기준: 전세 위험도 분석 보고서 생성
 export const createReport = async (reportData) => {
   const response = await api.post('/analysis-reports/analyze', reportData);
@@ -30,18 +48,9 @@ export const generateAiMessages = async (analysisReportId) => {
   return response.data;
 };
 
-// API 명세서 기준: 분석 보고서 삭제
+// Swagger 기준: 분석 보고서 삭제
 export const deleteReport = async (analysisReportId) => {
   const response = await api.delete(`/analysis-reports/${analysisReportId}`);
-
-  return response.data;
-};
-
-// API 명세서 기준: 분석 보고서 상단 고정 또는 해제
-export const toggleReportFavorite = async (analysisReportId) => {
-  const response = await api.patch(
-    `/analysis-reports/${analysisReportId}/favorite`,
-  );
 
   return response.data;
 };
