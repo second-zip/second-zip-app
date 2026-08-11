@@ -21,7 +21,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
 }));
 
-describe('LoginView', () => {
+describe('LoginView 로그인 화면', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authStore.loading = false;

@@ -1,12 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { getApiError } from '@/api/utils/error';
+import { getLatestTerms } from '@/api/terms';
 import { useAuthStore } from '@/stores/auth';
 import { useSignupForm } from '@/composables/useSignupForm';
 import { SIGNUP_FIELDS } from '@/constants/auth/signupFields';
-import { SIGNUP_TERMS } from '@/constants/auth/signupTerms';
 
 import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
@@ -29,17 +29,38 @@ const {
 
 const errorMessage = ref('');
 const expandedTermType = ref('');
+const signupTerms = ref([]);
+const isTermsLoading = ref(true);
 
-form.termConsents = SIGNUP_TERMS.map(({ termId }) => ({
-  termId,
-  agreed: false,
-}));
+const REQUIRED_TERM_TYPES = ['SERVICE', 'PRIVACY_POLICY'];
+
+const loadSignupTerms = async () => {
+  try {
+    const terms = await getLatestTerms();
+
+    signupTerms.value = terms.filter(
+      ({ required, termType }) =>
+        required && REQUIRED_TERM_TYPES.includes(termType),
+    );
+    form.termConsents = signupTerms.value.map(({ termId }) => ({
+      termId,
+      agreed: false,
+    }));
+  } catch (error) {
+    errorMessage.value = getApiError(error).message;
+  } finally {
+    isTermsLoading.value = false;
+  }
+};
+
+onMounted(loadSignupTerms);
 
 const getConsent = (termId) =>
   form.termConsents.find((consent) => consent.termId === termId);
 
 const hasRequiredConsents = computed(() =>
-  SIGNUP_TERMS.every(({ termId }) => getConsent(termId)?.agreed),
+  signupTerms.value.length === REQUIRED_TERM_TYPES.length &&
+  signupTerms.value.every(({ termId }) => getConsent(termId)?.agreed),
 );
 
 const toggleTerm = (termType) => {
@@ -112,8 +133,11 @@ const handleSignup = async () => {
           필수 약관을 확인하고 동의해 주세요.
         </p>
         <div class="term-list">
+          <p v-if="isTermsLoading" class="terms-state mb-0">
+            약관을 불러오는 중입니다.
+          </p>
           <article
-            v-for="term in SIGNUP_TERMS"
+            v-for="term in signupTerms"
             :key="term.termId"
             class="term-item"
           >
@@ -214,6 +238,11 @@ const handleSignup = async () => {
   margin-bottom: 0.5rem;
   color: var(--black-500);
   font-size: 0.75rem;
+}
+
+.terms-state {
+  color: var(--black-500);
+  font-size: 0.8125rem;
 }
 
 .term-list {

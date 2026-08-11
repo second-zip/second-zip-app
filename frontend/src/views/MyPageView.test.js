@@ -24,7 +24,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ replace: vi.fn() }),
 }));
 
-describe('MyPageView character selection', () => {
+describe('MyPageView AI 비서 선택', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authStore.myPage = {

@@ -3,11 +3,36 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SignupView from './SignupView.vue';
 
+const latestTerms = [
+  {
+    termId: 1,
+    termType: 'SERVICE',
+    title: '서비스 이용약관',
+    content: '백엔드 서비스 이용약관 본문',
+    required: true,
+  },
+  {
+    termId: 2,
+    termType: 'PRIVACY_POLICY',
+    title: '개인정보 수집·이용',
+    content: '백엔드 개인정보 수집·이용 동의 본문',
+    required: true,
+  },
+  {
+    termId: 3,
+    termType: 'MARKETING',
+    title: '마케팅 정보 수신',
+    content: '선택 약관 본문',
+    required: false,
+  },
+];
+
 const mocks = vi.hoisted(() => ({
   authStore: {
     signup: vi.fn(),
   },
   replace: vi.fn(),
+  getLatestTerms: vi.fn(),
 }));
 
 vi.mock('@/stores/auth', () => ({
@@ -15,6 +40,9 @@ vi.mock('@/stores/auth', () => ({
 }));
 vi.mock('vue-router', () => ({
   useRouter: () => ({ replace: mocks.replace }),
+}));
+vi.mock('@/api/terms', () => ({
+  getLatestTerms: mocks.getLatestTerms,
 }));
 
 const mountView = () =>
@@ -47,9 +75,10 @@ const agreeRequiredTerms = async (wrapper) => {
   }
 };
 
-describe('SignupView', () => {
+describe('SignupView 회원가입 화면', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getLatestTerms.mockResolvedValue(latestTerms);
   });
 
   it('상단 영역과 폼 여백을 줄인 회원가입 레이아웃을 렌더링한다', () => {
@@ -90,6 +119,7 @@ describe('SignupView', () => {
     ]);
     expect(wrapper.find('.privacy-policy').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('마케팅 정보 수신');
+    expect(mocks.getLatestTerms).toHaveBeenCalledOnce();
   });
 
   it('상단 체크를 누르면 동의 처리 전 약관 설명부터 펼친다', async () => {
@@ -99,7 +129,7 @@ describe('SignupView', () => {
     await wrapper.findAll('.term-checkbox')[0].trigger('click');
 
     expect(wrapper.get('.term-accordion').text()).toContain(
-      '제1조 목적',
+      '백엔드 서비스 이용약관 본문',
     );
     expect(wrapper.findAll('.term-row')[0].attributes('aria-checked')).toBe(
       'false',
@@ -124,6 +154,8 @@ describe('SignupView', () => {
 
   it('다른 약관을 열면 기존 아코디언을 닫고 선택한 약관만 표시한다', async () => {
     const wrapper = mountView();
+
+    await flushPromises();
     const rows = wrapper.findAll('.term-row');
 
     await rows[0].trigger('click');
@@ -139,6 +171,8 @@ describe('SignupView', () => {
 
   it('두 약관을 확인하기 전에는 계정 생성 버튼을 비활성화한다', async () => {
     const wrapper = mountView();
+
+    await flushPromises();
     const submitButton = wrapper.get('button[type="submit"]');
 
     expect(submitButton.attributes('disabled')).toBeDefined();
