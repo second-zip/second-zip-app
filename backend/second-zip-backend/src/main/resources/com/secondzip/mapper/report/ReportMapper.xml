@@ -10,7 +10,7 @@
     </insert>
 
     <insert id="insertCheckResult" parameterType="map">
-        INSERT INTO report_check_results (analysis_report_id, check_type, risk_level, evidence)
+        INSERT INTO analysis_report_check_results (analysis_report_id, check_type, risk_level, evidence)
         VALUES (#{reportId}, #{checkType}, #{riskLevel}, #{evidenceJson, jdbcType=VARCHAR})
     </insert>
 
@@ -58,7 +58,7 @@
             check_type AS checkType,
             risk_level AS riskLevel,
             evidence
-        FROM report_check_results
+        FROM analysis_report_check_results
         WHERE analysis_report_id = #{reportId}
     </select>
 
