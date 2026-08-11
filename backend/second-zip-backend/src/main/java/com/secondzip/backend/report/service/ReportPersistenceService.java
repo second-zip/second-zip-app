@@ -32,10 +32,17 @@ public class ReportPersistenceService {
     private final ReportQueryService reportQueryService;
 
     // 작성, 수정, 삭제, 저장 담당
+    /**
+     * @param housingCategory 건축물 유형. checklist_items.category ENUM과 이름이 일치해야
+     *                        체크리스트 생성 시 유형별 항목이 붙는다.
+     *                        (SINGLE_FAMILY / MULTI_FAMILY / APARTMENT / MULTI_HOUSEHOLD / OFFICETEL)
+     * @param trustProperty   신탁주택 여부. TRUE면 체크리스트에 TRUST_PROPERTY 항목이 추가된다.
+     */
     @Transactional
     public ReportDetailResponse save(Long accountId, String requestId,
                                      String roadAddress, String detailAddress,
-                                     Long deposit, RiskEvaluationResult evalResult) {
+                                     Long deposit, RiskEvaluationResult evalResult,
+                                     String housingCategory, boolean trustProperty) {
         // 보고서 만들고 저장 -> 그 보고서의 ID를 반환
         Long reportId = insertReport(
                 accountId,
@@ -43,7 +50,9 @@ public class ReportPersistenceService {
                 roadAddress,
                 detailAddress,
                 deposit,
-                evalResult
+                evalResult,
+                housingCategory,
+                trustProperty
         );
         // 해당 보고서에 필수 점검 결과 저장
         List<CheckResultView> checkViews = insertCheckResults(reportId, evalResult.getCheckResults());
@@ -52,13 +61,16 @@ public class ReportPersistenceService {
 
         return new ReportDetailResponse(
                 reportId, roadAddress, detailAddress, deposit,
-                evalResult.getOverallRiskLevel(), false, checkViews, fraudViews, Collections.emptyList()
+                evalResult.getOverallRiskLevel(), false,
+                housingCategory, trustProperty,
+                checkViews, fraudViews, Collections.emptyList()
         );
     }
 
     private Long insertReport(Long accountId, String requestId,
                               String roadAddress, String detailAddress,
-                              Long deposit, RiskEvaluationResult evalResult) {
+                              Long deposit, RiskEvaluationResult evalResult,
+                              String housingCategory, boolean trustProperty) {
         Map<String, Object> params = new HashMap<>();
         params.put("accountId", accountId);
         params.put("requestId", requestId);
@@ -66,6 +78,8 @@ public class ReportPersistenceService {
         params.put("detailAddress", detailAddress);
         params.put("deposit", deposit);
         params.put("result", evalResult.getOverallRiskLevel());
+        params.put("housingCategory", housingCategory);
+        params.put("trustProperty", trustProperty);
         reportMapper.insertReportMap(params);
         return Long.valueOf(params.get("reportId").toString());
     }

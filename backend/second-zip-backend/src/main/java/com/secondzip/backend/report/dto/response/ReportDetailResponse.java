@@ -15,6 +15,17 @@ public class ReportDetailResponse {
     private Long deposit;
     private RiskLevel result;
     private Boolean favorite;
+
+    /**
+     * 건축물 유형. SINGLE_FAMILY / MULTI_FAMILY / APARTMENT / MULTI_HOUSEHOLD / OFFICETEL.
+     *
+     * <p>이 필드가 추가되기 전에 생성된 리포트는 null이다.
+     */
+    private String housingCategory;
+
+    /** 신탁주택 여부. 등기에 신탁등기가 있거나 소유자가 신탁회사면 true. */
+    private Boolean trustProperty;
+
     private List<CheckResultView> checkResults;
     private List<FraudTypeView> fraudTypes;
 

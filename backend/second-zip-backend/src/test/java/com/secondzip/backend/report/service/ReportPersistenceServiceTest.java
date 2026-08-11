@@ -58,14 +58,46 @@ class ReportPersistenceServiceTest {
                         "서울특별시 강남구 테헤란로 1",
                         null,
                         100_000_000L,
-                        evaluation
+                        evaluation,
+                        "APARTMENT",
+                        false
                 )
         );
         assertEquals(0, mapper.insertedCheckResults);
     }
 
+    @Test
+    void savesHousingCategoryAndTrustPropertyForChecklistGeneration() {
+        CountingStubMapper mapper = new CountingStubMapper();
+        ReportPersistenceService service = new ReportPersistenceService(
+                mapper,
+                new ObjectMapper(),
+                null
+        );
+        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+                RiskLevel.SAFE,
+                List.of(),
+                List.of()
+        );
+
+        service.save(
+                1L,
+                "request-id",
+                "서울특별시 강남구 테헤란로 1",
+                "101동 1001호",
+                100_000_000L,
+                evaluation,
+                "OFFICETEL",
+                true
+        );
+
+        assertEquals("OFFICETEL", mapper.lastReportParams.get("housingCategory"));
+        assertEquals(true, mapper.lastReportParams.get("trustProperty"));
+    }
+
     private static class CountingStubMapper extends StubReportMapper {
         private int insertedCheckResults;
+        private Map<String, Object> lastReportParams;
 
         @Override
         public void insertCheckResult(Map<String, Object> params) {
@@ -74,6 +106,7 @@ class ReportPersistenceServiceTest {
 
         @Override
         public void insertReportMap(Map<String, Object> params) {
+            lastReportParams = new java.util.HashMap<>(params);
             params.put("reportId", 1L);
         }
     }

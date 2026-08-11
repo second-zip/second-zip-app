@@ -13,6 +13,7 @@ import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.service.ReportPersistenceService;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
+import com.secondzip.backend.report.service.TrustPropertyResolver;
 import com.secondzip.backend.report.service.external.client.*;
 import com.secondzip.backend.report.service.SpecialTermService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class AnalysisExecutionService {
     private final ReportPersistenceService reportPersistenceService;
     private final ReportQueryService reportQueryService;
     private final SpecialTermService specialTermService;
+    private final TrustPropertyResolver trustPropertyResolver;
 
     public ReportDetailResponse execute(
             Long accountId,
@@ -159,13 +161,21 @@ public class AnalysisExecutionService {
                             state.getDeposit(),
                             regionAddress(state)
                     );
+            // 체크리스트 생성 조건이 되는 두 값을 리포트에 함께 저장한다.
+            //
+            // housingCategory는 분석 준비 단계에서 이미 확정된 buildingType을 그대로 쓴다.
+            // BuildingRegisterDocumentSelector가 5종(단독/다가구/아파트/다세대/오피스텔)
+            // 이외의 값을 거부하므로 이 지점에서는 항상 유효하고, 값이 곧
+            // checklist_items.category ENUM과 일치한다.
             ReportDetailResponse report = reportPersistenceService.save(
                     accountId,
                     requestId,
                     state.getRoadAddress(),
                     state.getDetailAddress(),
                     state.getDeposit(),
-                    evaluation
+                    evaluation,
+                    state.getBuildingType(),
+                    trustPropertyResolver.resolve(registry)
             );
 
             // 리포트 저장이 완료됐으므로 분석 자체는 성공 처리.

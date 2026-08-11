@@ -15,6 +15,7 @@ import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.service.ReportPersistenceService;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
+import com.secondzip.backend.report.service.TrustPropertyResolver;
 import com.secondzip.backend.report.service.SpecialTermService;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterDataParser;
 import com.secondzip.backend.report.service.external.client.CodefTokenProvider;
@@ -50,7 +51,8 @@ class AnalysisExecutionServiceTest {
                 riskService,
                 new FixedPersistenceService(saved),
                 new FixedQueryService(saved),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         ReportDetailResponse result =
@@ -83,7 +85,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 new FixedPersistenceService(saved),
                 new FixedQueryService(saved),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         ReportDetailResponse result =
@@ -108,7 +111,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 persistence,
                 new FixedQueryService(existing, 99L),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         ReportDetailResponse result = service.execute(1L, "request-id");
@@ -132,7 +136,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(90L)),
                 new FixedQueryService(report(90L)),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         assertThrows(
@@ -158,7 +163,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(92L)),
                 new FixedQueryService(report(88L)),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         assertThrows(
@@ -186,7 +192,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(91L)),
                 new FixedQueryService(report(91L)),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         assertThrows(
@@ -212,7 +219,8 @@ class AnalysisExecutionServiceTest {
                 riskService,
                 new FixedPersistenceService(saved),
                 new FixedQueryService(saved),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         service.execute(1L, "request-id");
@@ -242,7 +250,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(93L)),
                 new FixedQueryService(report(93L)),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         assertThrows(
@@ -271,7 +280,8 @@ class AnalysisExecutionServiceTest {
                 new CapturingRiskService(),
                 new FixedPersistenceService(report(94L)),
                 new FixedQueryService(report(94L)),
-                new StubSpecialTermService()
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
         );
 
         assertThrows(
@@ -336,6 +346,8 @@ class AnalysisExecutionServiceTest {
                 "101동 1203호",
                 500_000_000L,
                 RiskLevel.DANGER,
+                false,
+                "APARTMENT",
                 false,
                 List.of(),
                 List.of(),
@@ -466,6 +478,8 @@ class AnalysisExecutionServiceTest {
             extends ReportPersistenceService {
         private final ReportDetailResponse response;
         private boolean called;
+        private String capturedHousingCategory;
+        private boolean capturedTrustProperty;
 
         private FixedPersistenceService(ReportDetailResponse response) {
             super(null, new ObjectMapper(), null);
@@ -479,9 +493,13 @@ class AnalysisExecutionServiceTest {
                 String roadAddress,
                 String detailAddress,
                 Long deposit,
-                RiskEvaluationResult evalResult
+                RiskEvaluationResult evalResult,
+                String housingCategory,
+                boolean trustProperty
         ) {
             called = true;
+            this.capturedHousingCategory = housingCategory;
+            this.capturedTrustProperty = trustProperty;
             return response;
         }
     }

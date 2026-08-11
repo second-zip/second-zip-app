@@ -80,6 +80,9 @@ public class ReportQueryService {
                 (Long) report.get("deposit"),
                 RiskLevel.valueOf(report.get("result").toString()),
                 (Boolean) report.get("favorite"),
+                // 이 필드가 추가되기 전에 저장된 리포트는 값이 없다. null 그대로 내려보낸다.
+                (String) report.get("housingCategory"),
+                (Boolean) report.get("trustProperty"),
                 checkViews,
                 fraudViews,
                 specialTermViews

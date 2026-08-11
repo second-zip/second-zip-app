@@ -163,6 +163,8 @@ class ReportShareServiceTest {
                     300_000_000L,
                     RiskLevel.CAUTION,
                     false,
+                    "APARTMENT",
+                    false,
                     List.of(),
                     List.of(),
                     List.of()

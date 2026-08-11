@@ -24,6 +24,7 @@ import com.secondzip.backend.report.enums.SimpleAuthProvider;
 import com.secondzip.backend.report.service.ReportPersistenceService;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
+import com.secondzip.backend.report.service.TrustPropertyResolver;
 import com.secondzip.backend.report.service.SpecialTermService;
 import com.secondzip.backend.report.service.external.client.AddressClient;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnalysisWorkflowE2ETest {
@@ -65,6 +67,8 @@ class AnalysisWorkflowE2ETest {
                 );
         CapturingRiskService riskService = new CapturingRiskService();
         ReportDetailResponse savedReport = report(501L);
+        FixedPersistenceService persistence =
+                new FixedPersistenceService(savedReport);
         AnalysisExecutionService execution =
                 new AnalysisExecutionService(
                         store,
@@ -72,9 +76,10 @@ class AnalysisWorkflowE2ETest {
                         new FixedRegistryClient(),
                         new FixedPriceClient(),
                         riskService,
-                        new FixedPersistenceService(savedReport),
+                        persistence,
                         new FixedQueryService(savedReport),
-                        new StubSpecialTermService()
+                        new StubSpecialTermService(),
+                        new TrustPropertyResolver()
                 );
 
         AnalysisPreparationResponse prepared =
@@ -152,6 +157,12 @@ class AnalysisWorkflowE2ETest {
         assertTrue(riskService.building.getIsIllegalBuilding());
         assertEquals(550_000_000L, riskService.price.getOfficialPrice());
         assertEquals(2, store.state.getCompletedDocuments().size());
+
+        // 체크리스트 생성 조건이 리포트에 함께 저장되는지 확인.
+        // 건축물 유형은 준비 단계에서 확정한 값이 그대로 넘어와야 하고,
+        // 등기에 신탁 흔적이 없으므로 신탁주택은 아니어야 한다.
+        assertEquals("APARTMENT", persistence.housingCategory);
+        assertFalse(persistence.trustProperty);
     }
 
     private void assertStep(
@@ -201,6 +212,8 @@ class AnalysisWorkflowE2ETest {
                 "101동 1304호",
                 500_000_000L,
                 RiskLevel.DANGER,
+                false,
+                "APARTMENT",
                 false,
                 List.of(),
                 List.of(),
@@ -475,6 +488,8 @@ class AnalysisWorkflowE2ETest {
     private static class FixedPersistenceService
             extends ReportPersistenceService {
         private final ReportDetailResponse response;
+        private String housingCategory;
+        private boolean trustProperty;
 
         private FixedPersistenceService(ReportDetailResponse response) {
             super(null, new ObjectMapper(), null);
@@ -488,8 +503,12 @@ class AnalysisWorkflowE2ETest {
                 String roadAddress,
                 String detailAddress,
                 Long deposit,
-                RiskEvaluationResult evalResult
+                RiskEvaluationResult evalResult,
+                String housingCategory,
+                boolean trustProperty
         ) {
+            this.housingCategory = housingCategory;
+            this.trustProperty = trustProperty;
             return response;
         }
     }
