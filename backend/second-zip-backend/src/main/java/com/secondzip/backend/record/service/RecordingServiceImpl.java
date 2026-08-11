@@ -245,8 +245,7 @@ public class RecordingServiceImpl implements RecordingService {
         );
 
         contextManager.create(
-                session.getRecordingSessionId(),
-                category
+                session.getRecordingSessionId()
         );
 
         return RecordingLiveStartResponseDTO.builder()

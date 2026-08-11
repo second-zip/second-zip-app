@@ -35,71 +35,72 @@ CREATE TABLE analysis_report_checklist_results (
 
 
 -- =========================================================
--- 3. 리포트 전용 체크리스트
--- Report 1 : 0..1 Checklist
+-- 3. 분석 리포트 전용 체크리스트
+-- Analysis Report 1 : 0..1 Checklist
 -- =========================================================
-CREATE TABLE report_checklists (
-                                   report_checklist_id BIGINT NOT NULL AUTO_INCREMENT,
-                                   analysis_report_id BIGINT NOT NULL,
-                                   account_id BIGINT NOT NULL,
+CREATE TABLE analysis_report_checklists (
+                                            analysis_report_checklist_id BIGINT NOT NULL AUTO_INCREMENT,
+                                            analysis_report_id BIGINT NOT NULL,
+                                            account_id BIGINT NOT NULL,
 
-                                   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                   modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                                       ON UPDATE CURRENT_TIMESTAMP,
+                                            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                            modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                                ON UPDATE CURRENT_TIMESTAMP,
 
-                                   PRIMARY KEY (report_checklist_id),
+                                            PRIMARY KEY (analysis_report_checklist_id),
 
-                                   CONSTRAINT uk_report_checklist_report
-                                       UNIQUE (analysis_report_id),
+                                            CONSTRAINT uk_analysis_report_checklist_report
+                                                UNIQUE (analysis_report_id),
 
-                                   CONSTRAINT fk_report_checklist_report
-                                       FOREIGN KEY (analysis_report_id)
-                                           REFERENCES analysis_reports(analysis_report_id)
-                                           ON DELETE CASCADE,
+                                            CONSTRAINT fk_analysis_report_checklist_report
+                                                FOREIGN KEY (analysis_report_id)
+                                                    REFERENCES analysis_reports(analysis_report_id)
+                                                    ON DELETE CASCADE,
 
-                                   CONSTRAINT fk_report_checklist_account
-                                       FOREIGN KEY (account_id)
-                                           REFERENCES accounts(account_id)
-                                           ON DELETE CASCADE
+                                            CONSTRAINT fk_analysis_report_checklist_account
+                                                FOREIGN KEY (account_id)
+                                                    REFERENCES accounts(account_id)
+                                                    ON DELETE CASCADE
 );
 
 
 -- =========================================================
--- 4. 실제 리포트 체크리스트 항목
+-- 4. 실제 분석 리포트 체크리스트 항목
 -- =========================================================
-CREATE TABLE report_checklist_items (
-                                        report_checklist_item_id BIGINT NOT NULL AUTO_INCREMENT,
-                                        report_checklist_id BIGINT NOT NULL,
-                                        checklist_item_id BIGINT NOT NULL,
-                                        is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+CREATE TABLE analysis_report_checklist_items (
+                                                 analysis_report_checklist_item_id BIGINT NOT NULL AUTO_INCREMENT,
+                                                 analysis_report_checklist_id BIGINT NOT NULL,
+                                                 checklist_item_id BIGINT NOT NULL,
+                                                 is_checked BOOLEAN NOT NULL DEFAULT FALSE,
 
-                                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                        modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                                            ON UPDATE CURRENT_TIMESTAMP,
+                                                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                 modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                                     ON UPDATE CURRENT_TIMESTAMP,
 
-                                        PRIMARY KEY (report_checklist_item_id),
+                                                 PRIMARY KEY (analysis_report_checklist_item_id),
 
-                                        CONSTRAINT uk_report_checklist_item
-                                            UNIQUE (report_checklist_id, checklist_item_id),
+                                                 CONSTRAINT uk_analysis_report_checklist_item
+                                                     UNIQUE (analysis_report_checklist_id, checklist_item_id),
 
-                                        CONSTRAINT fk_report_checklist_item_checklist
-                                            FOREIGN KEY (report_checklist_id)
-                                                REFERENCES report_checklists(report_checklist_id)
-                                                ON DELETE CASCADE,
+                                                 CONSTRAINT fk_analysis_report_checklist_item_checklist
+                                                     FOREIGN KEY (analysis_report_checklist_id)
+                                                         REFERENCES analysis_report_checklists(analysis_report_checklist_id)
+                                                         ON DELETE CASCADE,
 
-                                        CONSTRAINT fk_report_checklist_item_master
-                                            FOREIGN KEY (checklist_item_id)
-                                                REFERENCES checklist_items(checklist_item_id)
+                                                 CONSTRAINT fk_analysis_report_checklist_item_master
+                                                     FOREIGN KEY (checklist_item_id)
+                                                         REFERENCES checklist_items(checklist_item_id)
 );
 
 
 -- =========================================================
 -- 5. 녹음 세션
+-- 특정 분석 리포트 체크리스트에서 녹음 시작
 -- =========================================================
 CREATE TABLE recording_sessions (
                                     recording_session_id BIGINT NOT NULL AUTO_INCREMENT,
                                     account_id BIGINT NOT NULL,
-                                    report_checklist_id BIGINT NULL,
+                                    analysis_report_checklist_id BIGINT NULL,
 
                                     original_file_name VARCHAR(255) NULL,
                                     storage_object_key VARCHAR(500) NULL,
@@ -123,9 +124,9 @@ CREATE TABLE recording_sessions (
                                         FOREIGN KEY (account_id)
                                             REFERENCES accounts(account_id),
 
-                                    CONSTRAINT fk_recording_session_report_checklist
-                                        FOREIGN KEY (report_checklist_id)
-                                            REFERENCES report_checklists(report_checklist_id)
+                                    CONSTRAINT fk_recording_session_analysis_checklist
+                                        FOREIGN KEY (analysis_report_checklist_id)
+                                            REFERENCES analysis_report_checklists(analysis_report_checklist_id)
                                             ON DELETE CASCADE
 );
 

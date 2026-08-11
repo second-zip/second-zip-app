@@ -14,14 +14,12 @@ public class LiveChecklistAnalysisAsyncService {
     @Async
     public void analyze(
             Long recordingSessionId,
-            String transcript,
-            String category
+            String transcript
     ) {
         try {
             liveChecklistAnalysisService.analyzeProvisional(
                     recordingSessionId,
-                    transcript,
-                    category
+                    transcript
             );
         } finally {
             LiveRecordingContext context =

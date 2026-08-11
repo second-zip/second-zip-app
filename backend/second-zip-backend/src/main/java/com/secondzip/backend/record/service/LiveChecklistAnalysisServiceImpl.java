@@ -1,10 +1,12 @@
 package com.secondzip.backend.record.service;
 
 import com.secondzip.backend.record.client.ChecklistAnalysisClient;
+import com.secondzip.backend.record.domain.RecordingSessionVO;
 import com.secondzip.backend.record.dto.request.ChecklistItemInput;
 import com.secondzip.backend.record.dto.response.ChecklistAnalysisResult;
 import com.secondzip.backend.record.enums.ChecklistAnalysisStatus;
 import com.secondzip.backend.record.mapper.ChecklistItemMapper;
+import com.secondzip.backend.record.mapper.RecordingSessionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,17 +21,35 @@ public class LiveChecklistAnalysisServiceImpl
 
     private final ChecklistAnalysisClient checklistAnalysisClient;
     private final ChecklistItemMapper checklistItemMapper;
+    private final RecordingSessionMapper recordingSessionMapper;
     private final LiveRecordingContextManager contextManager;
 
     @Override
     public void analyzeProvisional(
             Long recordingSessionId,
-            String transcript,
-            String category
+            String transcript
     ) {
+        RecordingSessionVO recordingSession =
+                recordingSessionMapper.findById(recordingSessionId);
+
+        if (recordingSession == null) {
+            throw new IllegalArgumentException(
+                    "Recording session not found: " + recordingSessionId
+            );
+        }
+
+        Long analysisReportChecklistId =
+                recordingSession.getReportChecklistId();
+
+        if (analysisReportChecklistId == null) {
+            throw new IllegalStateException(
+                    "Analysis report checklist is not connected to recording session: "
+                            + recordingSessionId
+            );
+        }
 
         List<ChecklistItemInput> checklistItems =
-                checklistItemMapper.findByCategory(category);
+                checklistItemMapper.findByReportChecklistId(analysisReportChecklistId);
 
         if (checklistItems == null
                 || checklistItems.isEmpty()) {

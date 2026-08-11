@@ -5,7 +5,6 @@ public interface LiveChecklistAnalysisService {
 
     void analyzeProvisional(
             Long recordingSessionId,
-            String transcript,
-            String category
+            String transcript
     );
 }

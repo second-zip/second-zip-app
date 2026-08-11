@@ -15,9 +15,9 @@ public class LiveTranscriptionServiceImpl
     private static final int ANALYSIS_THRESHOLD = 300;
 
     @Override
-    public void start(Long recordingSessionId,String category) {
+    public void start(Long recordingSessionId) {
 
-        contextManager.create(recordingSessionId,category);
+        contextManager.create(recordingSessionId);
 
         // 여기서 CLOVA 실시간 STT 연결 시작
     }
@@ -45,8 +45,7 @@ public class LiveTranscriptionServiceImpl
     //CLOVA 응답 callback
     public void onTranscript(
             Long recordingSessionId,
-            String text,
-            String category
+            String text
     ) {
 
         LiveRecordingContext context =
@@ -79,8 +78,7 @@ public class LiveTranscriptionServiceImpl
 
         liveChecklistAnalysisAsyncService.analyze(
                 recordingSessionId,
-                transcript,
-                category
+                transcript
         );
     }
 

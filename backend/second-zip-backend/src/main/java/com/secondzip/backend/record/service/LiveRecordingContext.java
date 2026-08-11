@@ -24,7 +24,7 @@ public class LiveRecordingContext {
     // 중간 분석 결과
     private final Map<Long, ChecklistAnalysisResult.ResultItem> provisionalResults = new ConcurrentHashMap<>();
 
-    public LiveRecordingContext(String category) {
+    public LiveRecordingContext() {
         this.category = category;
     }
 

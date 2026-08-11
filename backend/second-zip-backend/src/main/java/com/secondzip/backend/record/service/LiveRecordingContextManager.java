@@ -14,12 +14,11 @@ public class LiveRecordingContextManager {
 
 
     public LiveRecordingContext create(
-            Long recordingSessionId,
-            String category
+            Long recordingSessionId
     ) {
 
         LiveRecordingContext context =
-                new LiveRecordingContext(category);
+                new LiveRecordingContext();
 
         contexts.put(
                 recordingSessionId,
