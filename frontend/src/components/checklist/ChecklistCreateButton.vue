@@ -1,6 +1,9 @@
 <script setup>
 import PlusIcon from '@/assets/icons/report/plus-white-14.svg';
 
+defineProps({
+  isLoading: { type: Boolean, default: false },
+});
 const emit = defineEmits(['create']);
 </script>
 
@@ -8,10 +11,16 @@ const emit = defineEmits(['create']);
   <button
     type="button"
     class="checklist-create-button d-inline-flex flex-shrink-0 align-items-center justify-content-center border-0 fw-semibold"
+    :disabled="isLoading"
     @click="emit('create')"
   >
-    <img :src="PlusIcon" class="checklist-create-button__icon" alt="" />
-    <span>생성</span>
+    <img
+      v-if="!isLoading"
+      :src="PlusIcon"
+      class="checklist-create-button__icon"
+      alt=""
+    />
+    <span>{{ isLoading ? '생성 중' : '생성' }}</span>
   </button>
 </template>
 
@@ -38,4 +47,6 @@ const emit = defineEmits(['create']);
   outline: 2px solid var(--blue-500);
   outline-offset: 2px;
 }
+
+.checklist-create-button:disabled { opacity: 0.6; }
 </style>

@@ -55,7 +55,7 @@ const routes = [
             meta: { requiresAuth: true },
           },
           {
-            path: ':analysisReportId(\\d+)',
+            path: ':reportChecklistId(\\d+)',
             name: 'checklist-detail',
             component: () =>
               import('@/views/checklist/ChecklistDetailView.vue'),

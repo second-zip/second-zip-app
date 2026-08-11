@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import ChecklistReportItem from '@/components/checklist/ChecklistReportItem.vue';
+import ListBox from '@/components/common/ListBox.vue';
 import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
-import ReportListBox from '@/components/report/list/ReportListBox.vue';
-import { useReportList } from '@/composables/report/useReportList';
+import { useChecklistList } from '@/composables/checklist/useChecklistList';
 import { REPORT_CHARACTER_TYPES } from '@/constants/report/list';
 import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
@@ -12,7 +13,16 @@ import { useAuthStore } from '@/stores/auth';
 import { logger } from '@/utils/logger';
 
 const authStore = useAuthStore();
-const { reports, isLoading, errorMessage, fetchReports } = useReportList();
+const router = useRouter();
+const {
+  checklists,
+  isLoading,
+  errorMessage,
+  creationErrorMessage,
+  fetchChecklists,
+  createChecklist,
+  isCreatingChecklist,
+} = useChecklistList();
 const isCharacterLoading = ref(
   authStore.isAuthenticated && !authStore.myPage?.characterType,
 );
@@ -22,7 +32,18 @@ const characterType = computed(() => {
   return REPORT_CHARACTER_TYPES.has(type) ? type : 'CAT';
 });
 
-onMounted(fetchReports);
+const handleCreateChecklist = async (report) => {
+  const createdChecklist = await createChecklist(report);
+
+  if (!createdChecklist?.reportChecklistId) return;
+
+  await router.push({
+    name: 'checklist-detail',
+    params: { reportChecklistId: createdChecklist.reportChecklistId },
+  });
+};
+
+onMounted(fetchChecklists);
 onMounted(async () => {
   if (!isCharacterLoading.value) return;
 
@@ -49,15 +70,28 @@ onMounted(async () => {
 
     <div class="checklist-sheet-scroll w-100 h-100 overflow-y-auto">
       <section class="checklist-list w-100">
-        <ReportListBox
-          :reports="reports"
+        <ListBox
+          title="리포트 목록"
+          :items="checklists"
+          item-key="analysisReportId"
           :is-loading="isLoading"
           :error-message="errorMessage"
+          loading-message="체크리스트 목록을 불러오는 중입니다."
+          empty-message="체크리스트를 만들 리포트가 없습니다."
         >
-          <template #item="{ report, index }">
-            <ChecklistReportItem :report="report" :index="index" />
+          <template #item="{ item }">
+            <ChecklistReportItem
+              :report="item"
+              :is-creating="isCreatingChecklist(item.analysisReportId)"
+              @create="handleCreateChecklist"
+            />
           </template>
-        </ReportListBox>
+        </ListBox>
+        <p
+          v-if="creationErrorMessage"
+          class="checklist-list__error mt-2 mb-0 text-center"
+          role="alert"
+        >{{ creationErrorMessage }}</p>
       </section>
     </div>
   </BottomSheetLayout>
@@ -88,5 +122,10 @@ onMounted(async () => {
 .checklist-list {
   min-height: 100%;
   padding: 24px 20px;
+}
+
+.checklist-list__error {
+  color: var(--red-500);
+  font-size: 0.75rem;
 }
 </style>
