@@ -1,5 +1,6 @@
 package com.secondzip.backend.checklist.dto.response;
 
+import com.secondzip.backend.checklist.enums.Category;
 import com.secondzip.backend.report.enums.RiskLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,7 @@ public class ChecklistListResponseDTO {
 
     private Long reportChecklistId;
 
-    private String housingCategory;
+    private Category housingCategory;
 
     private Boolean checklistCreated;
 
