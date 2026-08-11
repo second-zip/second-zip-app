@@ -5,45 +5,25 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.secondzip.backend.record.mapper.ChecklistItemMapper">
-    <select id="findByCategory"
-            resultType="com.secondzip.backend.record.dto.request.ChecklistItemInput">
-
-        SELECT
-            checklist_item_id AS checklistItemId,
-            contents AS contents,
-            category AS category
-        FROM checklist_items
-        WHERE category = 'COMMON'
-           OR category = #{category}
-        ORDER BY
-            CASE
-                WHEN category = 'COMMON' THEN 0
-                ELSE 1
-                END,
-            checklist_item_id ASC
-
-    </select>
     <select id="findByReportChecklistId"
             resultType="com.secondzip.backend.record.dto.request.ChecklistItemInput">
 
         SELECT
             ci.checklist_item_id AS checklistItemId,
             ci.contents AS contents,
-            ci.category AS category
+            ci.category AS category,
 
         FROM analysis_report_checklist_items rci
 
                  INNER JOIN checklist_items ci
-                            ON ci.checklist_item_id =
-                               rci.checklist_item_id
+                            ON ci.checklist_item_id = rci.checklist_item_id
 
         WHERE rci.analysis_report_checklist_id =
               #{reportChecklistId}
 
         ORDER BY
             CASE
-                WHEN ci.category = 'COMMON'
-                    THEN 0
+                WHEN ci.category = 'COMMON' THEN 0
                 ELSE 1
                 END,
             ci.checklist_item_id ASC

@@ -179,6 +179,7 @@
             ci.checklist_item_id AS checklistItemId,
             ci.contents,
             ci.category,
+            ci.description,
             rci.is_checked AS checked
 
         FROM analysis_report_checklist_items rci
