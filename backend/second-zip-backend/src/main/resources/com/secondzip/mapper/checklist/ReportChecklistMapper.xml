@@ -90,23 +90,65 @@
 
         SELECT
             ar.analysis_report_id AS analysisReportId,
-            rc.analysis_report_checklist_id AS reportChecklistId,
+            arc.analysis_report_checklist_id AS reportChecklistId,
             ar.housing_category AS housingCategory,
             ar.is_trust_property AS trustProperty,
+            ar.road_address  AS roadAddress,
+            ar.detail_address AS detailAddress,
+            ar.risk_level AS riskLevel,
 
             CASE
-                WHEN rc.analysis_report_checklist_id IS NULL
+                WHEN arc.analysis_report_checklist_id IS NULL
                     THEN FALSE
                 ELSE TRUE
                 END AS checklistCreated,
+
+            COALESCE(progress.checked_count, 0)
+                    AS checkedCount,
+
+            COALESCE(progress.total_count, 0)
+                    AS totalCount,
+
+            CASE
+                WHEN COALESCE(progress.total_count, 0) = 0
+                    THEN 0
+
+                ELSE ROUND(
+                        progress.checked_count
+                            * 100.0
+                            / progress.total_count
+                     )
+                END AS progressPercentage,
 
             ar.created_at AS reportCreatedAt
 
         FROM analysis_reports ar
 
-                 LEFT JOIN analysis_report_checklists rc
-                           ON rc.analysis_report_id =
+                 LEFT JOIN analysis_report_checklists arc
+                           ON arc.analysis_report_id =
                               ar.analysis_report_id
+
+                 LEFT JOIN (
+            SELECT
+                analysis_report_checklist_id,
+
+                COUNT(*) AS total_count,
+
+                SUM(
+                        CASE
+                            WHEN is_checked = TRUE
+                                THEN 1
+                            ELSE 0
+                            END
+                ) AS checked_count
+
+            FROM analysis_report_checklist_items
+
+            GROUP BY analysis_report_checklist_id
+
+        ) progress
+                           ON progress.analysis_report_checklist_id =
+                              arc.analysis_report_checklist_id
 
         WHERE ar.account_id = #{accountId}
 
