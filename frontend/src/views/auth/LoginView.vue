@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { getApiErrorMessage } from '@/api/utils/error';
 import { useAuthStore } from '@/stores/auth';
@@ -11,6 +11,7 @@ import BaseButton from '@/components/common/BaseButton.vue';
 import LoginImage from '@/assets/images/main-illust.png';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
 const form = reactive({
@@ -20,17 +21,27 @@ const form = reactive({
 
 const errorMessage = ref('');
 
+const getRedirectPath = () => {
+  const redirect = route.query.redirect;
+
+  return typeof redirect === 'string' && redirect.startsWith('/')
+    ? redirect
+    : '/';
+};
+
 const handleLogin = async () => {
   errorMessage.value = '';
 
   try {
     await authStore.login(form);
 
-    await router.replace('/');
+    await router.replace(getRedirectPath());
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error);
   }
 };
+
+const goToSignup = () => router.push('/signup');
 </script>
 
 <template>
@@ -61,9 +72,12 @@ const handleLogin = async () => {
       <p v-if="errorMessage" class="error-message fs-6 mb-0 fw-semibold w-100">
         {{ errorMessage }}
       </p>
-      <BaseButton type="submit" :disabled="authStore.loading">{{
-        authStore.loading ? '로그인 중...' : '로그인'
-      }}</BaseButton>
+      <div class="login-page__actions d-flex flex-column">
+        <BaseButton type="submit" :disabled="authStore.loading">{{
+          authStore.loading ? '로그인 중...' : '로그인'
+        }}</BaseButton>
+        <BaseButton type="button" @click="goToSignup">회원가입</BaseButton>
+      </div>
     </form>
   </main>
 </template>
@@ -87,6 +101,10 @@ const handleLogin = async () => {
   max-width: 402px;
   padding: 0 28px;
   transform: translate(-50%, -50%);
+}
+
+.login-page__actions {
+  gap: 12px;
 }
 
 .error-message {

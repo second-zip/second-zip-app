@@ -82,13 +82,13 @@ const handleSignup = async () => {
 </script>
 
 <template>
-  <BottomSheetLayout :title-ratio="15">
+  <BottomSheetLayout :title-ratio="10">
     <template #header>
       <DefaultSheetHeader title="회원가입" :icon="AuthIcon" />
     </template>
 
     <form
-      class="signup-box w-100 d-flex flex-column gap-4"
+      class="signup-box w-100 d-flex flex-column"
       @submit.prevent="handleSignup"
     >
       <AuthInputBox
@@ -108,7 +108,7 @@ const handleSignup = async () => {
         <h2 id="terms-heading" class="terms-title fw-bold mb-1">
           약관 동의
         </h2>
-        <p class="terms-description mb-3">
+        <p class="terms-description">
           필수 약관을 확인하고 동의해 주세요.
         </p>
         <div class="term-list">
@@ -177,7 +177,21 @@ const handleSignup = async () => {
 
 <style scoped>
 .signup-box {
-  padding: 20px;
+  gap: 0.875rem;
+  padding: 12px 20px 16px;
+}
+
+/* 작은 화면에서도 스크롤은 유지하되 시각적인 스크롤바는 숨긴다. */
+:deep(.sheet-layout) {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+:deep(.sheet-layout::-webkit-scrollbar) {
+  display: none;
 }
 
 .error-message {
@@ -186,7 +200,7 @@ const handleSignup = async () => {
 }
 
 .terms-section {
-  padding: 1.25rem;
+  padding: 0.875rem 1rem;
   background: var(--gray-50, #f8f9fb);
   border-radius: 1rem;
 }
@@ -197,6 +211,7 @@ const handleSignup = async () => {
 }
 
 .terms-description {
+  margin-bottom: 0.5rem;
   color: var(--black-500);
   font-size: 0.75rem;
 }
@@ -206,12 +221,12 @@ const handleSignup = async () => {
 }
 
 .term-item {
-  min-height: 2.75rem;
+  min-height: 2.5rem;
 }
 
 .term-row {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   padding: 0;
   color: inherit;
   background: transparent;

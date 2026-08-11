@@ -66,8 +66,8 @@ const handleCharacterChange = async (characterType) => {
       <p>닉네임: {{ authStore.myPage.nickname }}</p>
       <p>캐릭터: {{ authStore.myPage.characterType }}</p>
 
-      <fieldset class="mb-4" :disabled="characterSaving">
-        <legend class="h6">도감 캐릭터 테스트</legend>
+      <fieldset id="ai-secretary" class="mb-4" :disabled="characterSaving">
+        <legend class="h6">AI 비서 선택하기</legend>
         <div class="btn-group" role="group" aria-label="캐릭터 선택">
           <button
             v-for="option in characterOptions"

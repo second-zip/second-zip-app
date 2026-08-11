@@ -35,6 +35,14 @@ describe('MyPageView character selection', () => {
     authStore.fetchMyPage.mockResolvedValue(authStore.myPage);
   });
 
+  it('AI 비서 선택 영역에 직접 이동할 수 있는 앵커를 제공한다', async () => {
+    const wrapper = mount(MyPageView);
+
+    await flushPromises();
+
+    expect(wrapper.get('#ai-secretary').text()).toContain('AI 비서 선택하기');
+  });
+
   it('does not request a change when the current character is selected', async () => {
     const wrapper = mount(MyPageView);
     await flushPromises();

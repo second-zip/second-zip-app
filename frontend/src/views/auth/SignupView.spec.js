@@ -22,7 +22,9 @@ const mountView = () =>
     global: {
       stubs: {
         BottomSheetLayout: {
-          template: '<section><slot name="header"/><slot/></section>',
+          props: ['titleRatio'],
+          template:
+            '<section class="bottom-sheet-layout" :data-title-ratio="titleRatio"><slot name="header"/><slot/></section>',
         },
         DefaultSheetHeader: {
           template: '<header />',
@@ -48,6 +50,16 @@ const agreeRequiredTerms = async (wrapper) => {
 describe('SignupView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('상단 영역과 폼 여백을 줄인 회원가입 레이아웃을 렌더링한다', () => {
+    const wrapper = mountView();
+
+    expect(
+      wrapper.get('.bottom-sheet-layout').attributes('data-title-ratio'),
+    ).toBe('10');
+    expect(wrapper.get('.signup-box').classes()).not.toContain('gap-4');
+    expect(wrapper.get('.terms-description').classes()).not.toContain('mb-3');
   });
 
   it('네 개의 회원가입 입력 필드를 렌더링한다', async () => {
