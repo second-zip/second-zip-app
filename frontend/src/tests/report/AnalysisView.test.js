@@ -2,8 +2,15 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import AnalysisView from '@/views/report/AnalysisView.vue';
+import { logger } from '@/utils/logger';
 
-const { getReport, replace, route } = vi.hoisted(() => ({
+const { authStore, getReport, replace, route } = vi.hoisted(() => ({
+  authStore: {
+    characterType: 'CAT',
+    fetchMyPage: vi.fn(),
+    isAuthenticated: false,
+    myPage: null,
+  },
   getReport: vi.fn(),
   replace: vi.fn(),
   route: {
@@ -20,6 +27,12 @@ vi.mock('@/api/report', () => ({
 vi.mock('vue-router', () => ({
   useRoute: () => route,
   useRouter: () => ({ replace }),
+}));
+vi.mock('@/utils/logger', () => ({
+  logger: { error: vi.fn() },
+}));
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => authStore,
 }));
 
 const report = {
@@ -69,7 +82,8 @@ describe('분석 결과 화면', () => {
   });
 
   test('상세 조회 실패 시 오류와 재시도 버튼을 표시한다', async () => {
-    getReport.mockRejectedValue(new Error('network error'));
+    const error = new Error('network error');
+    getReport.mockRejectedValue(error);
     const wrapper = mount(AnalysisView);
 
     await flushPromises();
@@ -77,6 +91,11 @@ describe('분석 결과 화면', () => {
     expect(wrapper.text()).toContain('분석 결과를 불러오지 못했습니다.');
     expect(wrapper.get('.report-feedback--error button').text()).toBe(
       '다시 시도',
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'analysis.load-report',
+      error,
+      { analysisReportId: '12' },
     );
   });
 });

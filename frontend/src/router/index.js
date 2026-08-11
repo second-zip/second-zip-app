@@ -9,6 +9,11 @@ const routes = [
     component: MainLayout,
     children: [
       {
+        path: '',
+        name: 'main',
+        component: () => import('@/views/MainPageView.vue'),
+      },
+      {
         path: 'dictionary',
         name: 'dictionary',
         component: () => import('@/views/dictionary/DictionaryView.vue'),
@@ -49,35 +54,63 @@ const routes = [
         },
       },
       {
-        path: 'report/analysis/preview',
-        redirect: {
-          name: 'analysis-preview',
-          params: { scenario: 'a' },
-        },
+        path: 'mypage/profile',
+        name: 'mypage-profile',
+        component: () => import('@/views/mypage/ProfileEditView.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'report/analysis/preview/:scenario([a-f])',
-        name: 'analysis-preview',
-        component: () => import('@/views/report/AnalysisView.vue'),
-        meta: {
-          analysisPreview: true,
-        },
+        path: 'mypage/secretary',
+        name: 'mypage-secretary',
+        component: () => import('@/views/mypage/SecretaryChangeView.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'report/analysis',
-        name: 'analysis-create',
-        component: () => import('@/views/report/AnalysisView.vue'),
-        meta: {
-          requiresAuth: true,
-        },
+        path: 'mypage/withdraw',
+        name: 'mypage-withdraw',
+        component: () => import('@/views/mypage/WithdrawView.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'report/analysis/:analysisReportId(\\d+)',
-        name: 'analysis',
-        component: () => import('@/views/report/AnalysisView.vue'),
-        meta: {
-          requiresAuth: true,
-        },
+        path: 'report',
+        children: [
+          {
+            path: '',
+            name: 'report-list',
+            component: () => import('@/views/report/ReportListView.vue'),
+          },
+          {
+            path: 'analysis/preview',
+            redirect: {
+              name: 'analysis-preview',
+              params: { scenario: 'a' },
+            },
+          },
+          {
+            path: 'analysis/preview/:scenario([a-f])',
+            name: 'analysis-preview',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              analysisPreview: true,
+            },
+          },
+          {
+            path: 'analysis',
+            name: 'analysis-create',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              requiresAuth: true,
+            },
+          },
+          {
+            path: 'analysis/:analysisReportId(\\d+)',
+            name: 'analysis',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              requiresAuth: true,
+            },
+          },
+        ],
       },
       {
         path: 'analysis',
@@ -92,7 +125,6 @@ const routes = [
           params: { analysisReportId: to.params.analysisReportId },
         }),
       },
-      // 로그인·회원가입에는 하단 네비게이션을 사용하지 않는 경우
       {
         path: '/login',
         name: 'login',

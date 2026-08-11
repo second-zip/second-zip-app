@@ -4,6 +4,7 @@ import com.secondzip.backend.security.jwt.JwtAuthenticationFilter;
 import com.secondzip.backend.security.jwt.JwtTokenBlacklistService;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,6 +30,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtTokenBlacklistService jwtTokenBlacklistService;
 
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173}")
+    private String allowedOrigins;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -41,6 +45,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 jwtTokenBlacklistService
         );
     }
+
 
     //HTTP 요청에 대한 보안 규칙 설정
     @Override
@@ -73,6 +78,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/v2/api-docs",
                         "/webjars/**"
                 ).permitAll()
+                .antMatchers(HttpMethod.GET, "/api/analysis-reports/shared/*")
+                .permitAll()
                 .anyRequest().authenticated()*/
                 .anyRequest().permitAll()
                 .and()
@@ -88,9 +95,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173"
-        ));
+        configuration.setAllowedOrigins(
+                Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .filter(origin -> !origin.isEmpty())
+                        .toList()
+        );
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET",

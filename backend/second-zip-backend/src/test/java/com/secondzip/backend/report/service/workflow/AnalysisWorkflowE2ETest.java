@@ -15,6 +15,7 @@ import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.response.AnalysisAuthResponse;
 import com.secondzip.backend.report.dto.response.AnalysisPreparationResponse;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
+import com.secondzip.backend.report.dto.response.SpecialTermView;
 import com.secondzip.backend.report.enums.AnalysisNextAction;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
@@ -23,6 +24,7 @@ import com.secondzip.backend.report.enums.SimpleAuthProvider;
 import com.secondzip.backend.report.service.ReportPersistenceService;
 import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
+import com.secondzip.backend.report.service.SpecialTermService;
 import com.secondzip.backend.report.service.external.client.AddressClient;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterDataParser;
@@ -71,7 +73,8 @@ class AnalysisWorkflowE2ETest {
                         new FixedPriceClient(),
                         riskService,
                         new FixedPersistenceService(savedReport),
-                        new FixedQueryService(savedReport)
+                        new FixedQueryService(savedReport),
+                        new StubSpecialTermService()
                 );
 
         AnalysisPreparationResponse prepared =
@@ -199,6 +202,7 @@ class AnalysisWorkflowE2ETest {
                 500_000_000L,
                 RiskLevel.DANGER,
                 false,
+                List.of(),
                 List.of(),
                 List.of()
         );
@@ -511,6 +515,17 @@ class AnalysisWorkflowE2ETest {
                 Long reportId
         ) {
             return response;
+        }
+    }
+
+    private static class StubSpecialTermService extends SpecialTermService {
+        private StubSpecialTermService() {
+            super(null, null, null, null, null);
+        }
+
+        @Override
+        public List<SpecialTermView> generateAndSave(Long accountId, Long reportId) {
+            return List.of();
         }
     }
 }

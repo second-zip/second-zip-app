@@ -8,6 +8,7 @@ import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.mapper.ReportMapper;
+import com.secondzip.backend.report.mapper.StubReportMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -97,7 +98,7 @@ class ReportFavoriteServiceTest {
         }
     }
 
-    private static class StubMapper implements ReportMapper {
+    private static class StubMapper extends StubReportMapper {
         private boolean called;
         private Long reportId;
         private boolean favorite;
@@ -113,70 +114,6 @@ class ReportFavoriteServiceTest {
             this.reportId = reportId;
             this.favorite = favorite;
             this.favoritedAt = favoritedAt;
-        }
-
-        @Override
-        public void insertCheckResult(Map<String, Object> params) {
-        }
-
-        @Override
-        public void insertFraudTypeMap(Map<String, Object> params) {
-        }
-
-        @Override
-        public void insertDetailResult(
-                Long fraudTypeId,
-                DetailType detailType,
-                RiskLevel riskLevel
-        ) {
-        }
-
-        @Override
-        public void insertReportMap(Map<String, Object> params) {
-        }
-
-        @Override
-        public List<ReportListItem> findReportsByAccountId(Long accountId) {
-            return List.of();
-        }
-
-        @Override
-        public int countReportsByAccountId(Long accountId) {
-            return 0;
-        }
-
-        @Override
-        public Long findReportIdByRequestId(Long accountId, String requestId) {
-            return null;
-        }
-
-        @Override
-        public Long findAccountIdByReportId(Long reportId) {
-            return null;
-        }
-
-        @Override
-        public Map<String, Object> findReportById(Long reportId) {
-            return Map.of();
-        }
-
-        @Override
-        public List<Map<String, Object>> findCheckResultsByReportId(Long reportId) {
-            return List.of();
-        }
-
-        @Override
-        public List<Map<String, Object>> findFraudTypesByReportId(Long reportId) {
-            return List.of();
-        }
-
-        @Override
-        public List<DetailResult> findDetailResultsByFraudTypeId(Long fraudTypeId) {
-            return List.of();
-        }
-
-        @Override
-        public void deleteReport(Long reportId) {
         }
     }
 }

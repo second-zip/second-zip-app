@@ -132,4 +132,25 @@
         SET password = #{password}
         WHERE account_id = #{accountId}
     </update>
+
+    <select id="findActivitySummaryByAccountId"
+            parameterType="long"
+            resultType="com.secondzip.backend.account.dto.response.ActivitySummaryDTO">
+
+        SELECT
+            COUNT(*) AS totalReportCount,
+            COUNT(CASE
+                      WHEN risk_level = 'SAFE' THEN 1
+                END) AS safeCount,
+            COUNT(CASE
+                      WHEN risk_level = 'CAUTION' THEN 1
+                END) AS cautionCount,
+            COUNT(CASE
+                      WHEN risk_level = 'DANGER' THEN 1
+                END) AS dangerCount
+        FROM analysis_reports
+        WHERE account_id = #{accountId}
+
+    </select>
+
 </mapper>
