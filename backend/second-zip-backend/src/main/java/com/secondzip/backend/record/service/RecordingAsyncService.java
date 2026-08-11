@@ -13,13 +13,11 @@ public class RecordingAsyncService {
     @Async
     public void transcribe(
             Long recordingSessionId,
-            String storageObjectKey,
-            String category
+            String storageObjectKey
     ) {
         recordingTranscriptionService.transcribe(
                 recordingSessionId,
-                storageObjectKey,
-                category
+                storageObjectKey
         );
     }
 }

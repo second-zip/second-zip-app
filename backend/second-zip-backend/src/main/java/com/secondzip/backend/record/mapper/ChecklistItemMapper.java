@@ -12,4 +12,9 @@ public interface ChecklistItemMapper {
     List<ChecklistItemInput> findByCategory(
             @Param("category") String category
     );
+
+    List<ChecklistItemInput> findByReportChecklistId(
+            @Param("reportChecklistId")
+            Long reportChecklistId
+    );
 }

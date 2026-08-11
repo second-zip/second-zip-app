@@ -1,9 +1,14 @@
 package com.secondzip.backend.checklist.service;
 
+import com.secondzip.backend.checklist.domain.ReportChecklistVO;
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
+import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
-import com.secondzip.backend.checklist.mapper.AccountChecklistItemMapper;
+import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
+import com.secondzip.backend.common.exception.BusinessException;
+import com.secondzip.backend.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,48 +18,137 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChecklistServiceImpl implements ChecklistService {
 
-    private final AccountChecklistItemMapper accountChecklistItemMapper;
+    private final ReportChecklistMapper reportChecklistMapper;
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChecklistResponseDTO> getChecklists(
-            Long accountId,
-            String category
+    public List<ChecklistListResponseDTO> getChecklistList(
+            Long accountId
     ) {
-        return accountChecklistItemMapper
-                .findByAccountIdAndCategory(
-                        accountId,
-                        category
-                );
+
+        return reportChecklistMapper.findChecklistList(
+                accountId
+        );
+    }
+
+    @Override
+    @Transactional
+    public Long createChecklist(
+            Long accountId,
+            Long analysisReportId
+    ) {
+
+        String category =
+                reportChecklistMapper
+                        .findHousingCategoryByReportIdAndAccountId(
+                                analysisReportId,
+                                accountId
+                        );
+
+        if (category == null
+                || category.isBlank()) {
+
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "리포트 분석이 완료되지 않았거나 주택 유형이 없습니다."
+            );
+        }
+
+
+        Long existingId =
+                reportChecklistMapper
+                        .findChecklistIdByReportId(
+                                analysisReportId
+                        );
+
+        if (existingId != null) {
+            return existingId;
+        }
+
+
+        ReportChecklistVO checklist =
+                ReportChecklistVO.builder()
+                        .analysisReportId(
+                                analysisReportId
+                        )
+                        .accountId(accountId)
+                        .build();
+
+        try {
+
+            reportChecklistMapper.insertChecklist(
+                    checklist
+            );
+
+        } catch (DuplicateKeyException e) {
+
+            // 사용자가 버튼을 동시에 두 번 눌러도
+            // DB UNIQUE로 최종 중복 방어
+            return reportChecklistMapper
+                    .findChecklistIdByReportId(
+                            analysisReportId
+                    );
+        }
+
+
+        reportChecklistMapper.insertChecklistItems(
+                checklist.getReportChecklistId(),
+                analysisReportId,
+                category
+        );
+
+        return checklist.getReportChecklistId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChecklistResponseDTO> getChecklist(
+            Long accountId,
+            Long reportChecklistId
+    ) {
+
+        return reportChecklistMapper.findChecklistItems(
+                accountId,
+                reportChecklistId
+        );
     }
 
     @Override
     @Transactional
     public void updateCheckStatus(
             Long accountId,
+            Long reportChecklistId,
             Long checklistItemId,
             ChecklistCheckRequestDTO request
     ) {
 
-        if (Boolean.TRUE.equals(request.getChecked())) {
+        int updated =
+                reportChecklistMapper.updateChecked(
+                        accountId,
+                        reportChecklistId,
+                        checklistItemId,
+                        request.getChecked()
+                );
 
-            accountChecklistItemMapper.insertChecked(
-                    accountId,
-                    checklistItemId
+        if (updated != 1) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "체크리스트 항목을 찾을 수 없습니다."
             );
-
-            return;
         }
-
-        accountChecklistItemMapper.delete(
-                accountId,
-                checklistItemId
-        );
     }
+
 
     @Override
     @Transactional
-    public void resetChecklist(Long accountId) {
-        accountChecklistItemMapper.deleteAllByAccountId(accountId);
+    public void resetChecklist(
+            Long accountId,
+            Long reportChecklistId
+    ) {
+
+        reportChecklistMapper.reset(
+                accountId,
+                reportChecklistId
+        );
     }
 }

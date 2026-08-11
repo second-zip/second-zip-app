@@ -1,6 +1,6 @@
 package com.secondzip.backend.record.service;
 
-import com.secondzip.backend.checklist.mapper.AccountChecklistItemMapper;
+import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.record.mapper.ChecklistItemMapper;
 import com.secondzip.backend.record.client.ChecklistAnalysisClient;
 import com.secondzip.backend.record.domain.RecordingSessionVO;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChecklistAnalysisService {
 
-    private final AccountChecklistItemMapper accountChecklistItemMapper;
+    private final ReportChecklistMapper reportChecklistMapper;
 
     private final RecordingSessionMapper recordingSessionMapper;
 
@@ -38,9 +38,7 @@ public class ChecklistAnalysisService {
 
     @Transactional
     public void analyze(
-            Long recordingSessionId,
-            String category
-    ) {
+            Long recordingSessionId) {
 
         RecordingSessionVO session =
                 recordingSessionMapper.findById(
@@ -51,10 +49,19 @@ public class ChecklistAnalysisService {
         validateSession(session);
 
 
+        if (session.getReportChecklistId() == null) {
+
+            throw new IllegalStateException(
+                    "녹음과 연결된 체크리스트가 없습니다."
+            );
+        }
+
+
         List<ChecklistItemInput> checklistItems =
-                checklistItemMapper.findByCategory(
-                        category
-                );
+                checklistItemMapper
+                        .findByReportChecklistId(
+                                session.getReportChecklistId()
+                        );
 
 
         if (checklistItems == null
@@ -85,23 +92,23 @@ public class ChecklistAnalysisService {
         );
 
 
-        for (
-                ChecklistAnalysisResult.ResultItem item
-                : result.getResults()
-        ) {
+        for (ChecklistAnalysisResult.ResultItem item
+                : result.getResults()) {
 
+            // 녹음 분석 결과 자체는 기록
             resultMapper.upsertResult(
                     recordingSessionId,
                     item
             );
 
-            // AI가 확실하게 체크됐다고 판단한 항목만
-            // 회원 체크리스트에 반영
+
+            // 확실하게 확인된 항목만 기존 체크리스트에 추가 체크
             if (item.getStatus()
                     == ChecklistAnalysisStatus.CHECKED) {
 
-                accountChecklistItemMapper.insertChecked(
+                reportChecklistMapper.markChecked(
                         session.getAccountId(),
+                        session.getReportChecklistId(),
                         item.getChecklistItemId()
                 );
             }

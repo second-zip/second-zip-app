@@ -28,9 +28,10 @@ public class RecordingController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RecordingSessionResponseDTO>
     uploadRecording(@ApiIgnore @AuthenticationPrincipal Long accountId,
+                    @RequestParam Long reportChecklistId,
                     @RequestPart("file") MultipartFile file
     ) {
-        RecordingSessionResponseDTO response = recordingService.createSession(accountId, file);
+        RecordingSessionResponseDTO response = recordingService.createSession(accountId, reportChecklistId, file);
 
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
@@ -44,13 +45,10 @@ public class RecordingController {
     @PostMapping("/{recordingSessionId}/transcribe")
     public ResponseEntity<Void> transcribe(
             @ApiIgnore @AuthenticationPrincipal Long accountId,
-            @PathVariable Long recordingSessionId,
-            @RequestParam String category
-    ) {
+            @PathVariable Long recordingSessionId) {
         recordingService.startTranscription(
                 accountId,
-                recordingSessionId,
-                category
+                recordingSessionId
         );
 
         return ResponseEntity.accepted().build();

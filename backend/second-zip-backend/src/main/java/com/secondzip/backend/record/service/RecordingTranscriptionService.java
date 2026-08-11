@@ -17,8 +17,7 @@ public class RecordingTranscriptionService {
 
     public void transcribe(
             Long recordingSessionId,
-            String storageObjectKey,
-            String category
+            String storageObjectKey
     ) {
         try {
             recordingSessionMapper.updateStatus(
@@ -34,8 +33,7 @@ public class RecordingTranscriptionService {
                     RecordingStatus.ANALYZING
             );
             checklistAnalysisService.analyze(
-                    recordingSessionId,
-                    category
+                    recordingSessionId
             );
         } catch (Exception e) {
             recordingSessionMapper.markFailed(

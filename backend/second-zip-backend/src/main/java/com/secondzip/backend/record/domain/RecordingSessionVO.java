@@ -16,6 +16,8 @@ public class RecordingSessionVO {
 
     private Long accountId;
 
+    private Long reportChecklistId;
+
     private String originalFileName;
 
     private String storageObjectKey;

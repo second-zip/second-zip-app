@@ -1,5 +1,6 @@
 package com.secondzip.backend.record.service;
 
+import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.record.domain.RecordingSessionVO;
@@ -24,6 +25,7 @@ public class RecordingServiceImpl implements RecordingService {
     private final RecordingSessionMapper recordingSessionMapper;
     private final RecordingAsyncService recordingAsyncService;
     private final LiveRecordingContextManager contextManager;
+    private final ReportChecklistMapper reportChecklistMapper;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
@@ -35,8 +37,10 @@ public class RecordingServiceImpl implements RecordingService {
     @Transactional
     public RecordingSessionResponseDTO createSession(
             Long accountId,
+            Long reportChecklistId,
             MultipartFile file
     ) {
+
         if (accountId == null) {
             throw new BusinessException(
                     ErrorCode.UNAUTHORIZED,
@@ -44,40 +48,72 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
+        int exists =
+                reportChecklistMapper.existsOwnedChecklist(
+                        accountId,
+                        reportChecklistId
+                );
+
+        if (exists == 0) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "체크리스트를 찾을 수 없습니다."
+            );
+        }
+
         validateRecordingFile(file);
 
-        String objectKey = recordingStorage.upload(accountId, file);
+        String objectKey =
+                recordingStorage.upload(
+                        accountId,
+                        file
+                );
 
         RecordingSessionVO session =
                 RecordingSessionVO.builder()
                         .accountId(accountId)
+                        .reportChecklistId(
+                                reportChecklistId
+                        )
                         .originalFileName(
                                 file.getOriginalFilename()
                         )
-                        .storageObjectKey(objectKey)
-                        .contentType(file.getContentType())
-                        .fileSize(file.getSize())
-                        .status(RecordingStatus.UPLOADED)
+                        .storageObjectKey(
+                                objectKey
+                        )
+                        .contentType(
+                                file.getContentType()
+                        )
+                        .fileSize(
+                                file.getSize()
+                        )
+                        .status(
+                                RecordingStatus.UPLOADED
+                        )
                         .build();
 
         int insertedCount =
-                recordingSessionMapper.insert(session);
+                recordingSessionMapper.insert(
+                        session
+                );
 
         if (insertedCount != 1) {
+
             throw new BusinessException(
                     ErrorCode.INTERNAL_SERVER_ERROR,
                     "녹음 세션 생성에 실패했습니다."
             );
         }
 
-        return RecordingSessionResponseDTO.from(session);
+        return RecordingSessionResponseDTO.from(
+                session
+        );
     }
 
     @Override
     public void startTranscription(
             Long accountId,
-            Long recordingSessionId,
-            String category
+            Long recordingSessionId
     ) {
         if (accountId == null) {
             throw new BusinessException(
@@ -108,8 +144,7 @@ public class RecordingServiceImpl implements RecordingService {
 
         recordingAsyncService.transcribe(
                 recordingSessionId,
-                session.getStorageObjectKey(),
-                category
+                session.getStorageObjectKey()
         );
     }
 
