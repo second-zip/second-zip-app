@@ -2,6 +2,7 @@ package com.secondzip.backend.checklist.controller;
 
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistCreateResponseDTO;
+import com.secondzip.backend.checklist.dto.response.ChecklistDetailResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
 import com.secondzip.backend.checklist.service.ChecklistService;
@@ -82,7 +83,7 @@ public class ChecklistController {
             notes = "리포트에 생성된 체크리스트 항목을 조회합니다."
     )
     @GetMapping("/{reportChecklistId}")
-    public ResponseEntity<List<ChecklistResponseDTO>>
+    public ResponseEntity<ChecklistDetailResponseDTO>
     getChecklist(
             @ApiIgnore
             @AuthenticationPrincipal Long accountId,

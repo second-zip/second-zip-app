@@ -26,6 +26,8 @@ public class RecordingServiceImpl implements RecordingService {
     private final RecordingAsyncService recordingAsyncService;
     private final LiveRecordingContextManager contextManager;
     private final ReportChecklistMapper reportChecklistMapper;
+    private final LiveTranscriptionService liveTranscriptionService;
+    private final RecordingFinalAnalysisAsyncService recordingFinalAnalysisAsyncService;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
@@ -225,7 +227,7 @@ public class RecordingServiceImpl implements RecordingService {
     @Transactional
     public RecordingLiveStartResponseDTO startLiveRecording(
             Long accountId,
-            String category
+            Long reportChecklistId
     ) {
 
         if (accountId == null) {
@@ -234,15 +236,29 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
+        int exists =
+                reportChecklistMapper.existsOwnedChecklist(
+                        accountId,
+                        reportChecklistId
+                );
+
+
+        if (exists == 0) {
+
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "체크리스트를 찾을 수 없습니다."
+            );
+        }
+
         RecordingSessionVO session =
                 RecordingSessionVO.builder()
                         .accountId(accountId)
+                        .reportChecklistId(reportChecklistId)
                         .status(RecordingStatus.RECORDING)
                         .build();
 
-        recordingSessionMapper.insertLiveSession(
-                session
-        );
+        recordingSessionMapper.insertLiveSession(session);
 
         contextManager.create(
                 session.getRecordingSessionId()
@@ -254,5 +270,54 @@ public class RecordingServiceImpl implements RecordingService {
                 )
                 .status(session.getStatus())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void stopLiveRecording(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        RecordingSessionVO session =
+                recordingSessionMapper
+                        .findByIdAndAccountId(
+                                recordingSessionId,
+                                accountId
+                        );
+
+
+        if (session == null) {
+
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+
+        if (session.getStatus() != RecordingStatus.RECORDING) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "현재 녹음 중인 세션이 아닙니다."
+            );
+        }
+
+
+        String transcript = liveTranscriptionService.finish(recordingSessionId);
+
+
+        if (transcript == null || transcript.isBlank()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "분석할 녹취 내용이 없습니다."
+            );
+        }
+
+
+        recordingSessionMapper.updateTranscript(recordingSessionId, transcript, RecordingStatus.ANALYZING);
+
+
+        recordingFinalAnalysisAsyncService.analyze(recordingSessionId);
     }
 }

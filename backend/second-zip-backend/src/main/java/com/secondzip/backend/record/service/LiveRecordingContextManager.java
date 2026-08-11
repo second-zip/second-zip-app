@@ -25,6 +25,15 @@ public class LiveRecordingContextManager {
                 context
         );
 
+        System.out.println(
+                "[Context CREATE] manager="
+                        + System.identityHashCode(this)
+                        + ", recordingSessionId="
+                        + recordingSessionId
+                        + ", size="
+                        + contexts.size()
+        );
+
         return context;
     }
 
@@ -33,11 +42,23 @@ public class LiveRecordingContextManager {
             Long recordingSessionId
     ) {
 
+        System.out.println(
+                "[Context GET] manager="
+                        + System.identityHashCode(this)
+                        + ", recordingSessionId="
+                        + recordingSessionId
+                        + ", size="
+                        + contexts.size()
+                        + ", keys="
+                        + contexts.keySet()
+        );
+
         LiveRecordingContext context =
-                contexts.get(recordingSessionId);
+                contexts.get(
+                        recordingSessionId
+                );
 
         if (context == null) {
-
             throw new IllegalStateException(
                     "실시간 녹음 Context가 존재하지 않습니다. recordingSessionId="
                             + recordingSessionId
@@ -47,13 +68,18 @@ public class LiveRecordingContextManager {
         return context;
     }
 
+    // async GPT가 끝나는 순간 사용자가 이미 STOP해서 Context가 삭제
+    public LiveRecordingContext find(
+            Long recordingSessionId
+    ) {
+
+        return contexts.get(recordingSessionId);
+    }
 
     public LiveRecordingContext remove(
             Long recordingSessionId
     ) {
 
-        return contexts.remove(
-                recordingSessionId
-        );
+        return contexts.remove(recordingSessionId);
     }
 }

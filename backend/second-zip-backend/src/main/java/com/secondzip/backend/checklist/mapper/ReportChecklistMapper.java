@@ -1,9 +1,7 @@
 package com.secondzip.backend.checklist.mapper;
 
 import com.secondzip.backend.checklist.domain.ReportChecklistVO;
-import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
-import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
-import com.secondzip.backend.checklist.dto.response.ReportChecklistConditionDTO;
+import com.secondzip.backend.checklist.dto.response.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -51,11 +49,14 @@ public interface ReportChecklistMapper {
             Long accountId
     );
 
+    ChecklistAddressDTO findChecklistAddress(
+            @Param("accountId") Long accountId,
+            @Param("reportChecklistId") Long reportChecklistId
+    );
+
     List<ChecklistResponseDTO> findChecklistItems(
-            @Param("accountId")
-            Long accountId,
-            @Param("reportChecklistId")
-            Long reportChecklistId
+            @Param("accountId") Long accountId,
+            @Param("reportChecklistId") Long reportChecklistId
     );
 
     int updateChecked(

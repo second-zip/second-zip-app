@@ -13,5 +13,7 @@ public class ChecklistResponseDTO {
 
     private String category;
 
+    private String description;
+
     private Boolean checked;
 }
