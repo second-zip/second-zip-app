@@ -32,6 +32,7 @@ describe('ReportCreateView', () => {
       dong: '202',
       ho: '303호',
       deposit: 25_000,
+      validateReport: true,
     });
     await flushPromises();
 
@@ -56,6 +57,7 @@ describe('ReportCreateView', () => {
         dong: '',
         ho: '303',
         deposit: 10_000,
+        validateReport: true,
       },
       {
         roadAddress: '서울 역삼동 1',
@@ -70,6 +72,7 @@ describe('ReportCreateView', () => {
         dong: '101동',
         ho: '',
         deposit: 5_000,
+        validateReport: true,
       },
       {
         roadAddress: '사용자 입력 주소',
@@ -110,6 +113,7 @@ describe('ReportCreateView', () => {
       dong: '',
       ho: '',
       deposit: 1,
+      validateReport: true,
     };
 
     wrapper.getComponent(ReportCreateForm).vm.$emit('submit', payload);
@@ -119,5 +123,23 @@ describe('ReportCreateView', () => {
     expect(router.push).toHaveBeenCalledOnce();
     resolvePush();
     await flushPromises();
+  });
+
+  it('폼 검증을 통과하지 못한 submit은 진행 화면으로 전환하지 않는다', async () => {
+    const wrapper = mount(ReportCreateView, {
+      global: { stubs: { RouterLink: true } },
+    });
+
+    wrapper.getComponent(ReportCreateForm).vm.$emit('submit', {
+      address: null,
+      addressKeyword: '서울',
+      dong: '',
+      ho: '',
+      deposit: 0,
+      validateReport: false,
+    });
+    await flushPromises();
+
+    expect(router.push).not.toHaveBeenCalled();
   });
 });

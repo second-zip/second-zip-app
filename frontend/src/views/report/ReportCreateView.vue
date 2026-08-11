@@ -33,6 +33,8 @@ const createAnalysisRequest = (formData) => ({
 });
 
 const handleSubmit = async (formData) => {
+  if (!formData.validateReport) return;
+
   if (isOpeningAnalysis) return;
 
   isOpeningAnalysis = true;

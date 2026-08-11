@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import PlusDisableIcon from '@/assets/icons/report/plus-gray-14.svg';
+import PlusIcon from '@/assets/icons/report/plus-white-14.svg';
 import ReportCreateForm from './ReportCreateForm.vue';
 
 const addressApi = vi.hoisted(() => ({
@@ -51,9 +53,69 @@ describe('ReportCreateForm', () => {
           dong: '202',
           ho: '303',
           deposit: 25_000,
+          validateReport: true,
         },
       ],
     ]);
+  });
+
+  it('주소를 선택하고 0보다 큰 보증금을 입력해야 submit 버튼을 활성화한다', async () => {
+    const wrapper = mountForm();
+    const submitButton = wrapper.get('.report-create-form__submit');
+
+    expect(submitButton.attributes('disabled')).toBeDefined();
+    expect(submitButton.get('img').attributes('src')).toBe(PlusDisableIcon);
+
+    await wrapper.get('[aria-label="보증금"]').setValue('10000');
+    expect(submitButton.attributes('disabled')).toBeDefined();
+
+    await wrapper.get('[aria-label="주소 검색어"]').setValue('테헤란로');
+    await wrapper.get('[aria-label="주소 검색"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('.address-search__result').trigger('click');
+
+    expect(submitButton.attributes('disabled')).toBeUndefined();
+    expect(submitButton.get('img').attributes('src')).toBe(PlusIcon);
+  });
+
+  it.each(['', '0', '-1', 'Infinity', 'NaN'])(
+    '선택된 주소가 있어도 보증금 %j은 무효하다',
+    async (deposit) => {
+      const wrapper = mountForm();
+      await wrapper.get('[aria-label="주소 검색어"]').setValue('테헤란로');
+      await wrapper.get('[aria-label="주소 검색"]').trigger('click');
+      await flushPromises();
+      await wrapper.get('.address-search__result').trigger('click');
+
+      wrapper
+        .getComponent({ name: 'ReportDepositInput' })
+        .vm.$emit('update:modelValue', deposit);
+      await wrapper.vm.$nextTick();
+
+      expect(
+        wrapper.get('.report-create-form__submit').attributes('disabled'),
+      ).toBeDefined();
+      await wrapper.get('form').trigger('submit');
+      expect(wrapper.emitted('submit')[0][0].validateReport).toBe(false);
+    },
+  );
+
+  it('유효한 값을 만든 후 주소를 수정하면 다시 비활성화한다', async () => {
+    const wrapper = mountForm();
+    await wrapper.get('[aria-label="보증금"]').setValue('10000');
+    await wrapper.get('[aria-label="주소 검색어"]').setValue('테헤란로');
+    await wrapper.get('[aria-label="주소 검색"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('.address-search__result').trigger('click');
+    expect(
+      wrapper.get('.report-create-form__submit').attributes('disabled'),
+    ).toBeUndefined();
+
+    await wrapper.get('[aria-label="주소 검색어"]').setValue('수정된 주소');
+
+    expect(
+      wrapper.get('.report-create-form__submit').attributes('disabled'),
+    ).toBeDefined();
   });
 
   it('선택 후 검색어를 수정하면 선택 주소만 해제한다', async () => {

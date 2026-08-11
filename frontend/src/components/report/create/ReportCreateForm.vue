@@ -1,12 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import PlusIcon from '@/assets/icons/report/plus-white-14.svg';
+import PlusDisableIcon from '@/assets/icons/report/plus-gray-14.svg';
 
-import {
-  KAKAO_API_KEY_MISSING_ERROR,
-  searchKakaoAddress,
-} from '@/api/address';
+import { KAKAO_API_KEY_MISSING_ERROR, searchKakaoAddress } from '@/api/address';
 import ReportCreateBox from '@/components/report/ReportCreateBox.vue';
 import ReportAddressSearch from './ReportAddressSearch.vue';
 import ReportDetailAddressInput from './ReportDetailAddressInput.vue';
@@ -75,6 +73,13 @@ const handleClearAddress = () => {
   addressErrorMessage.value = '';
 };
 
+const validateDeposit = (value) =>
+  Number.isFinite(Number(value)) && Number(value) > 0;
+
+const validateReport = computed(() => {
+  return selectedAddress.value !== null && validateDeposit(deposit.value);
+});
+
 watch(addressKeyword, (value) => {
   if (
     selectedAddress.value &&
@@ -91,6 +96,7 @@ const handleSubmit = () => {
     dong: dong.value.trim(),
     ho: ho.value.trim(),
     deposit: Number(deposit.value),
+    validateReport: validateReport.value,
   });
 };
 </script>
@@ -119,9 +125,10 @@ const handleSubmit = () => {
     <div class="report-create-form__button-wrap d-flex justify-content-center">
       <button
         type="submit"
+        :disabled="!validateReport"
         class="report-create-form__submit d-inline-flex align-items-center justify-content-center border-0 fw-semibold"
       >
-        <img :src="PlusIcon" alt="" />
+        <img :src="validateReport ? PlusIcon : PlusDisableIcon" alt="" />
         <span>리포트 생성하기</span>
       </button>
     </div>
@@ -150,6 +157,12 @@ const handleSubmit = () => {
   font-size: 0.8125rem;
   background-color: var(--blue-900);
   border-radius: 14px;
+}
+
+.report-create-form__submit:disabled {
+  background-color: var(--black-100);
+  color: var(--black-300);
+  cursor: not-allowed;
 }
 
 .report-create-form__submit img {
