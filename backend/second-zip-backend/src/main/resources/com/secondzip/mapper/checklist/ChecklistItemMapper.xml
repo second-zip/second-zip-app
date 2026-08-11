@@ -31,13 +31,13 @@
             ci.contents AS contents,
             ci.category AS category
 
-        FROM report_checklist_items rci
+        FROM analysis_report_checklist_items rci
 
                  INNER JOIN checklist_items ci
                             ON ci.checklist_item_id =
                                rci.checklist_item_id
 
-        WHERE rci.report_checklist_id =
+        WHERE rci.analysis_report_checklist_id =
               #{reportChecklistId}
 
         ORDER BY

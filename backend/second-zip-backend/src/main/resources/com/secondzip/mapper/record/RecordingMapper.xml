@@ -13,7 +13,7 @@
 
         INSERT INTO recording_sessions (
             account_id,
-            report_checklist_id,
+            analysis_report_checklist_id,
             original_file_name,
             storage_object_key,
             content_type,
@@ -40,7 +40,7 @@
         SELECT
             recording_session_id AS recordingSessionId,
             account_id AS accountId,
-            report_checklist_id AS reportChecklistId,
+            analysis_report_checklist_id AS reportChecklistId,
             original_file_name AS originalFileName,
             storage_object_key AS storageObjectKey,
             content_type AS contentType,
@@ -67,7 +67,7 @@
         SELECT
             recording_session_id AS recordingSessionId,
             account_id AS accountId,
-            report_checklist_id AS reportChecklistId,
+            analysis_report_checklist_id AS reportChecklistId,
             original_file_name AS originalFileName,
             storage_object_key AS storageObjectKey,
             content_type AS contentType,
@@ -147,7 +147,7 @@
 
         INSERT INTO recording_sessions (
             account_id,
-            report_checklist_id,
+            analysis_report_checklist_id,
             status,
             created_at,
             modified_at

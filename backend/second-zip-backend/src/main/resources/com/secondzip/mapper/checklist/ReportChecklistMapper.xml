@@ -10,8 +10,8 @@
     <select id="findChecklistIdByReportId"
             resultType="java.lang.Long">
 
-        SELECT report_checklist_id
-        FROM report_checklists
+        SELECT analysis_report_checklist_id
+        FROM analysis_report_checklists
         WHERE analysis_report_id = #{analysisReportId}
 
     </select>
@@ -33,7 +33,7 @@
             useGeneratedKeys="true"
             keyProperty="reportChecklistId">
 
-        INSERT INTO report_checklists (
+        INSERT INTO analysis_report_checklists (
             analysis_report_id,
             account_id
         )
@@ -53,8 +53,8 @@
     -->
     <insert id="insertChecklistItems">
 
-        INSERT INTO report_checklist_items (
-            report_checklist_id,
+        INSERT INTO analysis_report_checklist_items (
+            analysis_report_checklist_id,
             checklist_item_id,
             is_checked
         )
@@ -90,12 +90,12 @@
 
         SELECT
             ar.analysis_report_id AS analysisReportId,
-            rc.report_checklist_id AS reportChecklistId,
+            rc.analysis_report_checklist_id AS reportChecklistId,
             ar.housing_category AS housingCategory,
             ar.is_trust_property AS trustProperty,
 
             CASE
-                WHEN rc.report_checklist_id IS NULL
+                WHEN rc.analysis_report_checklist_id IS NULL
                     THEN FALSE
                 ELSE TRUE
                 END AS checklistCreated,
@@ -104,7 +104,7 @@
 
         FROM analysis_reports ar
 
-                 LEFT JOIN report_checklists rc
+                 LEFT JOIN analysis_report_checklists rc
                            ON rc.analysis_report_id =
                               ar.analysis_report_id
 
@@ -139,17 +139,17 @@
             ci.category,
             rci.is_checked AS checked
 
-        FROM report_checklist_items rci
+        FROM analysis_report_checklist_items rci
 
-                 INNER JOIN report_checklists rc
-                            ON rc.report_checklist_id =
-                               rci.report_checklist_id
+                 INNER JOIN analysis_report_checklists rc
+                            ON rc.analysis_report_checklist_id =
+                               rci.analysis_report_checklist_id
 
                  INNER JOIN checklist_items ci
                             ON ci.checklist_item_id =
                                rci.checklist_item_id
 
-        WHERE rc.report_checklist_id =
+        WHERE rc.analysis_report_checklist_id =
               #{reportChecklistId}
 
           AND rc.account_id =
@@ -168,17 +168,17 @@
 
     <update id="updateChecked">
 
-        UPDATE report_checklist_items rci
+        UPDATE analysis_report_checklist_items rci
 
-            INNER JOIN report_checklists rc
-        ON rc.report_checklist_id =
-            rci.report_checklist_id
+            INNER JOIN analysis_report_checklists rc
+        ON rc.analysis_report_checklist_id =
+            rci.analysis_report_checklist_id
 
             SET
                 rci.is_checked = #{checked},
                 rci.modified_at = CURRENT_TIMESTAMP
 
-        WHERE rc.report_checklist_id =
+        WHERE rc.analysis_report_checklist_id =
             #{reportChecklistId}
 
           AND rc.account_id =
@@ -193,17 +193,17 @@
     <!-- 녹음 AI는 절대로 자동 해제하지 않고 CHECKED만 추가 -->
     <update id="markChecked">
 
-        UPDATE report_checklist_items rci
+        UPDATE analysis_report_checklist_items rci
 
-            INNER JOIN report_checklists rc
-        ON rc.report_checklist_id =
-            rci.report_checklist_id
+            INNER JOIN analysis_report_checklists rc
+        ON rc.analysis_report_checklist_id =
+            rci.analysis_report_checklist_id
 
             SET
                 rci.is_checked = TRUE,
                 rci.modified_at = CURRENT_TIMESTAMP
 
-        WHERE rc.report_checklist_id =
+        WHERE rc.analysis_report_checklist_id =
             #{reportChecklistId}
 
           AND rc.account_id =
@@ -217,17 +217,17 @@
 
     <update id="reset">
 
-        UPDATE report_checklist_items rci
+        UPDATE analysis_report_checklist_items rci
 
-            INNER JOIN report_checklists rc
-        ON rc.report_checklist_id =
-            rci.report_checklist_id
+            INNER JOIN analysis_report_checklists rc
+        ON rc.analysis_report_checklist_id =
+            rci.analysis_report_checklist_id
 
             SET
                 rci.is_checked = FALSE,
                 rci.modified_at = CURRENT_TIMESTAMP
 
-        WHERE rc.report_checklist_id =
+        WHERE rc.analysis_report_checklist_id =
             #{reportChecklistId}
 
           AND rc.account_id =
@@ -240,8 +240,8 @@
             resultType="int">
 
         SELECT COUNT(*)
-        FROM report_checklists
-        WHERE report_checklist_id =
+        FROM analysis_report_checklists
+        WHERE analysis_report_checklist_id =
               #{reportChecklistId}
 
           AND account_id =
