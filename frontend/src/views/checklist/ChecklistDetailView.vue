@@ -5,6 +5,7 @@ import ChecklistDescriptionModal from '@/components/checklist/ChecklistDescripti
 import ChecklistDetailHeader from '@/components/checklist/ChecklistDetailHeader.vue';
 import ChecklistItem from '@/components/checklist/ChecklistItem.vue';
 import ChecklistProgress from '@/components/checklist/ChecklistProgress.vue';
+import ChecklistRecorder from '@/components/checklist/ChecklistRecorder.vue';
 import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
 import { REPORT_CHARACTER_TYPES } from '@/constants/report/list';
 import { useAuthStore } from '@/stores/auth';
@@ -59,6 +60,7 @@ const checklistItems = ref([
 ]);
 const selectedItem = ref(null);
 const isDescriptionModalOpen = ref(false);
+const isRecorderModalOpen = ref(false);
 const isCharacterLoading = ref(
   authStore.isAuthenticated && !authStore.myPage?.characterType,
 );
@@ -118,14 +120,20 @@ onMounted(async () => {
       @reset="resetChecklist"
     />
 
+    <ChecklistRecorder
+      class="mt-3"
+      @modal-visibility-change="isRecorderModalOpen = $event"
+    />
+
     <ChecklistProgress
+      class="mt-4"
       :completed-count="completedCount"
       :total-count="totalCount"
       :progress="progress"
     />
 
     <section
-      class="checklist-items d-flex flex-column"
+      class="checklist-items d-flex flex-column mt-4"
       aria-label="계약 체크리스트"
     >
       <ChecklistItem
@@ -139,7 +147,9 @@ onMounted(async () => {
   </div>
 
   <SecretaryGuide
-    v-if="!isCharacterLoading && !isDescriptionModalOpen"
+    v-if="
+      !isCharacterLoading && !isDescriptionModalOpen && !isRecorderModalOpen
+    "
     :floating="true"
     :character-type="characterType"
     text="체크리스트 상단이 주택유형에 따른
@@ -155,12 +165,8 @@ onMounted(async () => {
 
 <style scoped>
 .checklist-detail-view {
-  padding: 20px 20px;
+  padding: 20px 20px 112px;
   overscroll-behavior: contain;
-}
-
-.checklist-detail-view > * + * {
-  margin-top: 28px;
 }
 
 .checklist-items {
