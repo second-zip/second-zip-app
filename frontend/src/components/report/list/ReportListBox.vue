@@ -42,13 +42,18 @@ const emit = defineEmits(['toggle-favorite', 'delete']);
         {{ REPORT_LIST_FEEDBACK.empty }}
       </p>
       <template v-else>
-        <ReportListItem
-          v-for="report in reports"
+        <template
+          v-for="(report, index) in reports"
           :key="report.analysisReportId"
-          :report="report"
-          @toggle-favorite="emit('toggle-favorite', $event)"
-          @delete="emit('delete', $event)"
-        />
+        >
+          <slot name="item" :report="report" :index="index">
+            <ReportListItem
+              :report="report"
+              @toggle-favorite="emit('toggle-favorite', $event)"
+              @delete="emit('delete', $event)"
+            />
+          </slot>
+        </template>
       </template>
     </ContentBox>
   </div>
