@@ -8,6 +8,7 @@ import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.RiskEvaluationResult;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.CheckType;
+import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.mapper.ReportMapper;
@@ -43,6 +44,7 @@ class ReportPersistenceServiceTest {
                 List.of(new CheckResult(
                         CheckType.MORTGAGE_EXISTENCE,
                         RiskLevel.CAUTION,
+                        DataStatus.VERIFIED,
                         Map.of("mortgageAmount", 100L)
                 )),
                 List.of()

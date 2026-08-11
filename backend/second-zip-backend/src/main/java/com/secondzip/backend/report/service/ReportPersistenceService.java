@@ -76,11 +76,17 @@ public class ReportPersistenceService {
             params.put("reportId", reportId);
             params.put("checkType", c.getCheckType());
             params.put("riskLevel", c.getRiskLevel());
+            params.put("dataStatus", c.getDataStatus());
             params.put("evidenceJson", toJson(c.getEvidence()));
 
             reportMapper.insertCheckResult(params);
 
-            return new CheckResultView(c.getCheckType(), c.getRiskLevel(), c.getEvidence());
+            return new CheckResultView(
+                    c.getCheckType(),
+                    c.getRiskLevel(),
+                    c.getDataStatus(),
+                    c.getEvidence()
+            );
         }).collect(Collectors.toList());
     }
 
@@ -94,8 +100,17 @@ public class ReportPersistenceService {
             Long fraudTypeId = Long.valueOf(params.get("fraudTypeId").toString());
 
             List<DetailResultView> details = f.getDetails().stream().map(d -> {
-                reportMapper.insertDetailResult(fraudTypeId, d.getDetailType(), d.getRiskLevel());
-                return new DetailResultView(d.getDetailType(), d.getRiskLevel());
+                reportMapper.insertDetailResult(
+                        fraudTypeId,
+                        d.getDetailType(),
+                        d.getRiskLevel(),
+                        d.getDataStatus()
+                );
+                return new DetailResultView(
+                        d.getDetailType(),
+                        d.getRiskLevel(),
+                        d.getDataStatus()
+                );
             }).collect(Collectors.toList());
 
             return new FraudTypeView(f.getFraudType(), f.getRiskLevel(), details);

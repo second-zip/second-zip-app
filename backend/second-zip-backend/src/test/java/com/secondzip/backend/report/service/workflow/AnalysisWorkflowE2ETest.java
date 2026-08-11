@@ -411,7 +411,8 @@ class AnalysisWorkflowE2ETest {
                     new CodefTokenProvider(new RestTemplate()),
                     new ObjectMapper(),
                     new RegistryRequestFactory(),
-                    new RegistryDataParser()
+                    new RegistryDataParser(),
+                    null   // getRegistryDataForAnalysis를 오버라이드하므로 캐시를 타지 않는다
             );
         }
 

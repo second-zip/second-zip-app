@@ -196,6 +196,92 @@ class AnalysisExecutionServiceTest {
         assertEquals(AnalysisRequestStatus.FAILED, store.state.getStatus());
     }
 
+    @Test
+    void usesStandardizedAddressForRegionJudgement() {
+        AnalysisWorkflowState state = state();
+        // 사용자가 건물명으로 입력한 경우. 시도명으로 시작하지 않는다.
+        state.setRoadAddress("테헤란로152빌딩");
+        InMemoryStore store = new InMemoryStore(state);
+        CapturingRiskService riskService = new CapturingRiskService();
+        ReportDetailResponse saved = report(78L);
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                new FixedRegistryClient(),
+                new FixedPriceClient(),
+                riskService,
+                new FixedPersistenceService(saved),
+                new FixedQueryService(saved),
+                new StubSpecialTermService()
+        );
+
+        service.execute(1L, "request-id");
+
+        assertEquals(
+                "서울 강남구 테헤란로 152",
+                riskService.roadAddress,
+                "원본 입력을 그대로 넘기면 수도권이 비수도권으로 분류되어 "
+                        + "HUG 보증금 한도가 7억이 아닌 5억으로 계산된다"
+        );
+    }
+
+    @Test
+    void skipsPaidRegistryLookupWhenViolationStatusIsUnavailable() {
+        AnalysisWorkflowState state = state();
+        state.getBuildingRegisterData().put(
+                BuildingRegisterDocumentType.COLLECTIVE_TITLE,
+                Map.of("resBasePrice", "550,000,000")
+        );
+        InMemoryStore store = new InMemoryStore(state);
+        CountingRegistryProvider registry = new CountingRegistryProvider();
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                registry,
+                new FixedPriceClient(),
+                new CapturingRiskService(),
+                new FixedPersistenceService(report(93L)),
+                new FixedQueryService(report(93L)),
+                new StubSpecialTermService()
+        );
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.execute(1L, "request-id")
+        );
+        assertEquals(0, registry.callCount, "유료 등기부등본 조회가 호출되면 안 된다");
+        assertEquals(AnalysisRequestStatus.FAILED, store.state.getStatus());
+    }
+
+    @Test
+    void skipsPaidRegistryLookupWhenPriceBasisIsUnavailable() {
+        AnalysisWorkflowState state = state();
+        state.getBuildingRegisterData().put(
+                BuildingRegisterDocumentType.COLLECTIVE_TITLE,
+                Map.of("resViolationStatus", "")
+        );
+        InMemoryStore store = new InMemoryStore(state);
+        CountingRegistryProvider registry = new CountingRegistryProvider();
+        PriceDataProvider unavailablePrice = (target, buildingType) -> null;
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                registry,
+                unavailablePrice,
+                new CapturingRiskService(),
+                new FixedPersistenceService(report(94L)),
+                new FixedQueryService(report(94L)),
+                new StubSpecialTermService()
+        );
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.execute(1L, "request-id")
+        );
+        assertEquals(0, registry.callCount, "유료 등기부등본 조회가 호출되면 안 된다");
+        assertEquals(AnalysisRequestStatus.FAILED, store.state.getStatus());
+    }
+
     private AnalysisWorkflowState state() {
         AnalysisTarget target = new AnalysisTarget(
                 "서울 강남구 테헤란로 152",
@@ -257,6 +343,25 @@ class AnalysisExecutionServiceTest {
         );
     }
 
+    /** 유료 조회가 실제로 몇 번 일어났는지 세는 스텁. */
+    private static class CountingRegistryProvider implements RegistryDataProvider {
+        private int callCount;
+
+        @Override
+        public RegistryData getRegistryDataForAnalysis(
+                AnalysisTarget target,
+                String detailAddress,
+                String buildingType
+        ) {
+            callCount++;
+            RegistryData data = new RegistryData();
+            data.setMortgageAmount(0L);
+            data.setHasSeizure(false);
+            data.setHasTrustRegistration(false);
+            return data;
+        }
+    }
+
     private static class InMemoryStore implements AnalysisWorkflowStore {
         private AnalysisWorkflowState state;
 
@@ -301,7 +406,8 @@ class AnalysisExecutionServiceTest {
                     new CodefTokenProvider(new RestTemplate()),
                     new ObjectMapper(),
                     new RegistryRequestFactory(),
-                    new com.secondzip.backend.report.service.external.client.RegistryDataParser()
+                    new com.secondzip.backend.report.service.external.client.RegistryDataParser(),
+                    null   // getRegistryDataForAnalysis를 오버라이드하므로 캐시를 타지 않는다
             );
         }
 
@@ -335,6 +441,7 @@ class AnalysisExecutionServiceTest {
             extends RiskEvaluationService {
         private BuildingData building;
         private PriceData price;
+        private String roadAddress;
 
         @Override
         public RiskEvaluationResult evaluate(
@@ -346,6 +453,7 @@ class AnalysisExecutionServiceTest {
         ) {
             this.building = building;
             this.price = price;
+            this.roadAddress = roadAddress;
             return new RiskEvaluationResult(
                     RiskLevel.DANGER,
                     List.of(),
