@@ -3,12 +3,12 @@ package com.secondzip.backend.report.enums;
 /**
  * 판정에 쓰인 데이터의 상태.
  *
- * <p>{@link RiskLevel}만으로는 <b>"위험해서 주의"</b>와 <b>"몰라서 주의"</b>를 구분할 수 없다.
+ * RiskLevel만으로는 "위험해서 주의"와 "몰라서 주의"를 구분할 수 없다.
  * 외부 API가 죽어서 아무것도 못 가져온 리포트가 사용자 화면에는 "위험"으로 보이는 문제가
  * 있어, 위험도와는 별개의 축으로 데이터 상태를 함께 내려준다.
  *
- * <p>RiskLevel은 그대로 3단계를 유지한다. 이 값은 표시 목적이며,
- * {@code NOT_APPLICABLE}만 집계에서 제외된다.
+ * RiskLevel은 그대로 3단계를 유지한다. 이 값은 표시 목적이며,
+ * NOT_APPLICABLE 만 집계에서 제외된다.
  */
 public enum DataStatus {
 

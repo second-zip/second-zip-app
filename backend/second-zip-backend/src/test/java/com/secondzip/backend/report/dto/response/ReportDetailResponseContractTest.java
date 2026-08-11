@@ -68,6 +68,48 @@ class ReportDetailResponseContractTest {
     }
 
     @Test
+    @DisplayName("건축물 유형과 신탁 여부가 응답에 포함된다")
+    void exposesHousingCategoryAndTrustProperty() throws Exception {
+        JsonNode json = objectMapper.readTree(
+                objectMapper.writeValueAsString(sample())
+        );
+
+        assertTrue(json.has("housingCategory"), "housingCategory가 있어야 한다");
+        assertEquals("OFFICETEL", json.get("housingCategory").asText());
+
+        assertTrue(json.has("trustProperty"), "trustProperty가 있어야 한다");
+        assertTrue(json.get("trustProperty").asBoolean());
+    }
+
+    @Test
+    @DisplayName("이 필드 추가 전에 만들어진 리포트는 두 값이 null로 내려간다")
+    void keepsLegacyReportsAsExplicitNull() throws Exception {
+        ReportDetailResponse legacy = new ReportDetailResponse(
+                2L,
+                "서울 강남구 테헤란로 152",
+                null,
+                500_000_000L,
+                RiskLevel.CAUTION,
+                false,
+                null,
+                null,
+                List.of(),
+                List.of(),
+                List.of()
+        );
+
+        JsonNode json = objectMapper.readTree(
+                objectMapper.writeValueAsString(legacy)
+        );
+
+        // 키가 사라지면 프론트가 '없음'과 '아직 안 옴'을 구분할 수 없다
+        assertTrue(json.has("housingCategory"));
+        assertTrue(json.get("housingCategory").isNull());
+        assertTrue(json.has("trustProperty"));
+        assertTrue(json.get("trustProperty").isNull());
+    }
+
+    @Test
     @DisplayName("위험도 enum은 SAFE/CAUTION/DANGER 3개를 유지한다")
     void riskLevelEnumIsUnchanged() {
         assertEquals(3, RiskLevel.values().length);
@@ -93,6 +135,8 @@ class ReportDetailResponseContractTest {
                 500_000_000L,
                 RiskLevel.CAUTION,
                 false,
+                "OFFICETEL",
+                true,
                 List.of(new CheckResultView(
                         CheckType.MORTGAGE_EXISTENCE,
                         RiskLevel.CAUTION,

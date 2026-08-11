@@ -4,9 +4,11 @@
 
     <insert id="insertReportMap" useGeneratedKeys="true" keyProperty="reportId" keyColumn="analysis_report_id" parameterType="map">
         INSERT INTO analysis_reports
-        (account_id, request_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level)
+        (account_id, request_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level,
+         housing_category, is_trust_property)
         VALUES
-            (#{accountId}, #{requestId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result})
+            (#{accountId}, #{requestId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result},
+             #{housingCategory, jdbcType=VARCHAR}, #{trustProperty})
     </insert>
 
     <insert id="insertCheckResult" parameterType="map">
@@ -74,7 +76,9 @@
             detail_address AS detailAddress,
             deposit,
             risk_level AS result,
-            favorite
+            favorite,
+            housing_category AS housingCategory,
+            is_trust_property AS trustProperty
         FROM analysis_reports
         WHERE analysis_report_id = #{reportId}
     </select>
