@@ -8,3 +8,6 @@ WHERE category = 'TRUST_PROPERTY'
   AND contents <> '신탁회사 동의';
 
 DROP TABLE report_check_results;
+
+ALTER TABLE analysis_reports
+    ADD COLUMN is_trust_property BOOLEAN NOT NULL DEFAULT FALSE;

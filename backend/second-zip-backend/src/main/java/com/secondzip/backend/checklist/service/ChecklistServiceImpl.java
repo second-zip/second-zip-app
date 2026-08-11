@@ -4,6 +4,7 @@ import com.secondzip.backend.checklist.domain.ReportChecklistVO;
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
+import com.secondzip.backend.checklist.dto.response.ReportChecklistConditionDTO;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
@@ -38,19 +39,28 @@ public class ChecklistServiceImpl implements ChecklistService {
             Long analysisReportId
     ) {
 
-        String category =
-                reportChecklistMapper
-                        .findHousingCategoryByReportIdAndAccountId(
-                                analysisReportId,
-                                accountId
-                        );
+        ReportChecklistConditionDTO condition =
+                reportChecklistMapper.findReportCondition(
+                        analysisReportId,
+                        accountId
+                );
 
-        if (category == null
-                || category.isBlank()) {
+        if (condition == null
+                || condition.getHousingCategory() == null
+                || condition.getHousingCategory().isBlank()) {
 
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "리포트 분석이 완료되지 않았거나 주택 유형이 없습니다."
+            );
+        }
+
+        if (condition.getHousingCategory() == null
+                || condition.getHousingCategory().isBlank()) {
+
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "리포트의 주택 유형이 확정되지 않았습니다."
             );
         }
 
@@ -94,7 +104,10 @@ public class ChecklistServiceImpl implements ChecklistService {
         reportChecklistMapper.insertChecklistItems(
                 checklist.getReportChecklistId(),
                 analysisReportId,
-                category
+                condition.getHousingCategory(),
+                Boolean.TRUE.equals(
+                        condition.getTrustProperty()
+                )
         );
 
         return checklist.getReportChecklistId();

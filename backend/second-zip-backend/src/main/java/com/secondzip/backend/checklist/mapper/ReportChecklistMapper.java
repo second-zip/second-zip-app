@@ -3,6 +3,7 @@ package com.secondzip.backend.checklist.mapper;
 import com.secondzip.backend.checklist.domain.ReportChecklistVO;
 import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
+import com.secondzip.backend.checklist.dto.response.ReportChecklistConditionDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -23,6 +24,13 @@ public interface ReportChecklistMapper {
             Long accountId
     );
 
+    ReportChecklistConditionDTO findReportCondition(
+            @Param("analysisReportId")
+            Long analysisReportId,
+            @Param("accountId")
+            Long accountId
+    );
+
     int insertChecklist(
             ReportChecklistVO checklist
     );
@@ -33,7 +41,9 @@ public interface ReportChecklistMapper {
             @Param("analysisReportId")
             Long analysisReportId,
             @Param("category")
-            String category
+            String category,
+            @Param("trustProperty")
+            Boolean trustProperty
     );
 
     List<ChecklistListResponseDTO> findChecklistList(

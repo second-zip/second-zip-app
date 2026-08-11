@@ -78,6 +78,9 @@
         WHERE ci.category = 'COMMON'
            OR ci.category = #{category}
 
+        <if test="trustProperty">
+            OR ci.category = 'TRUST_PROPERTY'
+        </if>
     </insert>
 
 
@@ -89,6 +92,7 @@
             ar.analysis_report_id AS analysisReportId,
             rc.report_checklist_id AS reportChecklistId,
             ar.housing_category AS housingCategory,
+            ar.is_trust_property AS trustProperty,
 
             CASE
                 WHEN rc.report_checklist_id IS NULL
@@ -112,6 +116,19 @@
 
     </select>
 
+    <select id="findReportCondition"
+            resultType="com.secondzip.backend.checklist.dto.response.ReportChecklistConditionDTO">
+
+        SELECT
+            housing_category AS housingCategory,
+            is_trust_property AS trustProperty
+
+        FROM analysis_reports
+
+        WHERE analysis_report_id = #{analysisReportId}
+          AND account_id = #{accountId}
+
+    </select>
 
     <select id="findChecklistItems"
             resultType="com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO">

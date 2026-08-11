@@ -18,4 +18,6 @@ public class ChecklistListResponseDTO {
     private Boolean checklistCreated;
 
     private LocalDateTime reportCreatedAt;
+
+    private Boolean trustProperty;
 }
