@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 
-import ReportCreateBox from '@/components/report/list/ReportCreateBox.vue';
+import ReportCreateBox from '@/components/report/ReportCreateBox.vue';
 import ReportDeleteModal from '@/components/report/list/ReportDeleteModal.vue';
 import ReportListBox from '@/components/report/list/ReportListBox.vue';
 import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';

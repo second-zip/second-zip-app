@@ -1,0 +1,60 @@
+.analysis-progress {
+  width: 100%;
+  max-width: 402px;
+  height: 100%;
+  padding: 32px 40px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.analysis-progress__image {
+  width: min(100%, 240px);
+  height: auto;
+  margin-bottom: 28px;
+  object-fit: contain;
+}
+
+.analysis-progress__title {
+  color: var(--black-900);
+  font-size: 1.375rem;
+  line-height: 1.4;
+  letter-spacing: -0.04em;
+}
+
+.analysis-progress__description,
+.analysis-progress__message {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.analysis-progress__description {
+  color: var(--black-500);
+}
+
+.analysis-progress__message {
+  min-height: 21px;
+  color: var(--blue-900);
+  font-size: 0.875rem;
+}
+
+.analysis-progress__track {
+  height: 8px;
+  margin-top: 32px;
+  overflow: hidden;
+  background-color: var(--black-100);
+  border-radius: 999px;
+}
+
+.analysis-progress__bar {
+  height: 100%;
+  background-color: var(--blue-900);
+  border-radius: inherit;
+  transition: width 0.35s ease;
+}
+
+.analysis-progress__count {
+  margin-top: 12px;
+  color: var(--black-500);
+  font-size: 0.875rem;
+}

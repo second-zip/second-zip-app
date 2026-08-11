@@ -151,7 +151,7 @@ test('AI 특약 응답과 F의 6000자 설명을 화면 구조로 변환한다',
   const terms = mapSpecialTerms(ANALYSIS_PREVIEW_REPORTS.f.aiSpecialTerms);
 
   assert.equal(terms.length, 1);
-  assert.equal(terms[0].description.length, 6000);
+  assert.equal(terms[0].content.length, 6000);
 });
 
 test('시나리오별 비서 설정을 화면 캐릭터 타입으로 변환한다', () => {

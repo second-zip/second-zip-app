@@ -15,16 +15,7 @@ export const useSignupForm = () => {
     password: '',
     passwordConfirm: '',
     nickname: '',
-    termConsents: [
-      {
-        agreed: true,
-        termId: 1,
-      },
-      {
-        agreed: true,
-        termId: 2,
-      },
-    ],
+    termConsents: [],
   });
 
   const started = reactive({

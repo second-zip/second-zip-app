@@ -153,13 +153,35 @@ describe('MainPageView', () => {
     expect(logger.error).toHaveBeenCalledWith('main.fetch-user', error);
   });
 
-  it('분석 및 캐릭터 변경 버튼을 요청 경로로 이동시킨다', async () => {
+  it('비로그인 상태에서 AI 비서 변경을 누르면 로그인 화면으로 이동한다', async () => {
+    const wrapper = mountView();
+
+    await wrapper.get('.secretary-stub').trigger('click');
+
+    expect(mocks.push).toHaveBeenCalledWith({
+      name: 'login',
+      query: { redirect: '/mypage#ai-secretary' },
+    });
+  });
+
+  it('로그인 상태에서 AI 비서 변경을 누르면 마이페이지 선택 영역으로 이동한다', async () => {
+    mocks.authStore.isAuthenticated = true;
+    mocks.authStore.myPage = { characterType: 'CAT' };
+    const wrapper = mountView();
+
+    await wrapper.get('.secretary-stub').trigger('click');
+
+    expect(mocks.push).toHaveBeenCalledWith({
+      name: 'mypage',
+      hash: '#ai-secretary',
+    });
+  });
+
+  it('분석 버튼을 누르면 리포트 화면으로 이동한다', async () => {
     const wrapper = mountView();
 
     await wrapper.get('.report-stub').trigger('click');
-    await wrapper.get('.secretary-stub').trigger('click');
 
-    expect(mocks.push).toHaveBeenNthCalledWith(1, '/report');
-    expect(mocks.push).toHaveBeenNthCalledWith(2, '/mypage/character');
+    expect(mocks.push).toHaveBeenCalledWith('/report');
   });
 });

@@ -9,19 +9,23 @@ const mocks = vi.hoisted(() => ({
     login: vi.fn(),
   },
   replace: vi.fn(),
+  push: vi.fn(),
+  route: { query: {} },
 }));
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => mocks.authStore,
 }));
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ replace: mocks.replace }),
+  useRoute: () => mocks.route,
+  useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
 }));
 
-describe('LoginView', () => {
+describe('LoginView 로그인 화면', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authStore.loading = false;
+    mocks.route.query = {};
   });
 
   it('입력한 계정으로 로그인하고 메인 화면으로 이동한다', async () => {
@@ -59,9 +63,28 @@ describe('LoginView', () => {
     mocks.authStore.loading = true;
 
     const wrapper = mount(LoginView);
-    const button = wrapper.get('button');
+    const button = wrapper.get('button[type="submit"]');
 
     expect(button.attributes('disabled')).toBeDefined();
     expect(button.text()).toBe('로그인 중...');
+  });
+
+  it('로그인 후 전달받은 내부 경로로 이동한다', async () => {
+    mocks.route.query = { redirect: '/mypage#ai-secretary' };
+    mocks.authStore.login.mockResolvedValue({ accountId: 1 });
+    const wrapper = mount(LoginView);
+
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(mocks.replace).toHaveBeenCalledWith('/mypage#ai-secretary');
+  });
+
+  it('회원가입 버튼을 누르면 회원가입 화면으로 이동한다', async () => {
+    const wrapper = mount(LoginView);
+
+    await wrapper.get('button[type="button"]').trigger('click');
+
+    expect(mocks.push).toHaveBeenCalledWith('/signup');
   });
 });
