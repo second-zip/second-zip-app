@@ -44,8 +44,7 @@ public class ChecklistServiceImpl implements ChecklistService {
                 );
 
         if (condition == null
-                || condition.getHousingCategory() == null
-                || condition.getHousingCategory().isBlank()) {
+                || condition.getHousingCategory() == null) {
 
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
@@ -53,8 +52,7 @@ public class ChecklistServiceImpl implements ChecklistService {
             );
         }
 
-        if (condition.getHousingCategory() == null
-                || condition.getHousingCategory().isBlank()) {
+        if (condition.getHousingCategory() == null) {
 
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,

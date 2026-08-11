@@ -1,5 +1,6 @@
 package com.secondzip.backend.checklist.dto.response;
 
+import com.secondzip.backend.checklist.enums.Category;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +12,7 @@ public class ChecklistResponseDTO {
 
     private String contents;
 
-    private String category;
+    private Category category;
 
     private String description;
 

@@ -2,6 +2,7 @@ package com.secondzip.backend.checklist.mapper;
 
 import com.secondzip.backend.checklist.domain.ReportChecklistVO;
 import com.secondzip.backend.checklist.dto.response.*;
+import com.secondzip.backend.checklist.enums.Category;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -39,7 +40,7 @@ public interface ReportChecklistMapper {
             @Param("analysisReportId")
             Long analysisReportId,
             @Param("category")
-            String category,
+            Category category,
             @Param("trustProperty")
             Boolean trustProperty
     );
