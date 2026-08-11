@@ -8,6 +8,7 @@ import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.*;
 import com.secondzip.backend.report.enums.CheckType;
+import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.FraudType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.mapper.ReportMapper;
@@ -57,6 +58,14 @@ public class ReportQueryService {
         validateOwnership(accountId, reportId);
 
         Map<String, Object> report = reportMapper.findReportById(reportId);
+        // validateOwnership 통과 후 조회 전에 다른 요청이 리포트를 지울 수 있다.
+        // 그 경우 아래에서 NPE가 나 500으로 나가므로 여기서 404로 정리한다.
+        if (report == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "리포트를 찾을 수 없습니다."
+            );
+        }
 
         List<CheckResultView> checkViews = buildCheckResultViews(reportId);
         List<FraudTypeView> fraudViews = buildFraudTypeViews(reportId);
@@ -84,8 +93,25 @@ public class ReportQueryService {
             CheckType checkType = CheckType.valueOf(row.get("checkType").toString());
             RiskLevel riskLevel = RiskLevel.valueOf(row.get("riskLevel").toString());
             Map<String, Object> evidence = parseEvidence(row.get("evidence"));
-            return new CheckResultView(checkType, riskLevel, evidence);
+            return new CheckResultView(
+                    checkType,
+                    riskLevel,
+                    parseDataStatus(row.get("dataStatus")),
+                    evidence
+            );
         }).collect(Collectors.toList());
+    }
+
+    /** V3 이전에 저장된 행은 data_status가 없을 수 있어 VERIFIED로 본다. */
+    private DataStatus parseDataStatus(Object raw) {
+        if (raw == null) {
+            return DataStatus.VERIFIED;
+        }
+        try {
+            return DataStatus.valueOf(raw.toString());
+        } catch (IllegalArgumentException e) {
+            return DataStatus.VERIFIED;
+        }
     }
 
     // 사기 유형 조회
@@ -98,7 +124,13 @@ public class ReportQueryService {
 
             List<DetailResult> details = reportMapper.findDetailResultsByFraudTypeId(fraudTypeId);
             List<DetailResultView> detailViews = details.stream()
-                    .map(d -> new DetailResultView(d.getDetailType(), d.getRiskLevel()))
+                    .map(d -> new DetailResultView(
+                            d.getDetailType(),
+                            d.getRiskLevel(),
+                            d.getDataStatus() != null
+                                    ? d.getDataStatus()
+                                    : DataStatus.VERIFIED
+                    ))
                     .collect(Collectors.toList());
 
             return new FraudTypeView(fraudType, riskLevel, detailViews);

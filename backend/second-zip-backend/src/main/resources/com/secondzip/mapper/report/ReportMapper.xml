@@ -10,8 +10,8 @@
     </insert>
 
     <insert id="insertCheckResult" parameterType="map">
-        INSERT INTO analysis_report_check_results (analysis_report_id, check_type, risk_level, evidence)
-        VALUES (#{reportId}, #{checkType}, #{riskLevel}, #{evidenceJson, jdbcType=VARCHAR})
+        INSERT INTO report_check_results (analysis_report_id, check_type, risk_level, data_status, evidence)
+        VALUES (#{reportId}, #{checkType}, #{riskLevel}, #{dataStatus}, #{evidenceJson, jdbcType=VARCHAR})
     </insert>
 
     <insert id="insertFraudTypeMap" useGeneratedKeys="true" keyProperty="fraudTypeId" keyColumn="report_fraud_type_id" parameterType="map">
@@ -20,8 +20,8 @@
     </insert>
 
     <insert id="insertDetailResult">
-        INSERT INTO report_fraud_detail_results (report_fraud_type_id, detail_type, risk_level)
-        VALUES (#{fraudTypeId}, #{detailType}, #{riskLevel})
+        INSERT INTO report_fraud_detail_results (report_fraud_type_id, detail_type, risk_level, data_status)
+        VALUES (#{fraudTypeId}, #{detailType}, #{riskLevel}, #{dataStatus})
     </insert>
 
     <!-- 리포트 목록 불러오기  -->
@@ -57,8 +57,9 @@
         SELECT
             check_type AS checkType,
             risk_level AS riskLevel,
+            data_status AS dataStatus,
             evidence
-        FROM analysis_report_check_results
+        FROM report_check_results
         WHERE analysis_report_id = #{reportId}
     </select>
 
@@ -90,7 +91,8 @@
     <select id="findDetailResultsByFraudTypeId" resultType="com.secondzip.backend.report.dto.DetailResult">
         SELECT
             detail_type AS detailType,
-            risk_level AS riskLevel
+            risk_level AS riskLevel,
+            data_status AS dataStatus
         FROM report_fraud_detail_results
         WHERE report_fraud_type_id = #{fraudTypeId}
     </select>

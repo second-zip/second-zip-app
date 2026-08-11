@@ -570,7 +570,7 @@ CREATE TABLE report_check_results (
                                           check_type
                                           ),
 
-                                      CONSTRAINT fk_report_check_results_reportㄷ
+                                      CONSTRAINT fk_report_check_results_report
                                           FOREIGN KEY (analysis_report_id)
                                               REFERENCES analysis_reports (analysis_report_id)
                                               ON DELETE CASCADE

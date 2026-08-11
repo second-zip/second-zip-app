@@ -2,6 +2,7 @@ package com.secondzip.backend.report.mapper;
 
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.ReportListItem;
+import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 
@@ -28,7 +29,8 @@ public class StubReportMapper implements ReportMapper {
     public void insertDetailResult(
             Long fraudTypeId,
             DetailType detailType,
-            RiskLevel riskLevel
+            RiskLevel riskLevel,
+            DataStatus dataStatus
     ) {
     }
 

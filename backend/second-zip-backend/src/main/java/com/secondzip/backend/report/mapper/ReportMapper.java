@@ -2,6 +2,7 @@ package com.secondzip.backend.report.mapper;
 
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.ReportListItem;
+import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
 import org.apache.ibatis.annotations.Mapper;
@@ -24,7 +25,8 @@ public interface ReportMapper {
     void insertDetailResult(
             @Param("fraudTypeId") Long fraudTypeId,
             @Param("detailType") DetailType detailType,
-            @Param("riskLevel") RiskLevel riskLevel
+            @Param("riskLevel") RiskLevel riskLevel,
+            @Param("dataStatus") DataStatus dataStatus
     );
 
     // 리포트 생성

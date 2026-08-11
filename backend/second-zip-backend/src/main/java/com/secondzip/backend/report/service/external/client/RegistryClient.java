@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,29 +46,26 @@ public class RegistryClient implements RegistryDataProvider {
     private final ObjectMapper objectMapper;
     private final RegistryRequestFactory requestFactory;
     private final RegistryDataParser registryDataParser;
-    private final Map<String, CacheEntry> responseCache = new ConcurrentHashMap<>();
+    private final RegistryDataCache registryDataCache;
 
     @Value("${CODEF_REGISTRY_ENABLED:false}")
     private boolean registryEnabled;
-
-    @Value("${CODEF_REGISTRY_CACHE_TTL_SECONDS:300}")
-    private long cacheTtlSeconds;
 
     public RegistryClient(
             @Qualifier("codefRestTemplate") RestTemplate restTemplate,
             CodefTokenProvider tokenProvider,
             ObjectMapper objectMapper,
             RegistryRequestFactory requestFactory,
-            RegistryDataParser registryDataParser
+            RegistryDataParser registryDataParser,
+            RegistryDataCache registryDataCache
     ) {
         this.restTemplate = restTemplate;
         this.tokenProvider = tokenProvider;
         this.objectMapper = objectMapper;
         this.requestFactory = requestFactory;
         this.registryDataParser = registryDataParser;
+        this.registryDataCache = registryDataCache;
     }
-
-    private record CacheEntry(RegistryData data, long expiresAtEpochMillis) {}
 
     // CODEF 등기부등본
     @Value("${CODEF_PUBLIC_KEY:}")
@@ -93,83 +89,6 @@ public class RegistryClient implements RegistryDataProvider {
 
     private static final String REGISTRY_PATH =
             "/v1/kr/public/ck/real-estate-register/status";
-
-    private static final Pattern MORTGAGE_AMOUNT_PATTERN =
-            Pattern.compile("채권최고액\\s*금?\\s*([0-9,]+)\\s*원");
-    private static final Pattern OWNER_NAME_PATTERN =
-            Pattern.compile("소유자\\s+([가-힣]{2,5})");
-    // 시도 약칭 → 공식 명칭 매핑 (roadAddress가 "서울", "경기" 같은 약칭으로 오는 경우 대비)
-    private static final Map<String, String> SIDO_FULL_NAME = Map.ofEntries(
-            Map.entry("서울", "서울특별시"),
-            Map.entry("부산", "부산광역시"),
-            Map.entry("대구", "대구광역시"),
-            Map.entry("인천", "인천광역시"),
-            Map.entry("광주", "광주광역시"),
-            Map.entry("대전", "대전광역시"),
-            Map.entry("울산", "울산광역시"),
-            Map.entry("세종", "세종특별자치시"),
-            Map.entry("경기", "경기도"),
-            Map.entry("강원", "강원특별자치도"),
-            Map.entry("충북", "충청북도"),
-            Map.entry("충남", "충청남도"),
-            Map.entry("전북", "전북특별자치도"),
-            Map.entry("전남", "전라남도"),
-            Map.entry("경북", "경상북도"),
-            Map.entry("경남", "경상남도"),
-            Map.entry("제주", "제주특별자치도")
-    );
-
-    /** roadAddress("서울 강남구 테헤란로 152")를 시도/시군구/도로명으로 분리 */
-    private ParsedAddress parseRoadAddress(String roadAddress) {
-        if (roadAddress == null || roadAddress.isBlank()) return null;
-
-        String[] tokens = roadAddress.trim().split("\\s+");
-        if (tokens.length < 3) {
-            log.warn("roadAddress 토큰이 부족해 시군구/도로명 분리를 할 수 없습니다: {}", roadAddress);
-            return null;
-        }
-
-        // 도로명(...로/...길)이 나오는 인덱스를 찾는다
-        int roadIndex = -1;
-        for (int i = 1; i < tokens.length; i++) {
-            if (tokens[i].endsWith("로") || tokens[i].endsWith("길")) {
-                roadIndex = i;
-                break;
-            }
-        }
-        if (roadIndex == -1 || roadIndex == tokens.length - 1) {
-            log.warn("roadAddress에서 도로명을 찾지 못했습니다: {}", roadAddress);
-            return null;
-        }
-
-        String sido = tokens[0];
-        String sidoFull = SIDO_FULL_NAME.getOrDefault(sido, sido);
-        String sigungu = String.join(" ", java.util.Arrays.copyOfRange(tokens, 1, roadIndex));
-        String roadName = tokens[roadIndex];
-
-        return new ParsedAddress(sidoFull, sigungu, roadName);
-    }
-
-    private record ParsedAddress(String sido, String sigungu, String roadName) {}
-
-    /** "101동 101호" / "101동" / "101호" 등을 dong/ho로 분리 */
-    private DongHo parseDongHo(String detailAddress) {
-        if (detailAddress == null || detailAddress.isBlank()) return null;
-
-        String dong = null;
-        String ho = null;
-
-        Matcher dongMatcher = Pattern.compile("(\\d+)\\s*동").matcher(detailAddress);
-        if (dongMatcher.find()) dong = dongMatcher.group(1);
-
-        Matcher hoMatcher = Pattern.compile("(\\d+)\\s*호").matcher(detailAddress);
-        if (hoMatcher.find()) ho = hoMatcher.group(1);
-
-        if (dong == null && ho == null) return null;
-        return new DongHo(dong, ho);
-    }
-
-    private record DongHo(String dong, String ho) {}
 
     /** 기존 호출부 호환용 집합건물 등기부 조회 */
     public RegistryData getRegistryData(
@@ -240,15 +159,15 @@ public class RegistryClient implements RegistryDataProvider {
             return null;
         }
 
+        // 문서 종류가 키에 포함된다. 단독·다가구는 BUILDING과 LAND가 서로 다른 문서라
+        // 각각 별도로 캐시된다.
         String cacheKey = documentType + "|" + target.roadAddress() + "|"
                 + target.mainNo() + "|" + target.subNo() + "|"
                 + (detailAddress == null ? "" : detailAddress);
-        CacheEntry cached = responseCache.get(cacheKey);
-        if (cached != null && System.currentTimeMillis() < cached.expiresAtEpochMillis()) {
-            log.info("CODEF 등기부등본 캐시 사용");
-            return cached.data();
+        RegistryData cached = findCached(cacheKey);
+        if (cached != null) {
+            return cached;
         }
-        responseCache.remove(cacheKey);
 
         String token = tokenProvider.getToken();
         if (token == null) {
@@ -289,19 +208,34 @@ public class RegistryClient implements RegistryDataProvider {
                 String code = result != null && result.get("code") != null
                         ? result.get("code").toString()
                         : null;
+                String message = asText(result, "message");
+                String extraMessage = asText(result, "extraMessage");
 
                 if ("CF-03002".equals(code)) {
-                    log.warn("CODEF 추가인증이 필요해 조회를 중단합니다.");
+                    log.warn(
+                            "CODEF 추가인증이 필요해 조회를 중단합니다. message={}, extraMessage={}",
+                            message,
+                            extraMessage
+                    );
                     return null;
                 }
                 if (code != null && !code.startsWith("CF-0000")) {
-                    log.warn("CODEF 등기부등본 응답 에러: code={}", code);
+                    log.warn(
+                            "CODEF 등기부등본 응답 에러: code={}, message={}, extraMessage={}",
+                            code,
+                            message,
+                            extraMessage
+                    );
                     return null;
                 }
 
                 Map<String, Object> data = asMap(body.get("data"));
                 if (data == null) {
-                    log.warn("CODEF 등기부등본 응답에 data가 없습니다.");
+                    log.warn(
+                            "CODEF 등기부등본 응답에 data가 없습니다. code={}, message={}",
+                            code,
+                            message
+                    );
                     return null;
                 }
 
@@ -311,11 +245,8 @@ public class RegistryClient implements RegistryDataProvider {
                     return null;
                 }
 
-                long ttlMillis = Math.max(1L, cacheTtlSeconds) * 1000L;
-                responseCache.put(
-                        cacheKey,
-                        new CacheEntry(registryData, System.currentTimeMillis() + ttlMillis)
-                );
+                // 과금이 끝난 결과이므로 반드시 캐시에 남긴다.
+                putCached(cacheKey, registryData);
                 return registryData;
             } catch (Exception e) {
                 log.error("CODEF 등기부등본 응답 파싱 실패: type={}",
@@ -324,18 +255,44 @@ public class RegistryClient implements RegistryDataProvider {
             }
 
         } catch (Exception e) {
-            log.error("CODEF 등기부등본 조회 실패: type={}", e.getClass().getSimpleName());
+            log.error(
+                    "CODEF 등기부등본 조회 실패: type={}, message={}",
+                    e.getClass().getSimpleName(),
+                    e.getMessage()
+            );
             return null;
         }
     }
 
-    private String joinBuildingNumber(String mainNo, String subNo) {
-        if (mainNo == null || mainNo.isBlank()) {
+    /**
+     * 캐시 조회. 캐시는 최적화일 뿐이므로 어떤 이유로도 조회 자체를 막지 않는다.
+     * 캐시가 주입되지 않은 환경(단위 테스트 등)도 허용한다.
+     */
+    private RegistryData findCached(String cacheKey) {
+        if (registryDataCache == null) {
             return null;
         }
-        return subNo == null || subNo.isBlank() || "0".equals(subNo)
-                ? mainNo
-                : mainNo + "-" + subNo;
+        try {
+            return registryDataCache.find(cacheKey);
+        } catch (Exception e) {
+            log.warn("등기부등본 캐시 조회를 건너뜁니다: type={}", e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    /**
+     * 캐시 저장. 이 시점엔 이미 과금이 끝났으므로,
+     * 저장에 실패하더라도 절대 결과를 잃어버리면 안 된다.
+     */
+    private void putCached(String cacheKey, RegistryData data) {
+        if (registryDataCache == null) {
+            return;
+        }
+        try {
+            registryDataCache.put(cacheKey, data);
+        } catch (Exception e) {
+            log.warn("등기부등본 캐시 저장을 건너뜁니다: type={}", e.getClass().getSimpleName());
+        }
     }
 
     private ResponseEntity<String> postWithTokenRetry(
@@ -388,78 +345,27 @@ public class RegistryClient implements RegistryDataProvider {
         return value instanceof Map<?, ?> ? (Map<String, Object>) value : null;
     }
 
-    private RegistryData parseRegistryData(Map<String, Object> data) {
-        List<Map<String, Object>> entriesList = new ArrayList<>();
-        collectMapsFromNamedList(data, "resRegisterEntriesList", entriesList);
-        if (entriesList == null || entriesList.isEmpty()) {
-            log.warn("등기사항 목록이 비어있습니다.");
+    /**
+     * result 하위의 진단용 문자열 필드를 꺼낸다.
+     * CODEF는 실패 사유를 code가 아니라 message/extraMessage에 담아 보내고,
+     * 한글이 퍼센트 인코딩된 채로 오는 경우가 있어 필요할 때만 디코딩한다.
+     */
+    private String asText(Map<String, Object> source, String key) {
+        if (source == null) {
             return null;
         }
-
-        String fullText = extractAllText(entriesList);
-        if (fullText.isBlank()) {
-            log.warn("등기사항 목록에 분석 가능한 텍스트가 없습니다.");
+        Object value = source.get(key);
+        if (value == null) {
             return null;
         }
-
-        Long mortgageAmount = extractMortgageAmount(fullText);
-        Boolean hasSeizure = containsActiveKeyword(fullText, "압류", "가압류", "경매개시결정");
-        Boolean hasTrustRegistration = containsActiveKeyword(fullText, "신탁");
-        String ownerName = extractOwnerName(fullText);
-        String ownerType = inferOwnerType(ownerName);
-
-        RegistryData registryData = new RegistryData();
-        registryData.setMortgageAmount(mortgageAmount);
-        registryData.setHasSeizure(hasSeizure);
-        registryData.setHasTrustRegistration(hasTrustRegistration);
-        registryData.setOwnerName(ownerName);
-        registryData.setOwnerType(ownerType);
-        // landOwnerName, hasPostTrustInfringement: 토지 별도조회/시계열 비교 필요 — 아직 미구현(null 고정)
-
-        log.info("등기부등본 파싱 완료: mortgageAmount={}, hasSeizure={}, hasTrustRegistration={}, ownerType={}",
-                mortgageAmount, hasSeizure, hasTrustRegistration, ownerType);
-
-        return registryData;
-    }
-
-    private void collectMapsFromNamedList(
-            Object node,
-            String targetKey,
-            List<Map<String, Object>> destination
-    ) {
-        if (node instanceof Map<?, ?> map) {
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
-                Object value = entry.getValue();
-                if (targetKey.equals(String.valueOf(entry.getKey()))
-                        && value instanceof Collection<?> collection) {
-                    for (Object item : collection) {
-                        Map<String, Object> itemMap = asMap(item);
-                        if (itemMap != null) {
-                            destination.add(itemMap);
-                        }
-                    }
-                } else {
-                    collectMapsFromNamedList(value, targetKey, destination);
-                }
-            }
-        } else if (node instanceof Collection<?> collection) {
-            collection.forEach(item -> collectMapsFromNamedList(item, targetKey, destination));
+        String text = value.toString();
+        if (text.indexOf('%') < 0) {
+            return text;
         }
-    }
-
-    private String extractAllText(Object node) {
-        StringBuilder sb = new StringBuilder();
-        appendTextValues(node, sb);
-        return sb.toString();
-    }
-
-    private void appendTextValues(Object node, StringBuilder destination) {
-        if (node instanceof Map<?, ?> map) {
-            map.values().forEach(value -> appendTextValues(value, destination));
-        } else if (node instanceof Collection<?> collection) {
-            collection.forEach(value -> appendTextValues(value, destination));
-        } else if (node instanceof CharSequence text && !text.toString().isBlank()) {
-            destination.append(text).append('\n');
+        try {
+            return URLDecoder.decode(text, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return text;
         }
     }
 
@@ -493,60 +399,4 @@ public class RegistryClient implements RegistryDataProvider {
         return node.getClass().getSimpleName();
     }
 
-    private Long extractMortgageAmount(String text) {
-        long total = 0L;
-        boolean found = false;
-        Matcher matcher = MORTGAGE_AMOUNT_PATTERN.matcher(text);
-        while (matcher.find()) {
-            // 문서 특이사항: 말소(취소선) 항목은 원본 텍스트에서 &...& 로 감싸져 온다.
-            // 매치 위치가 & 쌍 안에 있으면 말소된 근저당이므로 합산에서 제외.
-            if (isWithinCancelledSpan(text, matcher.start())) {
-                continue;
-            }
-            try {
-                total += Long.parseLong(matcher.group(1).replace(",", ""));
-                found = true;
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return found ? total : 0L;
-    }
-
-    private boolean isWithinCancelledSpan(String text, int position) {
-        int before = text.lastIndexOf('&', position);
-        if (before == -1) return false;
-        int after = text.indexOf('&', position);
-        if (after == -1) return false;
-        // 직전 & 이후 다음 &가 등장하기 전까지의 구간에 있으면 취소선(말소) 구간으로 판단
-        return before < position && position < after;
-    }
-
-    private Boolean containsActiveKeyword(String text, String... keywords) {
-        for (String keyword : keywords) {
-            int idx = text.indexOf(keyword);
-            while (idx != -1) {
-                if (!isWithinCancelledSpan(text, idx)) {
-                    return true;
-                }
-                idx = text.indexOf(keyword, idx + 1);
-            }
-        }
-        return false;
-    }
-
-    private String extractOwnerName(String text) {
-        Matcher matcher = OWNER_NAME_PATTERN.matcher(text);
-        String lastOwner = null;
-        while (matcher.find()) {
-            if (!isWithinCancelledSpan(text, matcher.start())) {
-                lastOwner = matcher.group(1); // 최신 소유자로 계속 갱신
-            }
-        }
-        return lastOwner;
-    }
-
-    private String inferOwnerType(String ownerName) {
-        if (ownerName == null) return null;
-        return ownerName.contains("신탁") ? "TRUST_COMPANY" : "INDIVIDUAL";
-    }
 }

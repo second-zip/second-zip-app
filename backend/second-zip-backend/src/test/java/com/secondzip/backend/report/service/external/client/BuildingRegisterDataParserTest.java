@@ -60,6 +60,59 @@ class BuildingRegisterDataParserTest {
     }
 
     @Test
+    void picksMostRecentBasePriceNotTheLargest() {
+        BuildingRegisterAnalysisData result = parser.parse(
+                List.of(BuildingRegisterDocumentType.COLLECTIVE_TITLE),
+                Map.of(
+                        BuildingRegisterDocumentType.COLLECTIVE_TITLE,
+                        Map.of(
+                                "resViolationStatus", "",
+                                "resPriceList", List.of(
+                                        Map.of(
+                                                "resBaseDate", "2023-01-01",
+                                                "resBasePrice", "500,000,000원"
+                                        ),
+                                        Map.of(
+                                                "resBaseDate", "2024-01-01",
+                                                "resBasePrice", "420,000,000원"
+                                        )
+                                )
+                        )
+                ),
+                "APARTMENT",
+                "공동주택"
+        );
+
+        assertEquals(
+                420_000_000L,
+                result.getOfficialPrice(),
+                "공시가격이 하락한 해가 있으면 최대값이 아니라 최신값을 써야 한다. "
+                        + "기준가가 높으면 전세가율이 낮게 나와 위험을 과소평가한다."
+        );
+    }
+
+    @Test
+    void fallsBackToLargestAmountWhenNoBaseDateExists() {
+        BuildingRegisterAnalysisData result = parser.parse(
+                List.of(BuildingRegisterDocumentType.COLLECTIVE_TITLE),
+                Map.of(
+                        BuildingRegisterDocumentType.COLLECTIVE_TITLE,
+                        Map.of(
+                                "resViolationStatus", "",
+                                "resPriceList", List.of(
+                                        Map.of("resBasePrice", "300,000,000원"),
+                                        Map.of("resBasePrice", "450,000,000원")
+                                )
+                        )
+                ),
+                "APARTMENT",
+                "공동주택"
+        );
+
+        assertEquals(450_000_000L, result.getOfficialPrice());
+    }
+
+    @Test
     void blankStatusMeansNormalOnlyWhenEveryRequiredDocumentSucceeded() {
         List<BuildingRegisterDocumentType> required = List.of(
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
