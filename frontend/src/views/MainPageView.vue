@@ -40,7 +40,18 @@ const secretaryMessage = computed(
 );
 
 const goToReport = () => router.push('/report');
-const goToCharacter = () => router.push('/mypage/character');
+const goToCharacter = () => {
+  const characterSettingsPath = '/mypage#ai-secretary';
+
+  if (!authStore.isAuthenticated) {
+    return router.push({
+      name: 'login',
+      query: { redirect: characterSettingsPath },
+    });
+  }
+
+  return router.push({ name: 'mypage', hash: '#ai-secretary' });
+};
 
 onMounted(async () => {
   if (!authStore.isAuthenticated || authStore.myPage) return;

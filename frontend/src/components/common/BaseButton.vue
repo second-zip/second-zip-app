@@ -28,4 +28,11 @@
   outline: 3px solid rgb(7 94 241 / 25%);
   outline-offset: 3px;
 }
+
+.base-button:disabled {
+  background-color: var(--gray-300, #d9dde5);
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: none;
+}
 </style>
