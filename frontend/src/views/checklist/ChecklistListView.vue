@@ -3,9 +3,9 @@ import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import ChecklistListContent from '@/components/checklist/ChecklistListContent.vue';
-import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
-import { useChecklistCharacter } from '@/composables/checklist/useChecklistCharacter';
+import MemberSecretaryGuide from '@/components/common/secretary/MemberSecretaryGuide.vue';
 import { useChecklistList } from '@/composables/checklist/useChecklistList';
+import { CHECKLIST_LIST_GUIDE_MESSAGES } from '@/constants/checklist/guide';
 import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
 
@@ -19,9 +19,6 @@ const {
   fetchChecklists,
   createChecklist,
 } = useChecklistList();
-const { characterType, isCharacterLoading } =
-  useChecklistCharacter('checklist-list');
-
 const handleCreateChecklist = async (report) => {
   const createdChecklist = await createChecklist(report);
 
@@ -59,11 +56,9 @@ onMounted(fetchChecklists);
     </div>
   </BottomSheetLayout>
 
-  <SecretaryGuide
-    v-if="!isCharacterLoading"
-    :floating="true"
-    :character-type="characterType"
-    text="각 리포트별로 체크리스트를 만들 수 있다냥! 안전한 계약을 이번집이 도와주겠다냥~"
+  <MemberSecretaryGuide
+    :messages="CHECKLIST_LIST_GUIDE_MESSAGES"
+    floating
   />
 </template>
 

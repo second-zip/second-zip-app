@@ -7,9 +7,9 @@ import ChecklistDetailHeader from '@/components/checklist/ChecklistDetailHeader.
 import ChecklistDetailList from '@/components/checklist/ChecklistDetailList.vue';
 import ChecklistProgress from '@/components/checklist/ChecklistProgress.vue';
 import ChecklistRecorder from '@/components/checklist/ChecklistRecorder.vue';
-import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
-import { useChecklistCharacter } from '@/composables/checklist/useChecklistCharacter';
+import MemberSecretaryGuide from '@/components/common/secretary/MemberSecretaryGuide.vue';
 import { useChecklistDetail } from '@/composables/checklist/useChecklistDetail';
+import { CHECKLIST_DETAIL_GUIDE_MESSAGES } from '@/constants/checklist/guide';
 
 const route = useRoute();
 const reportChecklistId = computed(
@@ -18,8 +18,6 @@ const reportChecklistId = computed(
 const selectedItem = ref(null);
 const isDescriptionModalOpen = ref(false);
 const isRecorderModalOpen = ref(false);
-const { characterType, isCharacterLoading } =
-  useChecklistCharacter('checklist-detail');
 const detail = useChecklistDetail(reportChecklistId);
 
 const openDescription = (item) => {
@@ -60,11 +58,10 @@ onMounted(detail.fetchChecklist);
       @show-description="openDescription"
     />
   </div>
-  <SecretaryGuide
-    v-if="!isCharacterLoading && !isDescriptionModalOpen && !isRecorderModalOpen"
+  <MemberSecretaryGuide
+    v-if="!isDescriptionModalOpen && !isRecorderModalOpen"
     floating
-    :character-type="characterType"
-    text="체크리스트를 하나씩 확인해 보자냥!"
+    :messages="CHECKLIST_DETAIL_GUIDE_MESSAGES"
   />
   <ChecklistDescriptionModal
     :item="selectedItem"
