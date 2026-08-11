@@ -22,5 +22,10 @@ public interface RecordingService {
             Long accountId,
             Long recordingSessionId
     );
-    RecordingLiveStartResponseDTO startLiveRecording(Long accountId,String category);
+    RecordingLiveStartResponseDTO startLiveRecording(Long accountId,Long reportChecklistId);
+
+    void stopLiveRecording(
+            Long accountId,
+            Long recordingSessionId
+    );
 }

@@ -32,24 +32,17 @@ public class LiveChecklistAnalysisServiceImpl
         RecordingSessionVO recordingSession =
                 recordingSessionMapper.findById(recordingSessionId);
 
-        if (recordingSession == null) {
-            throw new IllegalArgumentException(
-                    "Recording session not found: " + recordingSessionId
-            );
-        }
-
-        Long analysisReportChecklistId =
-                recordingSession.getReportChecklistId();
-
-        if (analysisReportChecklistId == null) {
+        if (recordingSession == null || recordingSession.getReportChecklistId() == null) {
             throw new IllegalStateException(
-                    "Analysis report checklist is not connected to recording session: "
-                            + recordingSessionId
+                    "녹음과 연결된 체크리스트가 없습니다."
             );
         }
 
         List<ChecklistItemInput> checklistItems =
-                checklistItemMapper.findByReportChecklistId(analysisReportChecklistId);
+                checklistItemMapper
+                        .findByReportChecklistId(
+                                recordingSession.getReportChecklistId()
+                        );
 
         if (checklistItems == null
                 || checklistItems.isEmpty()) {
@@ -73,7 +66,11 @@ public class LiveChecklistAnalysisServiceImpl
             );
         }
 
-        LiveRecordingContext context = contextManager.get(recordingSessionId);
+        LiveRecordingContext context = contextManager.find(recordingSessionId);
+
+        if (context == null) {
+            return;
+        }
 
         for (ChecklistAnalysisResult.ResultItem item : result.getResults()) {
             /*
@@ -82,8 +79,7 @@ public class LiveChecklistAnalysisServiceImpl
              *
              * 최종 검증 전 후보 상태인 PROVISIONAL로만 보관한다.
              */
-            if (item.getStatus()
-                    == ChecklistAnalysisStatus.CHECKED) {
+            if (item.getStatus() == ChecklistAnalysisStatus.CHECKED) {
 
                 context.updateProvisional(item);
 
