@@ -1,6 +1,7 @@
 package com.secondzip.backend.checklist.service;
 
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
+import com.secondzip.backend.checklist.dto.response.ChecklistDetailResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
 import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
 
@@ -17,7 +18,7 @@ public interface ChecklistService {
             Long analysisReportId
     );
 
-    List<ChecklistResponseDTO> getChecklist(
+    ChecklistDetailResponseDTO getChecklist(
             Long accountId,
             Long reportChecklistId
     );
