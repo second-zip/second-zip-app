@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Getter
 public class LiveRecordingContext {
 
-    private final String category;
-
     private final StringBuilder transcript = new StringBuilder();
 
     // 마지막으로 GPT 분석했던 transcript 길이
@@ -24,9 +22,6 @@ public class LiveRecordingContext {
     // 중간 분석 결과
     private final Map<Long, ChecklistAnalysisResult.ResultItem> provisionalResults = new ConcurrentHashMap<>();
 
-    public LiveRecordingContext() {
-        this.category = category;
-    }
 
     public synchronized void appendTranscript(String text) {
         if (text == null || text.isBlank()) {

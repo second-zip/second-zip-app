@@ -24,7 +24,6 @@ public class RecordingWebSocketHandler
 
         Long recordingSessionId = resolveRecordingSessionId(session);
 
-        String category = session.getId();
 
         log.info(
                 "실시간 녹음 WebSocket 연결. recordingSessionId={}, wsSessionId={}",
@@ -32,8 +31,7 @@ public class RecordingWebSocketHandler
                 session.getId()
         );
         liveTranscriptionService.start(
-                recordingSessionId,
-                category
+                recordingSessionId
         );
     }
 
