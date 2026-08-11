@@ -18,17 +18,21 @@ export const getChecklist = async (reportChecklistId) => {
 export const toggleChecklistItem = async (
   reportChecklistId,
   checklistItemId,
+  checked,
 ) => {
   const response = await api.patch(
     `/checklists/${reportChecklistId}/items/${checklistItemId}`,
+    { checked },
   );
 
   return response.data;
 };
 
 // 체크리스트 초기화
-export const clearChecklist = async (analysisReportId) => {
-  const response = await api.patch(`/checklists/clear/${analysisReportId}`);
+export const resetChecklist = async (reportChecklistId) => {
+  const response = await api.patch(
+    `/checklists/${reportChecklistId}/reset`,
+  );
 
   return response.data;
 };

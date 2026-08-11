@@ -6,6 +6,7 @@ defineProps({
     type: String,
     required: true,
   },
+  isResetting: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['reset']);
@@ -24,9 +25,10 @@ const emit = defineEmits(['reset']);
       <button
         type="button"
         class="checklist-detail-header__reset flex-shrink-0 border-0 fw-semibold"
+        :disabled="isResetting"
         @click="emit('reset')"
       >
-        초기화
+        {{ isResetting ? '초기화 중' : '초기화' }}
       </button>
     </div>
   </header>
@@ -68,4 +70,6 @@ const emit = defineEmits(['reset']);
   outline: 2px solid var(--blue-500);
   outline-offset: 2px;
 }
+
+.checklist-detail-header__reset:disabled { opacity: 0.6; }
 </style>

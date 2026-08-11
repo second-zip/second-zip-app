@@ -67,16 +67,13 @@ export const useChecklistList = () => {
     }
   };
 
-  const isCreatingChecklist = (analysisReportId) =>
-    creatingReportIds.value.includes(analysisReportId);
-
   return {
     checklists,
+    creatingReportIds,
     isLoading,
     errorMessage,
     creationErrorMessage,
     fetchChecklists,
     createChecklist,
-    isCreatingChecklist,
   };
 };
