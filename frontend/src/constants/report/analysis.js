@@ -98,27 +98,27 @@ export const DEFAULT_FRAUD_TYPES = [
 export const DEFAULT_SPECIAL_TERMS = [
   {
     title: '보증금 즉시 반환 명시',
-    description:
+    content:
       '계약 해지 또는 만료 시 임대인은 잔금 지급일로부터 3영업일 이내에 보증금 전액을 임차인에게 반환해야 한다.',
   },
   {
     title: '근저당 추가 설정 금지',
-    description:
+    content:
       '계약 기간 중 임대인은 해당 부동산에 신규 근저당권을 설정하거나 기존 채권최고액을 증액할 수 없다.',
   },
   {
     title: '잔금일 등기부등본 재확인',
-    description:
+    content:
       '임차인은 잔금 송금 직전 해당 부동산의 등기부등본을 재발급해 이상 유무를 확인한 후 지급하여야 한다.',
   },
   {
     title: '전세보증보험 가입 협조',
-    description:
+    content:
       '임대인은 임차인의 HUG·SGI 전세보증보험 가입을 위한 서류 제출 및 관련 절차에 적극 협조하여야 한다.',
   },
   {
     title: '매각·양도 시 임차인 우선 보호',
-    description:
+    content:
       '계약 기간 중 임대인이 해당 부동산을 제3자에게 매각 또는 양도할 경우 임차인에게 사전 고지하고 보증금 반환 의무를 승계하도록 조치해야 한다.',
   },
 ];

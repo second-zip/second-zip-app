@@ -20,7 +20,7 @@ defineProps({
           <span class="term-number">{{ index + 1 }}</span>
           <strong>{{ term.title }}</strong>
         </div>
-        <p>{{ term.description }}</p>
+        <p>{{ term.content }}</p>
       </li>
     </ol>
 

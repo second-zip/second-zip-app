@@ -80,6 +80,20 @@ const routes = [
             component: () => import('@/views/report/ReportListView.vue'),
           },
           {
+            path: 'create',
+            name: 'report-create',
+            component: () => import('@/views/report/ReportCreateView.vue'),
+          },
+          {
+            path: 'analysis/progress',
+            name: 'analysis-progress',
+            component: () =>
+              import('@/views/report/AnalysisProgressView.vue'),
+            meta: {
+              requiresAuth: true,
+            },
+          },
+          {
             path: 'analysis/preview',
             redirect: {
               name: 'analysis-preview',

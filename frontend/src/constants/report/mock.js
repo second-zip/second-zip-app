@@ -291,7 +291,7 @@ export const SCENARIO_F_REPORT_DETAIL = {
   aiSpecialTerms: [
     {
       title: '장문 특약 반응형 높이 테스트',
-      description: SCENARIO_F_LONG_TERM_TEXT,
+      content: SCENARIO_F_LONG_TERM_TEXT,
     },
   ],
   checkResults: MOCK_REPORT_DETAIL.checkResults.map((check) => {

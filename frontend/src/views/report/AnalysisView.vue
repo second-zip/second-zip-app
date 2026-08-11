@@ -125,6 +125,28 @@ const applyReport = (report) => {
     : DEFAULT_SPECIAL_TERMS;
 };
 
+const getNavigationReport = (analysisReportId) => {
+  const navigationState = window.history.state;
+  const navigationAnalysis = navigationState?.analysisResult;
+
+  if (
+    !navigationAnalysis ||
+    String(navigationAnalysis.analysisReportId) !== String(analysisReportId)
+  ) {
+    return null;
+  }
+
+  const generatedSpecialTerms =
+    navigationState.specialTermsResult?.specialTerms;
+
+  return {
+    ...navigationAnalysis,
+    specialTerms: Array.isArray(generatedSpecialTerms)
+      ? generatedSpecialTerms
+      : navigationAnalysis.specialTerms,
+  };
+};
+
 const loadReport = async (analysisReportId) => {
   isReportLoading.value = true;
   reportLoadError.value = '';
@@ -140,9 +162,14 @@ const loadReport = async (analysisReportId) => {
       return;
     }
 
-    const report = analysisReportId
-      ? await getReport(analysisReportId)
-      : await createReport(ANALYSIS_REQUEST);
+    const navigationReport = analysisReportId
+      ? getNavigationReport(analysisReportId)
+      : null;
+    const report =
+      navigationReport ??
+      (analysisReportId
+        ? await getReport(analysisReportId)
+        : await createReport(ANALYSIS_REQUEST));
 
     applyReport(report);
     if (!analysisReportId) {
