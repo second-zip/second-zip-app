@@ -1,39 +1,36 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
-import ChecklistReportItem from '@/components/checklist/ChecklistReportItem.vue';
-import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
-import ReportListBox from '@/components/report/list/ReportListBox.vue';
-import { useReportList } from '@/composables/report/useReportList';
-import { REPORT_CHARACTER_TYPES } from '@/constants/report/list';
+import ChecklistListContent from '@/components/checklist/ChecklistListContent.vue';
+import MemberSecretaryGuide from '@/components/common/secretary/MemberSecretaryGuide.vue';
+import { useChecklistList } from '@/composables/checklist/useChecklistList';
+import { CHECKLIST_LIST_GUIDE_MESSAGES } from '@/constants/checklist/guide';
 import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
-import { useAuthStore } from '@/stores/auth';
-import { logger } from '@/utils/logger';
 
-const authStore = useAuthStore();
-const { reports, isLoading, errorMessage, fetchReports } = useReportList();
-const isCharacterLoading = ref(
-  authStore.isAuthenticated && !authStore.myPage?.characterType,
-);
-const characterType = computed(() => {
-  const type = authStore.myPage?.characterType ?? authStore.characterType;
+const router = useRouter();
+const {
+  checklists,
+  creatingReportIds,
+  isLoading,
+  errorMessage,
+  creationErrorMessage,
+  fetchChecklists,
+  createChecklist,
+} = useChecklistList();
+const handleCreateChecklist = async (report) => {
+  const createdChecklist = await createChecklist(report);
 
-  return REPORT_CHARACTER_TYPES.has(type) ? type : 'CAT';
-});
+  if (!createdChecklist?.reportChecklistId) return;
 
-onMounted(fetchReports);
-onMounted(async () => {
-  if (!isCharacterLoading.value) return;
+  await router.push({
+    name: 'checklist-detail',
+    params: { reportChecklistId: createdChecklist.reportChecklistId },
+  });
+};
 
-  try {
-    await authStore.fetchMyPage();
-  } catch (error) {
-    logger.error('checklist-list.fetch-user', error);
-  } finally {
-    isCharacterLoading.value = false;
-  }
-});
+onMounted(fetchChecklists);
 </script>
 
 <template>
@@ -48,25 +45,20 @@ onMounted(async () => {
     </template>
 
     <div class="checklist-sheet-scroll w-100 h-100 overflow-y-auto">
-      <section class="checklist-list w-100">
-        <ReportListBox
-          :reports="reports"
-          :is-loading="isLoading"
-          :error-message="errorMessage"
-        >
-          <template #item="{ report, index }">
-            <ChecklistReportItem :report="report" :index="index" />
-          </template>
-        </ReportListBox>
-      </section>
+      <ChecklistListContent
+        :checklists="checklists"
+        :creating-report-ids="creatingReportIds"
+        :is-loading="isLoading"
+        :error-message="errorMessage"
+        :creation-error-message="creationErrorMessage"
+        @create="handleCreateChecklist"
+      />
     </div>
   </BottomSheetLayout>
 
-  <SecretaryGuide
-    v-if="!isCharacterLoading"
-    :floating="true"
-    :character-type="characterType"
-    text="각 리포트별로 체크리스트를 만들 수 있다냥! 안전한 계약을 이번집이 도와주겠다냥~"
+  <MemberSecretaryGuide
+    :messages="CHECKLIST_LIST_GUIDE_MESSAGES"
+    floating
   />
 </template>
 
@@ -85,8 +77,4 @@ onMounted(async () => {
   overscroll-behavior: contain;
 }
 
-.checklist-list {
-  min-height: 100%;
-  padding: 24px 20px;
-}
 </style>

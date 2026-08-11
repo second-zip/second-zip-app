@@ -1,19 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
+import MemberSecretaryGuide from '@/components/common/secretary/MemberSecretaryGuide.vue';
 import ReportCreateBox from '@/components/report/ReportCreateBox.vue';
 import ReportDeleteModal from '@/components/report/list/ReportDeleteModal.vue';
 import ReportListBox from '@/components/report/list/ReportListBox.vue';
-import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
 import { useReportList } from '@/composables/report/useReportList';
-import {
-  REPORT_CHARACTER_TYPES,
-  REPORT_LIST_MESSAGE,
-} from '@/constants/report/list';
-import { useAuthStore } from '@/stores/auth';
-import { logger } from '@/utils/logger';
+import { REPORT_LIST_MESSAGE } from '@/constants/report/list';
 
-const authStore = useAuthStore();
 const reportPendingDelete = ref(null);
 const {
   reports,
@@ -27,13 +21,6 @@ const {
   resetDeleteError,
 } = useReportList();
 
-const characterType = computed(() => {
-  const type = authStore.characterType ?? authStore.myPage?.characterType;
-  return REPORT_CHARACTER_TYPES.has(type) ? type : 'CAT';
-});
-const secretaryMessage = computed(
-  () => REPORT_LIST_MESSAGE[characterType.value],
-);
 const requestDelete = (report) => {
   resetDeleteError();
   reportPendingDelete.value = report;
@@ -47,14 +34,6 @@ const confirmDelete = async () => {
 };
 
 onMounted(fetchReports);
-onMounted(async () => {
-  if (!authStore.isAuthenticated || authStore.myPage) return;
-  try {
-    await authStore.fetchMyPage();
-  } catch (error) {
-    logger.error('report-list.fetch-user', error);
-  }
-});
 </script>
 
 <template>
@@ -68,10 +47,8 @@ onMounted(async () => {
       @delete="requestDelete"
     />
   </section>
-  <SecretaryGuide
-    v-if="!authStore.loading"
-    :text="secretaryMessage"
-    :character-type="characterType"
+  <MemberSecretaryGuide
+    :messages="REPORT_LIST_MESSAGE"
     floating
   />
   <ReportDeleteModal

@@ -48,7 +48,11 @@ export const useAudioAnalyser = () => {
     context = undefined;
     source = undefined;
     waveformLevels.value = [...EMPTY_LEVELS];
-    if (closingContext?.state !== 'closed') void closingContext.close();
+    if (closingContext && closingContext.state !== 'closed') {
+      void closingContext.close().catch(() => {
+        // 브라우저가 이미 context를 정리한 경우 추가 종료 오류는 무시합니다.
+      });
+    }
   };
 
   onBeforeUnmount(stop);
