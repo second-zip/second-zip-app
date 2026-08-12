@@ -47,6 +47,24 @@ describe('fraud dictionary components', () => {
     expect(wrapper.emitted('play')).toEqual([[fraudType.id]]);
   });
 
+  it('shows the YouTube thumbnail on the short-form preview', () => {
+    const wrapper = mount(CFraudTypeCard, {
+      props: {
+        type: {
+          ...fraudType,
+          thumbnailSrc:
+            'https://i.ytimg.com/vi/99bV3YRu8pI/maxresdefault.jpg',
+          thumbnailFallbackSrc:
+            'https://i.ytimg.com/vi/99bV3YRu8pI/hqdefault.jpg',
+        },
+      },
+    });
+
+    expect(wrapper.get('button img').attributes('src')).toContain(
+      '99bV3YRu8pI/maxresdefault.jpg',
+    );
+  });
+
   it('keeps a 9:16 placeholder until a video source is provided', () => {
     const wrapper = mount(BFraudVideoPlayer, {
       props: { fraudType },
@@ -54,6 +72,23 @@ describe('fraud dictionary components', () => {
 
     expect(wrapper.find('video').exists()).toBe(false);
     expect(wrapper.get('.video-frame__empty').text()).toContain('영상 준비 중');
+  });
+
+  it('embeds a YouTube short inside the video player', () => {
+    const wrapper = mount(BFraudVideoPlayer, {
+      props: {
+        fraudType: {
+          ...fraudType,
+          videoSrc: 'https://www.youtube-nocookie.com/embed/99bV3YRu8pI',
+        },
+      },
+    });
+
+    expect(wrapper.get('iframe').attributes('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/99bV3YRu8pI',
+    );
+    expect(wrapper.find('video').exists()).toBe(false);
+    expect(wrapper.find('.video-frame__empty').exists()).toBe(false);
   });
 
   it('returns to the fraud type list from the video page', async () => {
