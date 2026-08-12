@@ -1,6 +1,14 @@
 <script setup>
 defineProps({ type: { type: Object, required: true } });
 defineEmits(["play"]);
+
+// 고해상도 썸네일 로딩 실패 시 유튜브 기본 썸네일로 교체합니다.
+const handleThumbnailError = ({ currentTarget }, fallbackSrc) => {
+  if (!fallbackSrc || currentTarget.dataset.fallbackApplied) return;
+
+  currentTarget.dataset.fallbackApplied = "true";
+  currentTarget.src = fallbackSrc;
+};
 </script>
 <template>
   <article class="fraud-card">
@@ -17,6 +25,12 @@ defineEmits(["play"]);
         :aria-label="`${type.title} 영상 보기`"
         @click="$emit('play', type.id)"
       >
+        <img
+          v-if="type.thumbnailSrc"
+          :src="type.thumbnailSrc"
+          :alt="`${type.title} 영상 썸네일`"
+          @error="handleThumbnailError($event, type.thumbnailFallbackSrc)"
+        />
         <i aria-hidden="true"></i>
       </button>
       <p>{{ type.description }}</p>
@@ -86,6 +100,14 @@ button {
   aspect-ratio: 9/16;
   border: 0;
   background: #111118;
+  cursor: pointer;
+  overflow: hidden;
+}
+button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 button::before {
   position: absolute;
@@ -97,6 +119,8 @@ button::before {
   transform: translate(-50%, -50%);
   border: 3px solid #f2a6ab;
   border-radius: 50%;
+  background: rgb(17 17 24 / 68%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
 }
 button i {
   position: absolute;
@@ -110,7 +134,7 @@ button i {
   border-left: 9px solid #f2a6ab;
 }
 button:hover {
-  background: #20202a;
+  filter: brightness(0.88);
 }
 button:focus-visible {
   outline: 3px solid var(--blue-300);
