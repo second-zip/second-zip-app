@@ -10,6 +10,7 @@ import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
 import com.secondzip.backend.report.service.external.client.AddressClient;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
@@ -64,6 +65,50 @@ class AnalysisPreparationServiceTest {
         assertEquals(
                 java.util.List.of(BuildingRegisterDocumentType.GENERAL),
                 response.getRequiredDocuments()
+        );
+    }
+
+    @Test
+    @DisplayName("고른 주소와 표준화 결과의 법정동코드가 다르면 분석을 시작하지 않는다")
+    void rejectsWhenSelectedAddressMismatches() {
+        AnalysisPreparationService service =
+                service("APARTMENT", new InMemoryWorkflowStore());
+
+        CreateReportRequest request = request("101동 1203호");
+        // 스텁이 반환하는 값은 1168010100 이다. 다른 지역을 고른 상황.
+        request.setLegalDongCode("4113511000");
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.prepare(1L, request)
+        );
+    }
+
+    @Test
+    @DisplayName("고른 주소와 표준화 결과가 같으면 정상 진행한다")
+    void acceptsWhenSelectedAddressMatches() {
+        AnalysisPreparationService service =
+                service("APARTMENT", new InMemoryWorkflowStore());
+
+        CreateReportRequest request = request("101동 1203호");
+        request.setLegalDongCode("1168010100");
+
+        assertEquals(
+                AnalysisRequestStatus.AUTH_REQUIRED,
+                service.prepare(1L, request).getStatus()
+        );
+    }
+
+    @Test
+    @DisplayName("법정동코드를 보내지 않으면 검증을 건너뛴다 - 구버전 프론트 호환")
+    void skipsVerificationWhenCodeAbsent() {
+        AnalysisPreparationService service =
+                service("APARTMENT", new InMemoryWorkflowStore());
+
+        // legalDongCode 를 설정하지 않은 요청
+        assertEquals(
+                AnalysisRequestStatus.AUTH_REQUIRED,
+                service.prepare(1L, request("101동 1203호")).getStatus()
         );
     }
 
