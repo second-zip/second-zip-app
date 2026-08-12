@@ -90,23 +90,65 @@
 
         SELECT
             ar.analysis_report_id AS analysisReportId,
-            rc.analysis_report_checklist_id AS reportChecklistId,
+            arc.analysis_report_checklist_id AS reportChecklistId,
             ar.housing_category AS housingCategory,
             ar.is_trust_property AS trustProperty,
+            ar.road_address  AS roadAddress,
+            ar.detail_address AS detailAddress,
+            ar.risk_level AS riskLevel,
 
             CASE
-                WHEN rc.analysis_report_checklist_id IS NULL
+                WHEN arc.analysis_report_checklist_id IS NULL
                     THEN FALSE
                 ELSE TRUE
                 END AS checklistCreated,
+
+            COALESCE(progress.checked_count, 0)
+                    AS checkedCount,
+
+            COALESCE(progress.total_count, 0)
+                    AS totalCount,
+
+            CASE
+                WHEN COALESCE(progress.total_count, 0) = 0
+                    THEN 0
+
+                ELSE ROUND(
+                        progress.checked_count
+                            * 100.0
+                            / progress.total_count
+                     )
+                END AS progressPercentage,
 
             ar.created_at AS reportCreatedAt
 
         FROM analysis_reports ar
 
-                 LEFT JOIN analysis_report_checklists rc
-                           ON rc.analysis_report_id =
+                 LEFT JOIN analysis_report_checklists arc
+                           ON arc.analysis_report_id =
                               ar.analysis_report_id
+
+                 LEFT JOIN (
+            SELECT
+                analysis_report_checklist_id,
+
+                COUNT(*) AS total_count,
+
+                SUM(
+                        CASE
+                            WHEN is_checked = TRUE
+                                THEN 1
+                            ELSE 0
+                            END
+                ) AS checked_count
+
+            FROM analysis_report_checklist_items
+
+            GROUP BY analysis_report_checklist_id
+
+        ) progress
+                           ON progress.analysis_report_checklist_id =
+                              arc.analysis_report_checklist_id
 
         WHERE ar.account_id = #{accountId}
 
@@ -135,36 +177,56 @@
 
         SELECT
             ci.checklist_item_id AS checklistItemId,
-            ci.contents,
-            ci.category,
-            rci.is_checked AS checked
+            ci.contents AS contents,
+            ci.description AS description,
+            ci.category AS category,
+            arci.is_checked AS checked
 
-        FROM analysis_report_checklist_items rci
+        FROM analysis_report_checklist_items arci
 
-                 INNER JOIN analysis_report_checklists rc
-                            ON rc.analysis_report_checklist_id =
-                               rci.analysis_report_checklist_id
+                 INNER JOIN analysis_report_checklists arc
+                            ON arc.analysis_report_checklist_id =
+                               arci.analysis_report_checklist_id
 
                  INNER JOIN checklist_items ci
                             ON ci.checklist_item_id =
-                               rci.checklist_item_id
+                               arci.checklist_item_id
 
-        WHERE rc.analysis_report_checklist_id =
+        WHERE arc.analysis_report_checklist_id =
               #{reportChecklistId}
 
-          AND rc.account_id =
+          AND arc.account_id =
               #{accountId}
 
         ORDER BY
             CASE
-                WHEN ci.category = 'COMMON'
-                    THEN 0
-                ELSE 1
+                WHEN ci.category = 'COMMON' THEN 1
+                ELSE 0
                 END,
             ci.checklist_item_id ASC
 
     </select>
 
+    <select id="findChecklistAddress"
+            resultType="com.secondzip.backend.checklist.dto.response.ChecklistAddressDTO">
+
+        SELECT
+            ar.road_address AS roadAddress,
+            ar.detail_address AS detailAddress
+
+        FROM analysis_report_checklists arc
+
+                 INNER JOIN analysis_reports ar
+                            ON ar.analysis_report_id =
+                               arc.analysis_report_id
+
+        WHERE arc.analysis_report_checklist_id =
+              #{reportChecklistId}
+
+          AND arc.account_id =
+              #{accountId}
+
+    </select>
 
     <update id="updateChecked">
 

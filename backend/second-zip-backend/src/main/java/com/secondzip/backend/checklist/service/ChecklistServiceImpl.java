@@ -2,9 +2,7 @@ package com.secondzip.backend.checklist.service;
 
 import com.secondzip.backend.checklist.domain.ReportChecklistVO;
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
-import com.secondzip.backend.checklist.dto.response.ChecklistListResponseDTO;
-import com.secondzip.backend.checklist.dto.response.ChecklistResponseDTO;
-import com.secondzip.backend.checklist.dto.response.ReportChecklistConditionDTO;
+import com.secondzip.backend.checklist.dto.response.*;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
@@ -46,8 +44,7 @@ public class ChecklistServiceImpl implements ChecklistService {
                 );
 
         if (condition == null
-                || condition.getHousingCategory() == null
-                || condition.getHousingCategory().isBlank()) {
+                || condition.getHousingCategory() == null) {
 
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
@@ -55,8 +52,7 @@ public class ChecklistServiceImpl implements ChecklistService {
             );
         }
 
-        if (condition.getHousingCategory() == null
-                || condition.getHousingCategory().isBlank()) {
+        if (condition.getHousingCategory() == null) {
 
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
@@ -115,15 +111,35 @@ public class ChecklistServiceImpl implements ChecklistService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChecklistResponseDTO> getChecklist(
+    public ChecklistDetailResponseDTO getChecklist(
             Long accountId,
             Long reportChecklistId
     ) {
 
-        return reportChecklistMapper.findChecklistItems(
-                accountId,
-                reportChecklistId
-        );
+        ChecklistAddressDTO address =
+                reportChecklistMapper.findChecklistAddress(
+                        accountId,
+                        reportChecklistId
+                );
+
+        if (address == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "체크리스트를 찾을 수 없습니다."
+            );
+        }
+
+        List<ChecklistResponseDTO> items =
+                reportChecklistMapper.findChecklistItems(
+                        accountId,
+                        reportChecklistId
+                );
+
+        return ChecklistDetailResponseDTO.builder()
+                .roadAddress(address.getRoadAddress())
+                .detailAddress(address.getDetailAddress())
+                .items(items)
+                .build();
     }
 
     @Override

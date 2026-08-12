@@ -85,11 +85,27 @@ public class RecordingController {
 
         RecordingLiveStartResponseDTO response =
                 recordingService.startLiveRecording(
-                        accountId,request.getCategory()
+                        accountId,request.getReportChecklistId()
                 );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @ApiOperation(
+            value = "실시간 녹음 종료",
+            notes = "실시간 STT를 종료하고 최종 GPT 체크리스트 분석을 시작합니다."
+    )
+    @PostMapping("/{recordingSessionId}/stop")
+    public ResponseEntity<Void>
+    stopLiveRecording(
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @PathVariable Long recordingSessionId
+    ) {
+
+        recordingService.stopLiveRecording(accountId, recordingSessionId);
+
+        return ResponseEntity.accepted().build();
     }
 }

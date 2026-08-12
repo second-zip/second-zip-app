@@ -159,7 +159,6 @@
                    NOW(),
                    NOW()
                )
-
     </insert>
 
 </mapper>

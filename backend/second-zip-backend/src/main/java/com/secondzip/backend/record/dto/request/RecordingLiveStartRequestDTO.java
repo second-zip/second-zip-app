@@ -6,5 +6,5 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class RecordingLiveStartRequestDTO {
-    private String category;
+    private Long reportChecklistId;
 }

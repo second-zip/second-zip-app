@@ -13,26 +13,28 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-  index: {
-    type: Number,
-    required: true,
+  isCreating: {
+    type: Boolean,
+    default: false,
   },
 });
 
 const emit = defineEmits(['create']);
 
-const isCreationInProgress = computed(() => props.index % 2 === 1);
-const progress = 20;
+const hasChecklist = computed(() => Boolean(props.report.checklistCreated));
+const progress = computed(() =>
+  Math.min(100, Math.max(0, Number(props.report.percentage) || 0)),
+);
 const address = computed(() => formatReportAddress(props.report));
 const formattedCreatedAt = computed(() =>
-  formatReportDate(props.report.createdAt),
+  formatReportDate(props.report.reportCreatedAt),
 );
 const createdAtDateTime = computed(() =>
-  toReportDateTime(props.report.createdAt),
+  toReportDateTime(props.report.reportCreatedAt),
 );
 const detailRoute = computed(() => ({
   name: 'checklist-detail',
-  params: { analysisReportId: props.report.analysisReportId },
+  params: { reportChecklistId: props.report.reportChecklistId },
 }));
 </script>
 
@@ -53,7 +55,7 @@ const detailRoute = computed(() => ({
     </div>
 
     <RouterLink
-      v-if="isCreationInProgress"
+      v-if="hasChecklist"
       :to="detailRoute"
       class="checklist-report-item__progress d-flex flex-shrink-0 align-items-center text-decoration-none"
       :aria-label="`${address} 체크리스트 상세 보기`"
@@ -69,7 +71,11 @@ const detailRoute = computed(() => ({
       />
     </RouterLink>
 
-    <ChecklistCreateButton v-else @create="emit('create', report)" />
+    <ChecklistCreateButton
+      v-else
+      :is-loading="isCreating"
+      @create="emit('create', report)"
+    />
   </article>
 </template>
 

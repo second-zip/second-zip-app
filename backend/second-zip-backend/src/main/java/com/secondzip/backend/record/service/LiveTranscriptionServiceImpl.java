@@ -1,5 +1,6 @@
 package com.secondzip.backend.record.service;
 
+import com.secondzip.backend.record.client.ClovaRealtimeSpeechClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -7,17 +8,24 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 @AllArgsConstructor
-public class LiveTranscriptionServiceImpl
-        implements LiveTranscriptionService {
+public class LiveTranscriptionServiceImpl implements LiveTranscriptionService {
 
     private final LiveRecordingContextManager contextManager;
     private final LiveChecklistAnalysisAsyncService liveChecklistAnalysisAsyncService;
     private static final int ANALYSIS_THRESHOLD = 300;
+    private final ClovaRealtimeSpeechClient clovaRealtimeSpeechClient;
 
     @Override
     public void start(Long recordingSessionId) {
 
-        contextManager.create(recordingSessionId);
+        contextManager.get(recordingSessionId);
+
+        clovaRealtimeSpeechClient.start(recordingSessionId,
+                text -> onTranscript(
+                        recordingSessionId,
+                        text
+                )
+        );
 
         // 여기서 CLOVA 실시간 STT 연결 시작
     }
@@ -38,8 +46,7 @@ public class LiveTranscriptionServiceImpl
             );
         }
 
-        // 다음:
-        // CLOVA 실시간 STT에 audioChunk 전달
+        clovaRealtimeSpeechClient.sendAudio(recordingSessionId, audioChunk);
     }
 
     //CLOVA 응답 callback
@@ -84,6 +91,9 @@ public class LiveTranscriptionServiceImpl
 
     @Override
     public String finish(Long recordingSessionId) {
+
+        clovaRealtimeSpeechClient.finish(recordingSessionId);
+
 
         LiveRecordingContext context =
                 contextManager.remove(recordingSessionId);

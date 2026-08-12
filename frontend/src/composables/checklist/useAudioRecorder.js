@@ -100,7 +100,9 @@ export const useAudioRecorder = () => {
   };
 
   onBeforeUnmount(() => {
-    if (mediaRecorder?.state !== 'inactive') mediaRecorder.stop();
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
     isRecording.value = false;
     releaseInput();
     stopResolver = undefined;

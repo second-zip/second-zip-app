@@ -1,15 +1,14 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import MemberSecretaryGuide from '@/components/common/secretary/MemberSecretaryGuide.vue';
 import MainHero from '@/components/main/MainHero.vue';
 import MainDataTabs from '@/components/main/MainDataTabs.vue';
 import RiskMapCard from '@/components/main/RiskMapCard.vue';
 import KoreaRegionMap from '@/components/main/map/KoreaRegionMap.vue';
 import ReportButton from '@/components/main/ReportButton.vue';
-import SecretaryGuide from '@/components/common/secretary/SecretaryGuide.vue';
 import { useAuthStore } from '@/stores/auth';
-import { logger } from '@/utils/logger';
 
 const SECRETARY_MESSAGES = {
   'fraud-damage': {
@@ -23,21 +22,9 @@ const SECRETARY_MESSAGES = {
     WOMAN: '가격 변동률이 큰 지역은\n사기 위험도 높을 수 있으니 조심하세요…',
   },
 };
-const CHARACTER_TYPES = new Set(['CAT', 'MAN', 'WOMAN']);
-
 const authStore = useAuthStore();
 const router = useRouter();
 const selectedDataType = ref('fraud-damage');
-const isUserLoaded = ref(
-  !authStore.isAuthenticated || Boolean(authStore.myPage),
-);
-const characterType = computed(() => {
-  const type = authStore.characterType ?? authStore.myPage?.characterType;
-  return CHARACTER_TYPES.has(type) ? type : 'CAT';
-});
-const secretaryMessage = computed(
-  () => SECRETARY_MESSAGES[selectedDataType.value][characterType.value],
-);
 
 const goToReport = () => router.push('/report');
 const goToCharacter = () => {
@@ -53,18 +40,6 @@ const goToCharacter = () => {
   return router.push({ name: 'mypage', hash: '#ai-secretary' });
 };
 
-onMounted(async () => {
-  if (!authStore.isAuthenticated || authStore.myPage) return;
-
-  try {
-    await authStore.fetchMyPage();
-  } catch (error) {
-    logger.error('main.fetch-user', error);
-    // 회원정보 조회에 실패한 동안에는 기본 CAT 캐릭터를 사용한다.
-  } finally {
-    isUserLoaded.value = true;
-  }
-});
 </script>
 
 <template>
@@ -89,10 +64,8 @@ onMounted(async () => {
 
     <!-- 하단 남는 영역의 아래쪽 -->
     <div class="main-page__secretary-area d-flex align-items-end">
-      <SecretaryGuide
-        v-if="isUserLoaded"
-        :text="secretaryMessage"
-        :character-type="characterType"
+      <MemberSecretaryGuide
+        :messages="SECRETARY_MESSAGES[selectedDataType]"
         change-btn
         @change="goToCharacter"
       />
