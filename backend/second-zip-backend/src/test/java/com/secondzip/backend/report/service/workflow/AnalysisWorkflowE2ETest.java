@@ -27,6 +27,7 @@ import com.secondzip.backend.report.service.RiskEvaluationService;
 import com.secondzip.backend.report.service.TrustPropertyResolver;
 import com.secondzip.backend.report.service.SpecialTermService;
 import com.secondzip.backend.report.service.external.client.AddressClient;
+import com.secondzip.backend.report.service.external.client.AddressSearchCache;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterDataParser;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterGateway;
@@ -57,7 +58,8 @@ class AnalysisWorkflowE2ETest {
                 new AnalysisPreparationService(
                         new FixedAddressClient(),
                         new FixedBuildingHubClient(),
-                        store
+                        store,
+                        new EmptyAddressSearchCache()
                 );
         ReflectionTestUtils.setField(preparation, "ttlSeconds", 900L);
         AnalysisAuthenticationService authentication =
@@ -263,6 +265,18 @@ class AnalysisWorkflowE2ETest {
                 String lockToken
         ) {
             locked = false;
+        }
+    }
+
+    /** E2E는 토큰 없는 흐름을 검증하므로 항상 캐시 미스. */
+    private static class EmptyAddressSearchCache extends AddressSearchCache {
+        private EmptyAddressSearchCache() {
+            super(null, new ObjectMapper());
+        }
+
+        @Override
+        public AnalysisTarget find(String token) {
+            return null;
         }
     }
 

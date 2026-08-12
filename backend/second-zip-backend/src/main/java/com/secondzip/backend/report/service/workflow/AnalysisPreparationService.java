@@ -10,8 +10,10 @@ import com.secondzip.backend.report.dto.response.AnalysisPreparationResponse;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
 import com.secondzip.backend.report.service.external.client.AddressClient;
+import com.secondzip.backend.report.service.external.client.AddressSearchCache;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,11 +22,13 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AnalysisPreparationService {
 
     private final AddressClient addressClient;
     private final BuildingHubClient buildingHubClient;
     private final AnalysisWorkflowStore workflowStore;
+    private final AddressSearchCache addressSearchCache;
 
     @Value("${ANALYSIS_WORKFLOW_TTL_SECONDS:900}")
     private long ttlSeconds;
@@ -33,7 +37,7 @@ public class AnalysisPreparationService {
             Long accountId,
             CreateReportRequest request
     ) {
-        AnalysisTarget target = addressClient.standardize(request.getRoadAddress());
+        AnalysisTarget target = resolveTarget(request);
         if (target == null) {
             throw new BusinessException(
                     ErrorCode.EXTERNAL_API_ERROR,
@@ -111,4 +115,23 @@ public class AnalysisPreparationService {
                 state.getSelectionOptions()
         );
     }
+    /**
+     * 분석 대상 주소를 확정한다.
+     *
+     * <p>사용자가 검색 화면에서 고른 결과를 토큰으로 받아 그대로 쓴다.
+     * 토큰이 없거나 만료됐으면 주소 문자열로 재검색한다.
+     *
+     * <p>폴백 경로는 검색 결과가 여러 개일 때 첫 번째를 고르므로 사용자가 고른 것과
+     * 다를 수 있다. 구버전 프론트 호환용이며, 새 프론트는 항상 토큰을 보낸다.
+     */
+    private AnalysisTarget resolveTarget(CreateReportRequest request) {
+        AnalysisTarget selected = addressSearchCache.find(request.getAddressToken());
+        if (selected != null) {
+            return selected;
+        }
+        log.info("주소 토큰이 없어 재검색합니다. roadAddress={}", request.getRoadAddress());
+        return addressClient.standardize(request.getRoadAddress());
+    }
+
+
 }

@@ -23,4 +23,10 @@ public class CreateReportRequest {
     @NotNull(message = "전세 보증금은 필수입니다.")
     @Positive(message = "전세 보증금은 0보다 커야 합니다.")
     private Long deposit;
+
+    @ApiModelProperty(
+            value = "주소 검색에서 선택한 결과의 토큰. 있으면 재검색 없이 그 주소를 분석합니다.",
+            example = "3f2b1c9e-..."
+    )
+    private String addressToken;
 }
