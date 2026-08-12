@@ -23,4 +23,7 @@ public class CreateReportRequest {
     @NotNull(message = "전세 보증금은 필수입니다.")
     @Positive(message = "전세 보증금은 0보다 커야 합니다.")
     private Long deposit;
+
+    @ApiModelProperty(value = "주소 검색에서 받은 법정동코드 10자리", example = "4113511000")
+    private String legalDongCode;
 }
