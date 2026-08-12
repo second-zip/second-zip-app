@@ -1,22 +1,45 @@
 import api from './instance';
 
-// API 명세서 기준: 체크리스트 조회
-export const getChecklist = async () => {
+// 체크리스트 목록 조회
+export const getChecklists = async () => {
   const response = await api.get('/checklists');
 
   return response.data;
 };
 
-// API 명세서 기준: 체크리스트 항목 체크 또는 해제
-export const toggleChecklistItem = async (checklistItemId) => {
-  const response = await api.patch(`/checklists/${checklistItemId}`);
+// 체크리스트 상세 조회
+export const getChecklist = async (reportChecklistId) => {
+  const response = await api.get(`/checklists/${reportChecklistId}`);
 
   return response.data;
 };
 
-// API 명세서 기준: 체크리스트 초기화
-export const clearChecklist = async () => {
-  const response = await api.delete('/checklists/clear');
+// 체크리스트 항목 체크 또는 해제
+export const toggleChecklistItem = async (
+  reportChecklistId,
+  checklistItemId,
+  checked,
+) => {
+  const response = await api.patch(
+    `/checklists/${reportChecklistId}/items/${checklistItemId}`,
+    { checked },
+  );
+
+  return response.data;
+};
+
+// 체크리스트 초기화
+export const resetChecklist = async (reportChecklistId) => {
+  const response = await api.patch(
+    `/checklists/${reportChecklistId}/reset`,
+  );
+
+  return response.data;
+};
+
+// 체크리스트 생성
+export const createChecklist = async (analysisReportId) => {
+  const response = await api.post(`/checklists/reports/${analysisReportId}`);
 
   return response.data;
 };

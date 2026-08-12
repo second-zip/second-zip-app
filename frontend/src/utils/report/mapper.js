@@ -42,8 +42,7 @@ const DETAIL_LABELS = {
   RIGHTS_INFRINGEMENT_CONCEALMENT: 'C. 등기상 권리침해 은폐',
   TRUST_REGISTRATION_EXISTENCE: 'A. 신탁등기 존재 여부',
   REGISTERED_OWNER_VERIFICATION: 'B. 등기상 소유자 확인',
-  POST_TRUST_RIGHTS_INFRINGEMENT:
-    'C. 신탁등기 이후 추가 권리침해 여부',
+  POST_TRUST_RIGHTS_INFRINGEMENT: 'C. 신탁등기 이후 추가 권리침해 여부',
 };
 
 const hasValue = (value) => value !== null && value !== undefined;
@@ -139,7 +138,7 @@ export const mapSpecialTerms = (terms) =>
   Array.isArray(terms)
     ? terms.map((term, index) => ({
         title: term?.title ?? `AI 추천 특약 ${index + 1}`,
-        description: term?.description ?? '-',
+        content: term?.content ?? '-',
       }))
     : [];
 
@@ -150,9 +149,8 @@ export const mapSecretary = (secretary) =>
 // 상세 리포트 응답에서 화면이 바로 사용할 데이터만 추출합니다.
 export const mapReportDetail = (report = {}) => ({
   analysisReportId: report.analysisReportId,
-  address: [report.roadAddress, report.detailAddress]
-    .filter(Boolean)
-    .join(' ') || '-',
+  address:
+    [report.roadAddress, report.detailAddress].filter(Boolean).join(' ') || '-',
   deposit: hasValue(report.deposit) ? String(report.deposit) : '-',
   risk: toUiRisk(report.result),
   favorite: Boolean(report.favorite),
@@ -160,7 +158,5 @@ export const mapReportDetail = (report = {}) => ({
   checks: mapCheckResults(report.checkResults),
   fraudTypes: mapFraudTypes(report.fraudTypes),
   // TODO: AI/ChatGPT API 연결 시 aiSpecialTerms에 받은 특약 배열을 전달합니다.
-  specialTerms: mapSpecialTerms(
-    report.aiSpecialTerms ?? report.specialTerms,
-  ),
+  specialTerms: mapSpecialTerms(report.aiSpecialTerms ?? report.specialTerms),
 });

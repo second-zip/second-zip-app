@@ -1,0 +1,106 @@
+.region-map-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.region-map__breadcrumb {
+  min-height: 24px;
+  margin-bottom: 4px;
+  color: var(--black-500);
+  font-size: 0.75rem;
+}
+
+.region-map__back {
+  padding: 0;
+  color: var(--blue-900);
+  background: none;
+  border: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.region-map__back:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--blue-900);
+  outline-offset: 2px;
+}
+
+.region-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.region-map__area {
+  fill: var(--blue-100);
+  stroke: #fff;
+  stroke-width: 1;
+  cursor: pointer;
+  outline: none;
+  transition:
+    opacity 0.2s ease,
+    stroke 0.2s ease,
+    stroke-width 0.2s ease;
+}
+
+.region-map__area:hover,
+.region-map__area--active {
+  opacity: 0.85;
+}
+
+.region-map__area:focus-visible {
+  stroke: var(--blue-900);
+  stroke-width: 2;
+}
+
+.region-map__label {
+  fill: var(--black-900);
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.region-map__label-name {
+  font-size: 0.5625rem;
+}
+
+.region-map__label-value {
+  fill: var(--black-500);
+  font-size: 0.5rem;
+  font-weight: 500;
+}
+
+.region-map__status {
+  min-height: 18px;
+  margin: 0 0 2px;
+  color: var(--black-500);
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.region-map__status--error {
+  color: var(--red-500);
+}
+
+.region-map__error {
+  display: flex;
+  min-height: 260px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 20px;
+  color: var(--black-500);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.region-map__notice {
+  margin: 2px 0 0;
+  color: var(--black-300);
+  font-size: 0.625rem;
+  text-align: center;
+}

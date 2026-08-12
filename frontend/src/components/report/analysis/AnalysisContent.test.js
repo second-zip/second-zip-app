@@ -31,7 +31,7 @@ const fraudTypes = [
     items: [{ label: '세부 항목', status: 'caution' }],
   },
 ];
-const terms = [{ title: '특약', description: '특약 설명' }];
+const terms = [{ title: '특약', content: '특약 설명' }];
 
 describe('분석 결과 구역', () => {
   test('위험도와 비서 결과를 표시한다', () => {

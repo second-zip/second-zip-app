@@ -1,6 +1,6 @@
 <!-- 분석 메인화면:분석결과들 임포트해와서 조립해서 보여주는 곳-->
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { createReport, getReport } from '@/api/report';
@@ -30,10 +30,24 @@ import {
   toNumericAmount,
 } from '@/utils/report/analysis';
 import { mapReportDetail } from '@/utils/report/mapper';
+import { logger } from '@/utils/logger';
+import {
+  ANALYSIS_AND_CHECKLIST_NOTICE,
+  GUARANTEE_ELIGIBILITY_NOTICE,
+} from '@/constants/legalNotices';
+import { normalizeCharacterType } from '@/utils/character';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 const secretary = ref('cat');
+const activeSecretary = computed(() =>
+  normalizeCharacterType(
+    authStore.characterType ?? authStore.myPage?.characterType,
+    secretary.value,
+  ),
+);
 const address = ref('서울시 마포구 합정동 123-45');
 const deposit = ref('100000000');
 const isFavorite = ref(false);
@@ -44,6 +58,17 @@ const checks = ref(DEFAULT_CHECKS);
 const fraudTypes = ref(DEFAULT_FRAUD_TYPES);
 const specialTerms = ref(DEFAULT_SPECIAL_TERMS);
 let toastTimer;
+
+onMounted(async () => {
+  if (!authStore.isAuthenticated || authStore.myPage) return;
+
+  try {
+    await authStore.fetchMyPage();
+  } catch (error) {
+    logger.error('analysis.fetch-user', error);
+    // 조회 실패 시에는 리포트에 저장된 비서 값으로 안전하게 대체합니다.
+  }
+});
 
 const checkRisk = computed(() =>
   aggregateRiskStatuses(checks.value.map(({ status }) => status)),
@@ -59,18 +84,21 @@ const overallRisk = computed(() =>
   ]),
 );
 const secretaryImage = computed(() => {
-  const images = selectSecretaryValue(SECRETARY_IMAGES, secretary.value);
+  const images = selectSecretaryValue(SECRETARY_IMAGES, activeSecretary.value);
 
   return images[overallRisk.value] ?? SECRETARY_IMAGES.cat.safe;
 });
 const defaultSecretaryImage = computed(() =>
-  selectSecretaryValue(DEFAULT_SECRETARY_IMAGES, secretary.value),
+  selectSecretaryValue(DEFAULT_SECRETARY_IMAGES, activeSecretary.value),
 );
 const overallIcon = computed(
   () => RISK_ICONS[overallRisk.value] ?? RISK_ICONS.safe,
 );
 const overallMessage = computed(() => {
-  const messages = selectSecretaryValue(SECRETARY_MESSAGES, secretary.value);
+  const messages = selectSecretaryValue(
+    SECRETARY_MESSAGES,
+    activeSecretary.value,
+  );
 
   return messages[overallRisk.value] ?? SECRETARY_MESSAGES.cat.safe;
 });
@@ -97,6 +125,28 @@ const applyReport = (report) => {
     : DEFAULT_SPECIAL_TERMS;
 };
 
+const getNavigationReport = (analysisReportId) => {
+  const navigationState = window.history.state;
+  const navigationAnalysis = navigationState?.analysisResult;
+
+  if (
+    !navigationAnalysis ||
+    String(navigationAnalysis.analysisReportId) !== String(analysisReportId)
+  ) {
+    return null;
+  }
+
+  const generatedSpecialTerms =
+    navigationState.specialTermsResult?.specialTerms;
+
+  return {
+    ...navigationAnalysis,
+    specialTerms: Array.isArray(generatedSpecialTerms)
+      ? generatedSpecialTerms
+      : navigationAnalysis.specialTerms,
+  };
+};
+
 const loadReport = async (analysisReportId) => {
   isReportLoading.value = true;
   reportLoadError.value = '';
@@ -112,9 +162,14 @@ const loadReport = async (analysisReportId) => {
       return;
     }
 
-    const report = analysisReportId
-      ? await getReport(analysisReportId)
-      : await createReport(ANALYSIS_REQUEST);
+    const navigationReport = analysisReportId
+      ? getNavigationReport(analysisReportId)
+      : null;
+    const report =
+      navigationReport ??
+      (analysisReportId
+        ? await getReport(analysisReportId)
+        : await createReport(ANALYSIS_REQUEST));
 
     applyReport(report);
     if (!analysisReportId) {
@@ -123,7 +178,10 @@ const loadReport = async (analysisReportId) => {
         params: { analysisReportId: report.analysisReportId },
       });
     }
-  } catch {
+  } catch (error) {
+    logger.error('analysis.load-report', error, {
+      analysisReportId,
+    });
     reportLoadError.value = '분석 결과를 불러오지 못했습니다.';
   } finally {
     isReportLoading.value = false;
@@ -245,6 +303,11 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
       :default-secretary-image
     />
 
+    <aside class="legal-notices" aria-label="분석 결과 이용 시 유의사항">
+      <p>{{ ANALYSIS_AND_CHECKLIST_NOTICE }}</p>
+      <p>{{ GUARANTEE_ELIGIBILITY_NOTICE }}</p>
+    </aside>
+
     <Transition name="toast">
       <div
         v-if="showCopyToast"
@@ -283,6 +346,24 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
+}
+
+.legal-notices {
+  margin: 1rem 1.25rem 2rem;
+  padding: 1rem;
+  color: var(--gray-700);
+  background: var(--gray-100);
+  border-radius: 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.legal-notices p {
+  margin: 0;
+}
+
+.legal-notices p + p {
+  margin-top: 0.5rem;
 }
 
 .report-feedback--error {

@@ -2,8 +2,15 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import AnalysisView from '@/views/report/AnalysisView.vue';
+import { logger } from '@/utils/logger';
 
-const { getReport, replace, route } = vi.hoisted(() => ({
+const { authStore, getReport, replace, route } = vi.hoisted(() => ({
+  authStore: {
+    characterType: 'CAT',
+    fetchMyPage: vi.fn(),
+    isAuthenticated: false,
+    myPage: null,
+  },
   getReport: vi.fn(),
   replace: vi.fn(),
   route: {
@@ -20,6 +27,12 @@ vi.mock('@/api/report', () => ({
 vi.mock('vue-router', () => ({
   useRoute: () => route,
   useRouter: () => ({ replace }),
+}));
+vi.mock('@/utils/logger', () => ({
+  logger: { error: vi.fn() },
+}));
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => authStore,
 }));
 
 const report = {
@@ -39,6 +52,7 @@ describe('분석 결과 화면', () => {
     replace.mockReset();
     route.meta = {};
     route.params = { analysisReportId: '12', scenario: undefined };
+    window.history.replaceState({}, '');
   });
 
   test('라우트의 보고서 ID로 상세 결과를 조회한다', async () => {
@@ -69,7 +83,8 @@ describe('분석 결과 화면', () => {
   });
 
   test('상세 조회 실패 시 오류와 재시도 버튼을 표시한다', async () => {
-    getReport.mockRejectedValue(new Error('network error'));
+    const error = new Error('network error');
+    getReport.mockRejectedValue(error);
     const wrapper = mount(AnalysisView);
 
     await flushPromises();
@@ -78,5 +93,31 @@ describe('분석 결과 화면', () => {
     expect(wrapper.get('.report-feedback--error button').text()).toBe(
       '다시 시도',
     );
+    expect(logger.error).toHaveBeenCalledWith(
+      'analysis.load-report',
+      error,
+      { analysisReportId: '12' },
+    );
+  });
+
+  test('분석 진행 화면에서 전달한 분석·특약 응답을 우선 사용한다', async () => {
+    window.history.replaceState(
+      {
+        analysisResult: report,
+        specialTermsResult: {
+          specialTerms: [
+            { sequence: 1, title: '전달된 특약', content: '특약 내용' },
+          ],
+        },
+      },
+      '',
+    );
+
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    expect(getReport).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('서울시 마포구 101호');
+    expect(wrapper.text()).toContain('전달된 특약');
   });
 });

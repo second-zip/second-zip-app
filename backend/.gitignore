@@ -1,0 +1,55 @@
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+.kotlin
+
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+# 로컬 전용 목업(테스트) 데이터
+**/*-test.sql
+
+# 문서 폴더
+/docs/
+# 로컬 전용 분석 워크플로 API 명세
+/analysis-workflow-api-spec.md
+
+# 로컬 전용 리포트 즐겨찾기 명세
+/re14-15-favorite-functional-spec.md
+/re14-15-favorite-api-spec.md

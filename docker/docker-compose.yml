@@ -36,6 +36,33 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    profiles:
+      - backend
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    container_name: secondzip-backend
+    restart: always
+
+    env_file:
+      - ../backend/src/main/resources/.env
+
+    environment:
+      DB_URL: jdbc:log4jdbc:mysql://mysql:3306/secondzip
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   mysql-data:
   redis-data:
