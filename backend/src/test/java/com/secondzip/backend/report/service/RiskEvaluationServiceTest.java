@@ -79,7 +79,7 @@ class RiskEvaluationServiceTest {
 
         assertEquals(
                 "CODEF_BUILDING_REGISTER",
-                result.getEvidence().get("source")
+                result.getEvidence().get("illegalBuildingSource")
         );
         assertEquals(
                 byDocument,

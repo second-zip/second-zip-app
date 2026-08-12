@@ -120,8 +120,11 @@ public class RiskEvaluationService {
 
         evidence.put("isIllegalBuilding", illegal);
         evidence.put("isIllegalBuildingVerified", verified);
+        // 키 이름은 API 명세(analysis-workflow-api-spec.md)와 일치시킨다.
+        // evidence 안에서 "source"만으로는 무엇의 출처인지 알 수 없고,
+        // 같은 맵의 isIllegalBuilding* 접두사와도 어긋난다.
         evidence.put(
-                "source",
+                "illegalBuildingSource",
                 building != null ? building.getIllegalBuildingSource() : null
         );
         evidence.put(
