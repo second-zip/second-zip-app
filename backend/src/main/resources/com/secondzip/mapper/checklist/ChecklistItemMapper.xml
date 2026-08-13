@@ -11,7 +11,7 @@
         SELECT
             ci.checklist_item_id AS checklistItemId,
             ci.contents AS contents,
-            ci.category AS category,
+            ci.category AS category
 
         FROM analysis_report_checklist_items rci
 
