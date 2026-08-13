@@ -174,7 +174,7 @@ describe('ReportListView', () => {
 
     expect(mocks.authStore.fetchMyPage).toHaveBeenCalledOnce();
     expect(mocks.loggerError).toHaveBeenCalledWith(
-      'report-list.fetch-user',
+      'member-secretary.fetch-user',
       expect.any(Error),
     );
     wrapper.unmount();

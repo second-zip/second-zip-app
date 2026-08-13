@@ -47,7 +47,7 @@ export const usePcmAudioStream = () => {
       ]);
     }
     source?.disconnect();
-    activeNode.disconnect();
+    activeNode?.disconnect();
     silentGain?.disconnect();
     const activeContext = context;
     source = undefined;
