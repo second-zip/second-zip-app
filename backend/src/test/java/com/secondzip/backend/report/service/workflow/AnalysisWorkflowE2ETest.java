@@ -26,7 +26,7 @@ import com.secondzip.backend.report.service.ReportQueryService;
 import com.secondzip.backend.report.service.RiskEvaluationService;
 import com.secondzip.backend.report.service.TrustPropertyResolver;
 import com.secondzip.backend.report.service.SpecialTermService;
-import com.secondzip.backend.report.service.external.client.AddressClient;
+import com.secondzip.backend.report.service.AddressSearchStore;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterDataParser;
 import com.secondzip.backend.report.service.external.client.BuildingRegisterGateway;
@@ -55,7 +55,7 @@ class AnalysisWorkflowE2ETest {
         InMemoryStore store = new InMemoryStore();
         AnalysisPreparationService preparation =
                 new AnalysisPreparationService(
-                        new FixedAddressClient(),
+                        new FixedAddressSearchStore(),
                         new FixedBuildingHubClient(),
                         store
                 );
@@ -176,7 +176,7 @@ class AnalysisWorkflowE2ETest {
 
     private CreateReportRequest createRequest() {
         CreateReportRequest request = new CreateReportRequest();
-        request.setRoadAddress("서울특별시 송파구 송파대로 345");
+        request.setAddressId("test-address-id");
         request.setDetailAddress("101동 1304호");
         request.setDeposit(500_000_000L);
         return request;
@@ -266,15 +266,17 @@ class AnalysisWorkflowE2ETest {
         }
     }
 
-    private static class FixedAddressClient extends AddressClient {
-        private FixedAddressClient() {
-            super(new RestTemplate());
+    private static class FixedAddressSearchStore implements AddressSearchStore {
+
+        @Override
+        public String save(AnalysisTarget target) {
+            return "test-address-id";
         }
 
         @Override
-        public AnalysisTarget standardize(String inputAddress) {
+        public AnalysisTarget find(String addressId) {
             return new AnalysisTarget(
-                    inputAddress,
+                    "서울특별시 송파구 송파대로 345",
                     "서울 송파구 송파대로 345",
                     "1171010700",
                     "11710",

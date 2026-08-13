@@ -22,7 +22,9 @@ class AddressClientParsingTest {
         AddressClient client = new AddressClient(restTemplate);
         ReflectionTestUtils.setField(client, "kakaoApiKey", "test-key");
 
-        AnalysisTarget target = client.standardize("서울특별시 강남구 테헤란로 152");
+        AnalysisTarget target = client.search("서울특별시 강남구 테헤란로 152")
+                .get(0)
+                .target();
 
         assertEquals("서울 강남구 테헤란로 152", target.roadAddress());
         assertEquals("737", target.mainNo());

@@ -8,7 +8,8 @@ import com.secondzip.backend.report.dto.request.CreateReportRequest;
 import com.secondzip.backend.report.dto.response.AnalysisPreparationResponse;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
-import com.secondzip.backend.report.service.external.client.AddressClient;
+import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.report.service.AddressSearchStore;
 import com.secondzip.backend.report.service.external.client.BuildingHubClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,47 +70,31 @@ class AnalysisPreparationServiceTest {
     }
 
     @Test
-    @DisplayName("고른 주소와 표준화 결과의 법정동코드가 다르면 분석을 시작하지 않는다")
-    void rejectsWhenSelectedAddressMismatches() {
-        AnalysisPreparationService service =
-                service("APARTMENT", new InMemoryWorkflowStore());
-
-        CreateReportRequest request = request("101동 1203호");
-        // 스텁이 반환하는 값은 1168010100 이다. 다른 지역을 고른 상황.
-        request.setLegalDongCode("4113511000");
+    @DisplayName("만료됐거나 없는 addressId면 분석을 시작하지 않는다")
+    void rejectsExpiredAddressId() {
+        AnalysisPreparationService service = new AnalysisPreparationService(
+                new ExpiredAddressSearchStore(),
+                new FixedBuildingClient("APARTMENT"),
+                new InMemoryWorkflowStore()
+        );
+        ReflectionTestUtils.setField(service, "ttlSeconds", 900L);
 
         assertThrows(
                 BusinessException.class,
-                () -> service.prepare(1L, request)
+                () -> service.prepare(1L, request("101동 1203호"))
         );
     }
 
     @Test
-    @DisplayName("고른 주소와 표준화 결과가 같으면 정상 진행한다")
-    void acceptsWhenSelectedAddressMatches() {
-        AnalysisPreparationService service =
-                service("APARTMENT", new InMemoryWorkflowStore());
+    @DisplayName("검색 단계의 표준화 주소를 그대로 사용한다 - 재검색하지 않는다")
+    void usesStoredRoadAddressWithoutResearch() {
+        InMemoryWorkflowStore store = new InMemoryWorkflowStore();
+        AnalysisPreparationService service = service("APARTMENT", store);
 
-        CreateReportRequest request = request("101동 1203호");
-        request.setLegalDongCode("1168010100");
+        AnalysisPreparationResponse response =
+                service.prepare(1L, request("101동 1203호"));
 
-        assertEquals(
-                AnalysisRequestStatus.AUTH_REQUIRED,
-                service.prepare(1L, request).getStatus()
-        );
-    }
-
-    @Test
-    @DisplayName("법정동코드를 보내지 않으면 검증을 건너뛴다 - 구버전 프론트 호환")
-    void skipsVerificationWhenCodeAbsent() {
-        AnalysisPreparationService service =
-                service("APARTMENT", new InMemoryWorkflowStore());
-
-        // legalDongCode 를 설정하지 않은 요청
-        assertEquals(
-                AnalysisRequestStatus.AUTH_REQUIRED,
-                service.prepare(1L, request("101동 1203호")).getStatus()
-        );
+        assertEquals("서울 강남구 테헤란로 152", response.getStandardizedRoadAddress());
     }
 
     private AnalysisPreparationService service(
@@ -128,33 +113,54 @@ class AnalysisPreparationServiceTest {
                 "",
                 ""
         );
-        AddressClient addressClient = new FixedAddressClient(target);
+        AddressSearchStore addressSearchStore = new FixedAddressSearchStore(target);
         BuildingHubClient buildingHubClient = new FixedBuildingClient(buildingType);
         AnalysisPreparationService service =
-                new AnalysisPreparationService(addressClient, buildingHubClient, store);
+                new AnalysisPreparationService(addressSearchStore, buildingHubClient, store);
         ReflectionTestUtils.setField(service, "ttlSeconds", 900L);
         return service;
     }
 
     private CreateReportRequest request(String detailAddress) {
         CreateReportRequest request = new CreateReportRequest();
-        request.setRoadAddress("서울 강남구 테헤란로 152");
+        request.setAddressId("test-address-id");
         request.setDetailAddress(detailAddress);
         request.setDeposit(100_000_000L);
         return request;
     }
 
-    private static class FixedAddressClient extends AddressClient {
+    private static class FixedAddressSearchStore implements AddressSearchStore {
         private final AnalysisTarget target;
 
-        private FixedAddressClient(AnalysisTarget target) {
-            super(new RestTemplate());
+        private FixedAddressSearchStore(AnalysisTarget target) {
             this.target = target;
         }
 
         @Override
-        public AnalysisTarget standardize(String inputAddress) {
+        public String save(AnalysisTarget target) {
+            return "test-address-id";
+        }
+
+        @Override
+        public AnalysisTarget find(String addressId) {
             return target;
+        }
+    }
+
+    /** 보관 기간이 지나 후보가 사라진 상황. */
+    private static class ExpiredAddressSearchStore implements AddressSearchStore {
+
+        @Override
+        public String save(AnalysisTarget target) {
+            return "test-address-id";
+        }
+
+        @Override
+        public AnalysisTarget find(String addressId) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_CONFLICT,
+                    "주소 정보가 만료되었습니다. 다시 검색해주세요."
+            );
         }
     }
 

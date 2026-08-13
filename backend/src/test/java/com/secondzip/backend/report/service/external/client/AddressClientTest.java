@@ -31,13 +31,16 @@ class AddressClientTest {
     @DisplayName("카카오 주소 검색 API 실제 호출 및 파싱 테스트")
     @EnabledIfEnvironmentVariable(named = "KAKAO_REST_API_KEY", matches = ".+")
     void testStandardizeWithRealApi() {
-        // given: 테스트할 주소 (본번/부번이 명확한 주소)
+        // 테스트할 주소 (본번/부번이 명확한 주소)
         String inputAddress = "서울특별시 강남구 테헤란로 152";
 
-        // when: API 호출 및 데이터 파싱
-        AnalysisTarget target = addressClient.standardize(inputAddress);
+        // API 호출 및 데이터 파싱
+        AnalysisTarget target = addressClient.search(inputAddress).stream()
+                .findFirst()
+                .map(com.secondzip.backend.report.dto.AddressCandidate::target)
+                .orElse(null);
 
-        // then: 결과 출력 및 검증
+        // 결과 출력 및 검증
         assertNotNull(target, "주소 검색 결과가 없습니다. API 키와 테스트 주소를 확인하세요.");
         System.out.println("====== [카카오 API 파싱 결과] ======");
         System.out.println("원본 주소: " + target.originalAddress());
@@ -49,10 +52,10 @@ class AddressClientTest {
         System.out.println("부번(subNo): " + target.subNo());
         System.out.println("==================================");
 
-        // 검증 (Assertion) - API가 정상 호출되었다면 법정동코드가 null이 아니어야 합니다.
+        // 검증 - API가 정상 호출 -> 법정동코드가 null이 아니어야 함.
         assertNotNull(target.legalDongCode(), "법정동 코드가 파싱되지 않았습니다! API 키나 응답을 확인하세요.");
 
-        // 강남구의 시군구코드는 '11680'으로 시작합니다. (테헤란로 기준)
+        // 강남구의 시군구코드는 '11680'으로 시작. (테헤란로 기준)
         assertTrue(target.sigunguCode().startsWith("11680"), "시군구 코드가 일치하지 않습니다.");
     }
 }

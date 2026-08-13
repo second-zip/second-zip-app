@@ -12,9 +12,13 @@ import javax.validation.constraints.Positive;
 @ApiModel(description = "분석 보고서 생성 요청")
 public class CreateReportRequest {
 
-    @ApiModelProperty(value = "도로명 주소", required = true, example = "서울특별시 강남구 테헤란로 1")
-    @NotBlank(message = "도로명 주소는 필수입니다.")
-    private String roadAddress;
+    @ApiModelProperty(
+            value = "주소 검색(GET /api/addresses)에서 받은 주소 식별자",
+            required = true,
+            example = "b7f3c2a1-4d5e-4f6a-8b9c-0d1e2f3a4b5c"
+    )
+    @NotBlank(message = "주소를 선택해주세요.")
+    private String addressId;
 
     @ApiModelProperty(value = "상세 주소", example = "101동 101호")
     private String detailAddress;
@@ -23,7 +27,4 @@ public class CreateReportRequest {
     @NotNull(message = "전세 보증금은 필수입니다.")
     @Positive(message = "전세 보증금은 0보다 커야 합니다.")
     private Long deposit;
-
-    @ApiModelProperty(value = "주소 검색에서 받은 법정동코드 10자리", example = "4113511000")
-    private String legalDongCode;
 }
