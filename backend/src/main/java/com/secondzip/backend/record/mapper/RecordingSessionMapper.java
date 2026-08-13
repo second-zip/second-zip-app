@@ -47,4 +47,17 @@ public interface RecordingSessionMapper {
     int insertLiveSession(
             RecordingSessionVO session
     );
+
+    int deleteByIdAndAccountId(
+            @Param("recordingSessionId")
+            Long recordingSessionId,
+
+            @Param("accountId")
+            Long accountId
+    );
+
+    int deleteAnalysisResults(
+            @Param("recordingSessionId")
+            Long recordingSessionId
+    );
 }

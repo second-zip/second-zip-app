@@ -4,9 +4,7 @@ import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.record.domain.RecordingSessionVO;
-import com.secondzip.backend.record.dto.response.RecordingLiveStartResponseDTO;
-import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
-import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
+import com.secondzip.backend.record.dto.response.*;
 import com.secondzip.backend.record.enums.RecordingStatus;
 import com.secondzip.backend.record.mapper.RecordingSessionMapper;
 import com.secondzip.backend.record.storage.RecordingStorage;
@@ -319,5 +317,141 @@ public class RecordingServiceImpl implements RecordingService {
 
 
         recordingFinalAnalysisAsyncService.analyze(recordingSessionId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecordingDetailResponseDTO getRecording(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        RecordingSessionVO session =
+                recordingSessionMapper.findByIdAndAccountId(
+                        recordingSessionId,
+                        accountId
+                );
+
+        if (session == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        return RecordingDetailResponseDTO.builder()
+                .recordingSessionId(
+                        session.getRecordingSessionId()
+                )
+                .reportChecklistId(
+                        session.getReportChecklistId()
+                )
+                .originalFileName(
+                        session.getOriginalFileName()
+                )
+                .contentType(
+                        session.getContentType()
+                )
+                .fileSize(
+                        session.getFileSize()
+                )
+                .status(
+                        session.getStatus()
+                )
+                .summary(
+                        session.getSummary()
+                )
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecordingTranscriptResponseDTO getTranscript(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        RecordingSessionVO session =
+                recordingSessionMapper.findByIdAndAccountId(
+                        recordingSessionId,
+                        accountId
+                );
+
+        if (session == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        return RecordingTranscriptResponseDTO.builder()
+                .recordingSessionId(
+                        session.getRecordingSessionId()
+                )
+                .transcript(
+                        session.getFullTranscript()
+                )
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void deleteRecording(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        RecordingSessionVO session =
+                recordingSessionMapper.findByIdAndAccountId(
+                        recordingSessionId,
+                        accountId
+                );
+
+        if (session == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        /*
+         * 실시간 진행 중인 세션을 바로 삭제하는 것은
+         * gRPC/WebSocket 정리 문제가 있으므로 막는 것을 권장
+         */
+        if (session.getStatus() == RecordingStatus.RECORDING) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "녹음 중인 세션은 삭제할 수 없습니다."
+            );
+        }
+
+        // 업로드 방식에서만 파일 존재
+        if (session.getStorageObjectKey() != null
+                && !session.getStorageObjectKey().isBlank()) {
+
+            recordingStorage.delete(
+                    session.getStorageObjectKey()
+            );
+        }
+
+        recordingSessionMapper.deleteAnalysisResults(
+                recordingSessionId
+        );
+
+        int deleted =
+                recordingSessionMapper.deleteByIdAndAccountId(
+                        recordingSessionId,
+                        accountId
+                );
+
+        if (deleted != 1) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
+                    "녹음 세션 삭제에 실패했습니다."
+            );
+        }
+
+        // 혹시 메모리 Context가 남아있다면 정리
+        contextManager.remove(recordingSessionId);
     }
 }
