@@ -37,7 +37,8 @@ public class AddressSearchService {
                         addressSearchStore.save(candidate.target()),
                         candidate.target().roadAddress(),
                         candidate.target().lotAddress(),
-                        candidate.zoneNo()
+                        candidate.zoneNo(),
+                        candidate.placeName()
                 ))
                 .collect(Collectors.toList());
 

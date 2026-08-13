@@ -27,4 +27,10 @@ public class AddressSearchItem {
 
     @ApiModelProperty(value = "우편번호. 없을 수 있다.", example = "13494")
     private String zoneNo;
+
+    @ApiModelProperty(
+            value = "건물·장소명. 건물명으로 검색된 경우에만 채워진다.",
+            example = "판교테크노밸리"
+    )
+    private String placeName;
 }

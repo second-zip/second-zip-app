@@ -17,8 +17,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 // 카카오 주소 검색 API
 // (주소 검색 -> 주소 표준화 후 주소 목록(addressId) 프론트로 전달 -> 프론트에서 선택 -> 백엔드에서 해당 주소 선택)
@@ -27,11 +29,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AddressClient {
 
-    private static final String SEARCH_URL =
+    private static final String ADDRESS_SEARCH_URL =
             "https://dapi.kakao.com/v2/local/search/address.json";
+
+    private static final String KEYWORD_SEARCH_URL =
+            "https://dapi.kakao.com/v2/local/search/keyword.json";
 
     /** 카카오 주소 검색의 결과 후보를 넉넉히 보여주기 위해 최대로 받는다. */
     private static final int SEARCH_SIZE = 30;
+
+    // 장소 검색 폴백에서 표준화할 최대 후보 수.
+    // 장소 검색 결과에는 법정동코드가 없어 후보마다 주소 검색을 한 번씩 더 호출한다.
+    // 즉 이 값이 곧 추가 API 호출 수다.
+    private static final int KEYWORD_FALLBACK_LIMIT = 10;
 
     private final RestTemplate restTemplate;
 
@@ -56,46 +66,80 @@ public class AddressClient {
             );
         }
 
-        List<Map<String, Object>> documents = requestDocuments(query);
-        List<AddressCandidate> candidates = new ArrayList<>();
-        for (Map<String, Object> document : documents) {
-            AddressCandidate candidate = toCandidate(document, query);
-            if (candidate != null) {
-                candidates.add(candidate);
-            }
+        List<AddressCandidate> candidates = searchByAddress(query);
+
+        // 주소 검색은 완전한 주소("판교역로 235")만 찾는다.
+        // 도로명만("판교역로")이나 건물명("헬리오시티")은 0건이므로 그때만 장소 검색으로 재시도한다.
+        // 평소에는 호출이 1회로 끝난다.
+        if (candidates.isEmpty()) {
+            candidates = searchByKeyword(query);
         }
 
         log.info("주소 검색 완료. query={}, 후보={}건", query, candidates.size());
         return candidates;
     }
 
-    /**
-     * 사용자 입력 주소를 공공 API용 표준 식별값으로 변환한다.
-     *
-     * 검색 결과를 서버가 보관하고 addressId로 참조하는 방식(AN_19)으로 대체된다.
-     * 남아 있는 호출부가 정리되면 삭제한다.
-     */
-    @Deprecated
-    public AnalysisTarget standardize(String inputAddress) {
-        log.info("주소 표준화 요청 (카카오 API): {}", inputAddress);
-        try {
-            return search(inputAddress).stream()
-                    .findFirst()
-                    .map(AddressCandidate::target)
-                    .orElse(null);
-        } catch (RuntimeException e) {
-            log.error("주소 표준화 중 에러 발생: {}", e.getMessage());
+    // 주소 검색. 응답에 법정동코드가 있어 그대로 후보가 된다.
+    private List<AddressCandidate> searchByAddress(String query) {
+        List<AddressCandidate> candidates = new ArrayList<>();
+        for (Map<String, Object> document
+                : requestDocuments(ADDRESS_SEARCH_URL, query, SEARCH_SIZE)) {
+            AddressCandidate candidate = toCandidate(document, query);
+            if (candidate != null) {
+                candidates.add(candidate);
+            }
+        }
+        return candidates;
+    }
+
+    // 장소 검색 폴백.
+    // 장소 검색 응답에는 법정동코드가 없어, 각 결과의 지번주소로 주소 검색을 다시 호출해 채운다.
+    // 지번주소는 건물을 유일하게 특정하므로 이 재조회는 어긋날 여지가 없다.
+    private List<AddressCandidate> searchByKeyword(String query) {
+        List<AddressCandidate> candidates = new ArrayList<>();
+        Set<String> seenLotAddresses = new LinkedHashSet<>();
+
+        for (Map<String, Object> document
+                : requestDocuments(KEYWORD_SEARCH_URL, query, 15)) {
+            String lotAddress = asText(document.get("address_name"));
+            if (lotAddress == null || !seenLotAddresses.add(lotAddress)) {
+                // 한 건물에 여러 점포가 등록돼 있으면 같은 지번주소가 반복된다.
+                continue;
+            }
+            if (seenLotAddresses.size() > KEYWORD_FALLBACK_LIMIT) {
+                break;
+            }
+
+            String placeName = asText(document.get("place_name"));
+            for (Map<String, Object> resolved
+                    : requestDocuments(ADDRESS_SEARCH_URL, lotAddress, 1)) {
+                AddressCandidate candidate = toCandidate(resolved, query);
+                if (candidate != null) {
+                    candidates.add(candidate.withPlaceName(placeName));
+                    break;
+                }
+            }
+        }
+
+        log.info("장소 검색 폴백 사용. query={}, 표준화 성공={}건", query, candidates.size());
+        return candidates;
+    }
+
+    private String asText(Object value) {
+        if (value == null) {
             return null;
         }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : text;
     }
 
     @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> requestDocuments(String query) {
+    private List<Map<String, Object>> requestDocuments(String url, String query, int size) {
         try {
             URI uri = UriComponentsBuilder
-                    .fromHttpUrl(SEARCH_URL)
+                    .fromHttpUrl(url)
                     .queryParam("query", query)
-                    .queryParam("size", SEARCH_SIZE)
+                    .queryParam("size", size)
                     .build()
                     .encode()
                     .toUri();
