@@ -1,9 +1,7 @@
 package com.secondzip.backend.record.controller;
 
 import com.secondzip.backend.record.dto.request.RecordingLiveStartRequestDTO;
-import com.secondzip.backend.record.dto.response.RecordingLiveStartResponseDTO;
-import com.secondzip.backend.record.dto.response.RecordingSessionResponseDTO;
-import com.secondzip.backend.record.dto.response.RecordingStatusResponseDTO;
+import com.secondzip.backend.record.dto.response.*;
 import com.secondzip.backend.record.service.RecordingService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -39,7 +37,7 @@ public class RecordingController {
     }
 
     @ApiOperation(
-            value = "녹음 파일 음성 인식 시작",
+            value = "녹음 파일 음성 인식 시작(파일 방식)",
             notes = "업로드된 녹음 파일을 CLOVA Speech로 분석합니다."
     )
     @PostMapping("/{recordingSessionId}/transcribe")
@@ -107,5 +105,58 @@ public class RecordingController {
         recordingService.stopLiveRecording(accountId, recordingSessionId);
 
         return ResponseEntity.accepted().build();
+    }
+
+    @ApiOperation(
+            value = "녹음 조회",
+            notes = "녹음 세션 정보를 조회합니다."
+    )
+    @GetMapping("/{recordingSessionId}/read")
+    public ResponseEntity<RecordingDetailResponseDTO>
+    getRecording(
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @PathVariable Long recordingSessionId
+    ) {
+        return ResponseEntity.ok(
+                recordingService.getRecording(
+                        accountId,
+                        recordingSessionId
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "녹음 Transcript 조회",
+            notes = "녹음의 전체 음성 인식 결과를 조회합니다."
+    )
+    @GetMapping("/{recordingSessionId}/transcript")
+    public ResponseEntity<RecordingTranscriptResponseDTO>
+    getTranscript(
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @PathVariable Long recordingSessionId
+    ) {
+        return ResponseEntity.ok(
+                recordingService.getTranscript(
+                        accountId,
+                        recordingSessionId
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "녹음 삭제",
+            notes = "녹음 세션과 연결된 분석 결과 및 녹음 파일을 삭제합니다."
+    )
+    @DeleteMapping("/{recordingSessionId}")
+    public ResponseEntity<Void>
+    deleteRecording(
+            @ApiIgnore @AuthenticationPrincipal Long accountId,
+            @PathVariable Long recordingSessionId
+    ) {
+        recordingService.deleteRecording(
+                accountId,
+                recordingSessionId
+        );
+        return ResponseEntity.noContent().build();
     }
 }

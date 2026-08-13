@@ -161,4 +161,26 @@
                )
     </insert>
 
+    <!-- 녹음 삭제 -->
+    <delete id="deleteByIdAndAccountId">
+
+        DELETE FROM recording_sessions
+
+        WHERE recording_session_id =
+              #{recordingSessionId}
+
+          AND account_id =
+              #{accountId}
+
+    </delete>
+
+    <!-- 부모 녹음 삭제 -->
+    <delete id="deleteAnalysisResults">
+
+        DELETE FROM recording_checklist_results
+
+        WHERE recording_session_id =
+              #{recordingSessionId}
+
+    </delete>
 </mapper>

@@ -55,6 +55,23 @@ public class NcloudRecordingStorage implements RecordingStorage {
         return objectKey;
     }
 
+    @Override
+    public void delete(
+            String objectKey
+    ) {
+
+        if (objectKey == null
+                || objectKey.isBlank()) {
+
+            return;
+        }
+
+        amazonS3.deleteObject(
+                bucketName,
+                objectKey
+        );
+    }
+
     private String sanitizeFilename(String originalFilename) {
         if (originalFilename == null || originalFilename.isBlank()) {
             return "recording";
