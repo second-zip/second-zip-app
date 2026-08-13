@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * 건축HUB 건축물대장정보 서비스 (BldRgstHubService) - 표제부 조회(getBrTitleInfo) 클라이언트.
- * AnalysisTarget(주소 표준화 결과)을 받아 건축물 용도, 위반건축물 여부 등을 조회한다.
+ * AnalysisTarget(주소 표준화 결과)을 받아 건축물 용도, 위반건축물 여부 등을 조회.
  *
  * 주의: 위반건축물 여부(violBldgYn)는 공식 기술문서(요청/응답 명세)에는 명시되어 있지 않음.
  *      실제 응답에 포함될 수 있어 방어적으로 파싱하되, 없으면 null(확인불가)로 처리한다.
