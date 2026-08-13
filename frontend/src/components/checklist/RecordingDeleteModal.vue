@@ -1,7 +1,11 @@
 <script setup>
 import RecordingModalShell from './RecordingModalShell.vue';
 
-defineProps({ open: { type: Boolean, default: false } });
+defineProps({
+  open: { type: Boolean, default: false },
+  isDeleting: { type: Boolean, default: false },
+  errorMessage: { type: String, default: '' },
+});
 const emit = defineEmits(['close', 'confirm']);
 </script>
 
@@ -17,17 +21,25 @@ const emit = defineEmits(['close', 'confirm']);
       <p class="mb-0">
         녹음을 삭제해도 현재 체크리스트의 체크 상태는 변경되지 않아요.
       </p>
+      <p v-if="errorMessage" class="recording-delete-modal__error mt-2 mb-0" role="alert">
+        {{ errorMessage }}
+      </p>
     </div>
     <template #footer>
-      <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+      <button
+        type="button"
+        class="btn btn-light"
+        data-bs-dismiss="modal"
+        :disabled="isDeleting"
+      >
         취소
       </button>
       <button
         type="button"
         class="btn btn-danger"
-        data-bs-dismiss="modal"
+        :disabled="isDeleting"
         @click="emit('confirm')"
-      >녹음 삭제</button>
+      >{{ isDeleting ? '삭제 중' : '녹음 삭제' }}</button>
     </template>
   </RecordingModalShell>
 </template>
@@ -38,4 +50,5 @@ const emit = defineEmits(['close', 'confirm']);
   font-size: 0.8125rem;
   line-height: 1.6;
 }
+.recording-delete-modal__error { color: var(--red-500); }
 </style>

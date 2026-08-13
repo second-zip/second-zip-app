@@ -1,25 +1,39 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 import { useAudioRecorder } from './useAudioRecorder';
+import { useLiveRecordingSession } from './useLiveRecordingSession';
+import { useSavedRecording } from './useSavedRecording';
 
-export const useChecklistRecorder = (emit) => {
+export const useChecklistRecorder = (emit, reportChecklistId) => {
   const recorder = useAudioRecorder();
-  const savedRecording = ref(null);
-  const isDeleteModalOpen = ref(false);
   const isFinishing = ref(false);
-  const isTextModalOpen = ref(false);
-  const hasOpenModal = computed(
-    () => isDeleteModalOpen.value || isTextModalOpen.value,
+  const saved = useSavedRecording(emit);
+  let pendingRecording;
+
+  const setSavedRecording = (data) => {
+    if (!pendingRecording) return;
+    void saved.save(pendingRecording, data);
+    pendingRecording = undefined;
+    emit('processed');
+  };
+  const live = useLiveRecordingSession(reportChecklistId, setSavedRecording);
+  const errorMessage = computed(
+    () => live.errorMessage.value
+      || recorder.errorMessage.value
+      || saved.errorMessage.value,
   );
 
   const beginRecording = async () => {
     recorder.clearError();
+    live.errorMessage.value = '';
     try {
       await recorder.startRecording({
-        onChunk: (chunk) => emit('recording-chunk', chunk),
+        beforeStart: live.start,
+        onPcmChunk: live.sendChunk,
       });
     } catch {
-      // 권한 및 장치 오류는 녹음 영역에서 안내합니다.
+      void live.abort();
+      // Composables expose a user-safe error message in the recording panel.
     }
   };
 
@@ -28,42 +42,18 @@ export const useChecklistRecorder = (emit) => {
     isFinishing.value = true;
     const duration = recorder.elapsedSeconds.value;
     const blob = await recorder.stopRecording();
-
-    if (blob) {
-      if (savedRecording.value?.url) {
-        URL.revokeObjectURL(savedRecording.value.url);
-      }
-      savedRecording.value = {
-        blob, duration, transcript: '', url: URL.createObjectURL(blob),
-      };
-      emit('recording-complete', blob);
+    if (blob) pendingRecording = { blob, duration };
+    try {
+      if (blob) await live.finish();
+    } catch {
+      pendingRecording = undefined;
+    } finally {
+      isFinishing.value = false;
     }
-    isFinishing.value = false;
   };
-
-  const deleteRecording = () => {
-    // 실제 삭제 API 성공 후 아래 로컬 상태를 비우도록 연결합니다.
-    if (savedRecording.value?.url) {
-      URL.revokeObjectURL(savedRecording.value.url);
-    }
-    savedRecording.value = null;
-  };
-
-  const openTextModal = () => {
-    // STT 조회 API 결과로 transcript를 갱신한 뒤 모달을 엽니다.
-    isTextModalOpen.value = true;
-  };
-
-  watch(hasOpenModal, (open) => emit('modal-visibility-change', open));
-  onBeforeUnmount(() => {
-    if (savedRecording.value?.url) {
-      URL.revokeObjectURL(savedRecording.value.url);
-    }
-  });
 
   return {
-    ...recorder, beginRecording, deleteRecording, finishRecording,
-    isDeleteModalOpen, isFinishing, isTextModalOpen, openTextModal,
-    savedRecording,
+    ...recorder, ...live, ...saved, beginRecording, errorMessage,
+    finishRecording, isFinishing,
   };
 };

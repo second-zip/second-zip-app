@@ -6,6 +6,8 @@ import RecordingModalShell from './RecordingModalShell.vue';
 const props = defineProps({
   open: { type: Boolean, default: false },
   text: { type: String, default: '' },
+  isLoading: { type: Boolean, default: false },
+  errorMessage: { type: String, default: '' },
 });
 const emit = defineEmits(['close']);
 const hasText = computed(() => Boolean(props.text.trim()));
@@ -19,7 +21,15 @@ const hasText = computed(() => Boolean(props.text.trim()));
     @close="emit('close')"
   >
     <div class="recording-text-modal__body overflow-y-auto">
-      <p v-if="hasText" class="recording-text-modal__text mb-0">{{ text }}</p>
+      <p v-if="isLoading" class="recording-text-modal__empty mb-0 text-center">
+        녹음 내용을 불러오고 있어요.
+      </p>
+      <p
+        v-else-if="errorMessage"
+        class="recording-text-modal__error mb-0 text-center"
+        role="alert"
+      >{{ errorMessage }}</p>
+      <p v-else-if="hasText" class="recording-text-modal__text mb-0">{{ text }}</p>
       <p v-else class="recording-text-modal__empty mb-0 text-center">
         변환된 녹음 텍스트가 아직 없어요.
       </p>
@@ -45,6 +55,11 @@ const hasText = computed(() => Boolean(props.text.trim()));
 .recording-text-modal__empty {
   padding: 24px 0;
   color: var(--black-300);
+  font-size: 0.8125rem;
+}
+.recording-text-modal__error {
+  padding: 24px 0;
+  color: var(--red-500);
   font-size: 0.8125rem;
 }
 .recording-text-modal__close {

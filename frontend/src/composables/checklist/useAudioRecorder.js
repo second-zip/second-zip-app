@@ -1,12 +1,11 @@
 import { onBeforeUnmount, ref } from 'vue';
 
 import { useAudioAnalyser } from './useAudioAnalyser';
+import { usePcmAudioStream } from './usePcmAudioStream';
 
 const getErrorMessage = (error) => {
   if (error?.name === 'NotAllowedError') return '마이크 권한을 허용해 주세요.';
-  if (error?.name === 'NotFoundError') {
-    return '사용 가능한 마이크를 찾을 수 없어요.';
-  }
+  if (error?.name === 'NotFoundError') return '사용 가능한 마이크를 찾을 수 없어요.';
   return '녹음을 시작할 수 없어요. 잠시 후 다시 시도해 주세요.';
 };
 
@@ -16,11 +15,11 @@ export const useAudioRecorder = () => {
   const elapsedSeconds = ref(0);
   const errorMessage = ref('');
   const { startAnalysis, stopAnalysis, waveformLevels } = useAudioAnalyser();
+  const { startPcmStream, stopPcmStream } = usePcmAudioStream();
   let chunks = [];
   let elapsedTimer;
   let mediaRecorder;
   let mediaStream;
-  let startedAt = 0;
   let stopResolver;
 
   const releaseInput = () => {
@@ -30,17 +29,14 @@ export const useAudioRecorder = () => {
     mediaStream?.getTracks().forEach((track) => track.stop());
     mediaStream = undefined;
   };
-
-  const attachRecorderEvents = (recorder, onChunk) => {
+  const attachEvents = (recorder) => {
     recorder.addEventListener('dataavailable', ({ data }) => {
       if (!data.size) return;
       chunks.push(data);
-      onChunk?.(data);
     });
     recorder.addEventListener('stop', () => {
-      const blob = new Blob(chunks, {
-        type: recorder.mimeType || 'audio/webm',
-      });
+      const options = recorder.mimeType ? { type: recorder.mimeType } : undefined;
+      const blob = new Blob(chunks, options);
       chunks = [];
       stopResolver?.(blob);
       stopResolver = undefined;
@@ -55,24 +51,30 @@ export const useAudioRecorder = () => {
     });
   };
 
-  const startRecording = async ({ onChunk } = {}) => {
+  const startRecording = async ({ beforeStart, onPcmChunk } = {}) => {
     if (isRecording.value || isStarting.value) return;
     errorMessage.value = '';
     isStarting.value = true;
-
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         throw new Error('Audio recording is not supported.');
       }
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      chunks = [];
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 16000 },
+        },
+      });
       mediaRecorder = new MediaRecorder(mediaStream);
-      attachRecorderEvents(mediaRecorder, onChunk);
-      elapsedSeconds.value = 0;
-      startedAt = Date.now();
-      isRecording.value = true;
+      attachEvents(mediaRecorder);
       startAnalysis(mediaStream);
+      await beforeStart?.();
+      await startPcmStream(mediaStream, onPcmChunk);
+      chunks = [];
+      elapsedSeconds.value = 0;
+      const startedAt = Date.now();
       mediaRecorder.start(1000);
+      isRecording.value = true;
       elapsedTimer = window.setInterval(() => {
         elapsedSeconds.value = Math.floor((Date.now() - startedAt) / 1000);
       }, 250);
@@ -80,17 +82,16 @@ export const useAudioRecorder = () => {
       errorMessage.value = getErrorMessage(error);
       isRecording.value = false;
       mediaRecorder = undefined;
+      await stopPcmStream();
       releaseInput();
       throw error;
     } finally {
       isStarting.value = false;
     }
   };
-
-  const stopRecording = () => {
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-      return Promise.resolve(null);
-    }
+  const stopRecording = async () => {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return Promise.resolve(null);
+    await stopPcmStream();
     return new Promise((resolve) => {
       stopResolver = resolve;
       isRecording.value = false;
@@ -100,14 +101,12 @@ export const useAudioRecorder = () => {
   };
 
   onBeforeUnmount(() => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     isRecording.value = false;
     releaseInput();
+    void stopPcmStream();
     stopResolver = undefined;
   });
-
   return {
     clearError: () => (errorMessage.value = ''), elapsedSeconds, errorMessage,
     isRecording, isStarting, startRecording, stopRecording, waveformLevels,

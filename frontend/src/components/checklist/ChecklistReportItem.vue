@@ -23,7 +23,7 @@ const emit = defineEmits(['create']);
 
 const hasChecklist = computed(() => Boolean(props.report.checklistCreated));
 const progress = computed(() =>
-  Math.min(100, Math.max(0, Number(props.report.percentage) || 0)),
+  Math.min(100, Math.max(0, Number(props.report.progressPercentage) || 0)),
 );
 const address = computed(() => formatReportAddress(props.report));
 const formattedCreatedAt = computed(() =>
@@ -40,7 +40,7 @@ const detailRoute = computed(() => ({
 
 <template>
   <article class="checklist-report-item d-flex align-items-center w-100">
-    <ReportListStatusIcon :result="report.result" />
+    <ReportListStatusIcon :result="report.riskLevel" />
 
     <div class="checklist-report-item__content flex-grow-1 overflow-hidden">
       <p class="checklist-report-item__address fw-semibold mb-0">

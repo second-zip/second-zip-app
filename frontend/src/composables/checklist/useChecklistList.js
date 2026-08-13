@@ -34,12 +34,10 @@ export const useChecklistList = () => {
       !analysisReportId ||
       report.checklistCreated ||
       creatingReportIds.value.includes(analysisReportId)
-    ) return false;
+    )
+      return false;
 
-    creatingReportIds.value = [
-      ...creatingReportIds.value,
-      analysisReportId,
-    ];
+    creatingReportIds.value = [...creatingReportIds.value, analysisReportId];
     creationErrorMessage.value = '';
 
     try {
@@ -49,12 +47,10 @@ export const useChecklistList = () => {
         ...report,
         checklistCreated: true,
         reportChecklistId: data?.reportChecklistId,
-        percentage: 0,
+        progressPercentage: 0,
       };
       checklists.value = checklists.value.map((item) =>
-        item.analysisReportId === analysisReportId
-          ? createdChecklist
-          : item,
+        item.analysisReportId === analysisReportId ? createdChecklist : item,
       );
       return createdChecklist;
     } catch (error) {
