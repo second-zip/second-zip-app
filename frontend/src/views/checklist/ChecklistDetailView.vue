@@ -41,7 +41,9 @@ onMounted(detail.fetchChecklist);
     />
     <ChecklistRecorder
       class="mt-3"
+      :report-checklist-id="reportChecklistId"
       @modal-visibility-change="isRecorderModalOpen = $event"
+      @processed="detail.fetchChecklist"
     />
     <ChecklistProgress
       class="mt-4"

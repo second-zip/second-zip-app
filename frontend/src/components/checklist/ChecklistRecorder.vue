@@ -1,15 +1,19 @@
 <script setup>
+import { toRef } from 'vue';
+
 import { useChecklistRecorder } from '@/composables/checklist/useChecklistRecorder';
 import RecordingActivePanel from './RecordingActivePanel.vue';
 import RecordingDeleteModal from './RecordingDeleteModal.vue';
 import RecordingIdlePanel from './RecordingIdlePanel.vue';
+import RecordingProcessingPanel from './RecordingProcessingPanel.vue';
 import RecordingSavedPanel from './RecordingSavedPanel.vue';
 import RecordingTextModal from './RecordingTextModal.vue';
 
-const emit = defineEmits([
-  'modal-visibility-change', 'recording-chunk', 'recording-complete',
-]);
-const state = useChecklistRecorder(emit);
+const props = defineProps({
+  reportChecklistId: { type: Number, required: true },
+});
+const emit = defineEmits(['modal-visibility-change', 'processed']);
+const state = useChecklistRecorder(emit, toRef(props, 'reportChecklistId'));
 </script>
 
 <template>
@@ -25,9 +29,11 @@ const state = useChecklistRecorder(emit);
         :finishing="state.isFinishing.value"
         @finish="state.finishRecording"
       />
+      <RecordingProcessingPanel v-else-if="state.isProcessing.value" />
       <RecordingSavedPanel
         v-else-if="state.savedRecording.value"
         :recording="state.savedRecording.value"
+        can-delete
         @delete="state.isDeleteModalOpen.value = true"
         @show-text="state.openTextModal"
       />
@@ -43,12 +49,16 @@ const state = useChecklistRecorder(emit);
     </p>
     <RecordingDeleteModal
       :open="state.isDeleteModalOpen.value"
+      :is-deleting="state.isDeleting.value"
+      :error-message="state.deleteErrorMessage.value"
       @close="state.isDeleteModalOpen.value = false"
-      @confirm="state.deleteRecording"
+      @confirm="state.remove"
     />
     <RecordingTextModal
       :open="state.isTextModalOpen.value"
       :text="state.savedRecording.value?.transcript ?? ''"
+      :is-loading="state.isTextLoading.value"
+      :error-message="state.textErrorMessage.value"
       @close="state.isTextModalOpen.value = false"
     />
   </section>

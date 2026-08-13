@@ -150,7 +150,10 @@ describe('MainPageView', () => {
     expect(wrapper.getComponent(SecretaryGuideStub).props('characterType')).toBe(
       'CAT',
     );
-    expect(logger.error).toHaveBeenCalledWith('main.fetch-user', error);
+    expect(logger.error).toHaveBeenCalledWith(
+      'member-secretary.fetch-user',
+      error,
+    );
   });
 
   it('비로그인 상태에서 AI 비서 변경을 누르면 로그인 화면으로 이동한다', async () => {

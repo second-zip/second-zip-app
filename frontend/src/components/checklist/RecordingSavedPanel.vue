@@ -3,6 +3,7 @@ import RecordingPlayer from './RecordingPlayer.vue';
 
 defineProps({
   recording: { type: Object, required: true },
+  canDelete: { type: Boolean, default: false },
 });
 defineEmits(['delete', 'show-text']);
 </script>
@@ -15,6 +16,7 @@ defineEmits(['delete', 'show-text']);
     />
     <div class="recording-saved__actions d-flex gap-2">
       <button
+        v-if="canDelete"
         type="button"
         class="recording-saved__delete btn flex-grow-1 fw-semibold"
         @click="$emit('delete')"
