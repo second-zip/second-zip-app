@@ -35,7 +35,10 @@ class AddressClientTest {
         String inputAddress = "서울특별시 강남구 테헤란로 152";
 
         // API 호출 및 데이터 파싱
-        AnalysisTarget target = addressClient.standardize(inputAddress);
+        AnalysisTarget target = addressClient.search(inputAddress).stream()
+                .findFirst()
+                .map(com.secondzip.backend.report.dto.AddressCandidate::target)
+                .orElse(null);
 
         // 결과 출력 및 검증
         assertNotNull(target, "주소 검색 결과가 없습니다. API 키와 테스트 주소를 확인하세요.");
