@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import springfox.documentation.annotations.ApiIgnore;
 
-@Api(tags = "녹음 분석 API")
+@Api(
+        tags = "녹음 분석 API",
+        description = "계약 현장 녹음 및 음성 인식 기능을 제공합니다."
+)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/recordings")

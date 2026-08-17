@@ -18,8 +18,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 @Api(
-        tags = "지도 - 전세가격지수 동기화 API",
-        description = "한국부동산원의 전세가격지수 데이터를 조회하여 내부 데이터베이스에 동기화합니다."
+        tags = "지도 API",
+        description = "전세사기 피해현황 및 전세가격지수 관련 기능을 제공합니다."
 )
 @RestController
 @RequiredArgsConstructor
