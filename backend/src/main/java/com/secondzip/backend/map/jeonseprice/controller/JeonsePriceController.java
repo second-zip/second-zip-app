@@ -20,8 +20,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 @Api(
-        tags = "지도 - 전세가격지수 조회 API",
-        description = "기준월에 따른 시도 및 시군구별 전세가격지수와 전월 대비 변동률을 조회합니다."
+        tags = "지도 API",
+        description = "전세사기 피해현황 및 전세가격지수 관련 기능을 제공합니다."
 )
 @RestController
 @RequiredArgsConstructor
