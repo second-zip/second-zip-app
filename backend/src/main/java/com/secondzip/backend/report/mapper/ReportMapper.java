@@ -1,6 +1,7 @@
 package com.secondzip.backend.report.mapper;
 
 import com.secondzip.backend.report.dto.DetailResult;
+import com.secondzip.backend.report.dto.VerifiedChecklistItem;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -31,6 +32,17 @@ public interface ReportMapper {
 
     // 리포트 생성
     void insertReportMap(Map<String, Object> params);
+
+    /**
+     * 분석으로 확인 완료된 체크리스트 항목 저장.
+     * 이후 체크리스트를 생성할 때 insertChecklistItems 가 이 행을 보고
+     * 해당 항목을 is_checked = TRUE 로 만든다.
+     * items 가 비어 있으면 호출하지 않는다. (IN () 은 문법 오류)
+     */
+    void insertChecklistVerifications(
+            @Param("analysisReportId") Long analysisReportId,
+            @Param("items") List<VerifiedChecklistItem> items
+    );
 
     // 리포트 목록 조회
     List<ReportListItem> findReportsByAccountId(@Param("accountId") Long accountId);
