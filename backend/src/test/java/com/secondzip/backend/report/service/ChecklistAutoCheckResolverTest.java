@@ -1,0 +1,244 @@
+package com.secondzip.backend.report.service;
+
+import com.secondzip.backend.checklist.enums.Category;
+import com.secondzip.backend.report.dto.CheckResult;
+import com.secondzip.backend.report.dto.DetailResult;
+import com.secondzip.backend.report.dto.FraudTypeResult;
+import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.enums.CheckType;
+import com.secondzip.backend.report.enums.DataStatus;
+import com.secondzip.backend.report.enums.DetailType;
+import com.secondzip.backend.report.enums.FraudType;
+import com.secondzip.backend.report.enums.RiskLevel;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ChecklistAutoCheckResolverTest {
+
+    // ---------- 헬퍼 ----------
+
+    private static CheckResult check(CheckType type, RiskLevel risk, DataStatus status) {
+        return new CheckResult(type, risk, status, Map.of());
+    }
+
+    private static RiskEvaluationResult evaluation(
+            List<CheckResult> checks,
+            List<DetailResult> details
+    ) {
+        List<FraudTypeResult> fraudTypes = new ArrayList<>();
+        for (FraudType fraudType : FraudType.values()) {
+            List<DetailResult> owned = details.stream()
+                    .filter(d -> d.getDetailType().getParentType() == fraudType)
+                    .collect(Collectors.toList());
+            if (!owned.isEmpty()) {
+                fraudTypes.add(new FraudTypeResult(fraudType, RiskLevel.SAFE, owned));
+            }
+        }
+        return new RiskEvaluationResult(RiskLevel.SAFE, checks, fraudTypes);
+    }
+
+    /** 필수점검 5개 전부 + 세부 9개 전부를 주어진 상태로 채운 판정 결과 */
+    private static RiskEvaluationResult allWith(DataStatus status) {
+        List<CheckResult> checks = Arrays.stream(CheckType.values())
+                .map(t -> check(t, RiskLevel.SAFE, status))
+                .collect(Collectors.toList());
+        List<DetailResult> details = Arrays.stream(DetailType.values())
+                .map(t -> new DetailResult(t, RiskLevel.SAFE, status))
+                .collect(Collectors.toList());
+        return evaluation(checks, details);
+    }
+
+    private static Set<String> contentsOf(List<VerifiedChecklistItem> items) {
+        return items.stream()
+                .map(VerifiedChecklistItem::getContents)
+                .collect(Collectors.toSet());
+    }
+
+    // ---------- 기본 동작 ----------
+
+    @Test
+    @DisplayName("전부 VERIFIED면 규칙에 정의된 항목이 모두 확인 완료로 나온다")
+    void resolvesAllRulesWhenEveryJudgementIsVerified() {
+        List<VerifiedChecklistItem> result =
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
+
+        assertEquals(10, result.size());
+        assertTrue(contentsOf(result).containsAll(Set.of(
+                "등기부등본 확인",
+                "건축물대장 확인",
+                "전세가율 확인",
+                "HUG/HF/SGI 보증보험 가능 여부 확인"
+        )));
+    }
+
+    @Test
+    @DisplayName("외부 API 실패로 UNVERIFIED면 어떤 항목도 자동 체크하지 않는다")
+    void resolvesNothingWhenEveryJudgementIsUnverified() {
+        assertTrue(ChecklistAutoCheckResolver
+                .resolve(allWith(DataStatus.UNVERIFIED)).isEmpty());
+    }
+
+    @Test
+    @DisplayName("해당 없음(NOT_APPLICABLE)은 확인한 것으로 치지 않는다")
+    void resolvesNothingWhenEveryJudgementIsNotApplicable() {
+        assertTrue(ChecklistAutoCheckResolver
+                .resolve(allWith(DataStatus.NOT_APPLICABLE)).isEmpty());
+    }
+
+    // ---------- 핵심 설계 결정 ----------
+
+    @Test
+    @DisplayName("DANGER로 판정됐어도 데이터를 확인했으면 체크된다 - 체크리스트는 안전도가 아니라 확인 여부를 묻는다")
+    void checksItemEvenWhenJudgementIsDangerous() {
+        RiskEvaluationResult evaluation = evaluation(
+                List.of(
+                        check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.DANGER, DataStatus.VERIFIED),
+                        check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.DANGER, DataStatus.VERIFIED)
+                ),
+                List.of()
+        );
+
+        assertTrue(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
+                .contains("등기부등본 확인"));
+    }
+
+    @Test
+    @DisplayName("아파트는 유형별 고유 규칙이 없다 - COMMON과 중복이라 V8에서 제거됨")
+    void hasNoAutoCheckRuleForApartment() {
+        List<VerifiedChecklistItem> result =
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
+
+        assertTrue(result.stream()
+                .noneMatch(item -> item.getCategory() == Category.APARTMENT));
+    }
+
+    @Test
+    @DisplayName("유형별 규칙이 COMMON 규칙과 같은 개념을 덮지 않는다 - 같은 항목이 두 줄로 뜨는 것을 막는다")
+    void hasNoTypeRuleDuplicatingCommonRule() {
+        List<VerifiedChecklistItem> all =
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
+
+        Set<String> common = all.stream()
+                .filter(item -> item.getCategory() == Category.COMMON)
+                .map(VerifiedChecklistItem::getContents)
+                .collect(Collectors.toSet());
+        Set<String> byType = all.stream()
+                .filter(item -> item.getCategory() != Category.COMMON)
+                .map(VerifiedChecklistItem::getContents)
+                .collect(Collectors.toSet());
+
+        assertTrue(common.contains("전세가율 확인"));
+        assertTrue(common.contains("등기부등본 확인"));
+        assertFalse(byType.contains("전세가율"));
+        assertFalse(byType.contains("권리관계 확인"));
+    }
+
+    @Test
+    @DisplayName("근거가 여러 개인 항목은 하나라도 UNVERIFIED면 체크하지 않는다")
+    void requiresEveryUnderlyingJudgementToBeVerified() {
+        RiskEvaluationResult evaluation = evaluation(
+                List.of(
+                        check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.SAFE, DataStatus.VERIFIED),
+                        // 등기부 권리침해만 확인 실패
+                        check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.CAUTION, DataStatus.UNVERIFIED)
+                ),
+                List.of()
+        );
+
+        Set<String> contents = contentsOf(ChecklistAutoCheckResolver.resolve(evaluation));
+        assertFalse(contents.contains("등기부등본 확인"));
+        // 근저당 하나만 필요한 다세대 '공동근저당'은 통과해야 한다
+        assertTrue(contents.contains("공동근저당"));
+    }
+
+    @Test
+    @DisplayName("판정 항목이 아예 누락돼도 체크하지 않는다")
+    void doesNotCheckWhenJudgementIsMissingEntirely() {
+        RiskEvaluationResult evaluation = evaluation(
+                List.of(check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.SAFE, DataStatus.VERIFIED)),
+                List.of()
+        );
+
+        assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
+                .contains("등기부등본 확인"));
+    }
+
+    // ---------- 자동 체크 금지 항목 ----------
+
+    @Test
+    @DisplayName("미래 행위·외부 데이터 없는 항목은 전부 VERIFIED여도 절대 체크하지 않는다")
+    void neverChecksItemsThatCannotBeVerifiedByAnalysis() {
+        Set<String> contents = contentsOf(
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED))
+        );
+
+        assertFalse(contents.contains("잔금 지급 직전 등기부 재확인"));
+        assertFalse(contents.contains("잔금 전 등기부 재확인"));
+        assertFalse(contents.contains("국세·지방세 체납 확인"));
+        assertFalse(contents.contains("국세·지방세 체납"));
+        assertFalse(contents.contains("대리계약 여부"));
+        assertFalse(contents.contains("신탁회사 동의"));
+        assertFalse(contents.contains("전입세대확인서"));
+        assertFalse(contents.contains("확정일자 부여현황"));
+        assertFalse(contents.contains("선순위 임차인 보증금"));
+    }
+
+    @Test
+    @DisplayName("V8에서 제거된 중복 항목은 규칙에도 남아 있지 않다")
+    void hasNoRuleForItemsRemovedInV8() {
+        Set<String> contents = contentsOf(
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED))
+        );
+
+        // V8 삭제분: OFFICETEL/신탁회사 동의, APARTMENT/권리관계 확인,
+        //            APARTMENT/전세가율, MULTI_HOUSEHOLD/전세가율
+        assertFalse(contents.contains("권리관계 확인"));
+        assertFalse(contents.contains("전세가율"));      // COMMON의 '전세가율 확인'과 다른 문자열
+        assertTrue(contents.contains("전세가율 확인"));  // COMMON 쪽은 남아야 한다
+    }
+
+    @Test
+    @DisplayName("다가구는 자동 체크 대상이 없다")
+    void hasNoAutoCheckRuleForMultiFamily() {
+        List<VerifiedChecklistItem> result =
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
+
+        assertTrue(result.stream()
+                .noneMatch(item -> item.getCategory() == Category.MULTI_FAMILY));
+    }
+
+    // ---------- 방어 ----------
+
+    @Test
+    @DisplayName("판정 결과가 null이거나 비어 있어도 터지지 않는다")
+    void toleratesNullAndEmptyInput() {
+        assertTrue(ChecklistAutoCheckResolver.resolve(null).isEmpty());
+        assertTrue(ChecklistAutoCheckResolver
+                .resolve(new RiskEvaluationResult(RiskLevel.SAFE, null, null))
+                .isEmpty());
+        assertTrue(ChecklistAutoCheckResolver
+                .resolve(new RiskEvaluationResult(RiskLevel.SAFE, List.of(), List.of()))
+                .isEmpty());
+    }
+
+    @Test
+    @DisplayName("같은 (category, contents) 조합이 중복 생성되지 않는다")
+    void producesNoDuplicateItems() {
+        List<VerifiedChecklistItem> result =
+                ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
+
+        assertEquals(result.size(), Set.copyOf(result).size());
+    }
+}

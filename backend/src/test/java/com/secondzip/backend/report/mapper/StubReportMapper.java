@@ -1,6 +1,7 @@
 package com.secondzip.backend.report.mapper;
 
 import com.secondzip.backend.report.dto.DetailResult;
+import com.secondzip.backend.report.dto.VerifiedChecklistItem;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -36,6 +37,13 @@ public class StubReportMapper implements ReportMapper {
 
     @Override
     public void insertReportMap(Map<String, Object> params) {
+    }
+
+    @Override
+    public void insertChecklistVerifications(
+            Long analysisReportId,
+            List<VerifiedChecklistItem> items
+    ) {
     }
 
     @Override

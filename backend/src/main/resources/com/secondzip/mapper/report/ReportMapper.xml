@@ -26,6 +26,30 @@
         VALUES (#{fraudTypeId}, #{detailType}, #{riskLevel}, #{dataStatus})
     </insert>
 
+    <!--
+        분석으로 확인 완료된 체크리스트 항목 저장.
+
+        checklist_items 의 PK는 환경마다 값이 달라질 수 있어,
+        UNIQUE (category, contents) 를 자연키로 써서 id 를 찾는다.
+        시드에 없는 (category, contents) 조합은 그냥 0건 매칭되고 끝난다.
+
+        analysis_report_id 는 같은 트랜잭션에서 방금 만든 리포트라
+        UNIQUE (analysis_report_id, checklist_item_id) 충돌이 날 수 없다.
+    -->
+    <insert id="insertChecklistVerifications">
+        INSERT INTO analysis_report_checklist_results
+            (analysis_report_id, checklist_item_id, is_verified)
+        SELECT
+            #{analysisReportId},
+            ci.checklist_item_id,
+            TRUE
+        FROM checklist_items ci
+        WHERE (ci.category, ci.contents) IN
+        <foreach item="item" collection="items" open="(" separator="," close=")">
+            (#{item.category}, #{item.contents})
+        </foreach>
+    </insert>
+
     <!-- 리포트 목록 불러오기  -->
     <select id="findReportsByAccountId" resultType="com.secondzip.backend.report.dto.response.ReportListItem">
         SELECT

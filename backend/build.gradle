@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'war'
+    id 'jacoco'
 
     id 'com.google.protobuf' version '0.9.5'
 }
@@ -25,6 +26,9 @@ ext {
     mybatisSpringVersion = '2.1.2'
     junitVersion = '5.10.2'
     flywayVersion = '12.10.0'
+    mockitoVersion = '5.11.0'
+    assertjVersion = '3.25.3'
+    jacocoVersion = '0.8.12'
 }
 
 tasks.withType(JavaCompile) {
@@ -119,7 +123,16 @@ dependencies {
     testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
     testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"   // @ParameterizedTest
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+
+    // Mockito — 협력 객체가 많은 오케스트레이션 서비스/RedisTemplate 목킹용
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+    // AssertJ — 단언 가독성
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    // MockMvc(standaloneSetup) / MockRestServiceServer 는 위의 spring-test 에 포함되어 있다.
+    testImplementation 'javax.servlet:javax.servlet-api:4.0.1'                   // MockMvc 실행에 필요
 
     //swagger
     implementation 'io.springfox:springfox-swagger2:2.9.2'
@@ -178,6 +191,69 @@ war {
     }
 }
 
+// ===================== 테스트 / 커버리지 =====================
+
+jacoco {
+    toolVersion = jacocoVersion   // Java 17 바이트코드 파싱은 0.8.12+ 필요
+}
+
 test {
     useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
+    }
+    finalizedBy jacocoTestReport  // 테스트가 끝나면 자동으로 리포트 생성
 }
+
+// 커버리지 측정 대상에서 제외할 것 — 로직이 없거나(DTO/설정) 사람이 안 쓴 코드(생성 코드)
+def jacocoExcludes = [
+        '**/dto/**',                          // 순수 데이터 홀더
+        '**/vo/**',                           // MyBatis VO
+        '**/domain/**VO*',
+        '**/config/**',                       // 스프링 설정
+        '**/*Application*',
+        'com/nbp/cdncp/nest/grpc/proto/v1/**', // protobuf/gRPC 생성 코드
+        '**/generated/**',
+        '**/HelloServlet*'
+]
+// enums 는 일부러 제외하지 않는다. RiskLevel.aggregateByCount()/worstOf(),
+// DataStatus 처럼 판정 로직을 가진 enum 이 있어서, 제외하면 정작 측정해야 할 것이 빠진다.
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        html.required = true
+        xml.required = true     // CI 연동 시 필요
+        csv.required = false
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludes)
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludes)
+        }))
+    }
+    violationRules {
+        rule {
+            element = 'PACKAGE'
+            includes = ['com.secondzip.backend.report.service*']
+            limit { counter = 'LINE'; value = 'COVEREDRATIO'; minimum = 0.80 }
+        }
+        rule {
+            element = 'PACKAGE'
+            includes = ['com.secondzip.backend.report.controller']
+            limit { counter = 'LINE'; value = 'COVEREDRATIO'; minimum = 0.70 }
+        }
+    }
+}
+
+// ⚠️ 목표 커버리지에 도달한 뒤에 아래 주석을 해제한다.
+//     지금 켜면 베이스라인에서 build 가 실패한다.
+// check.dependsOn jacocoTestCoverageVerification
