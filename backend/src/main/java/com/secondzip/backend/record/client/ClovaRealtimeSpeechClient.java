@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 //CLOVA와 실제 gRPC 연결을 만들고 요청/응답 스트림을 시작하는 클래스
@@ -50,7 +51,7 @@ public class ClovaRealtimeSpeechClient {
 
     public void start(
             Long recordingSessionId,
-            Consumer<String> transcriptConsumer
+            BiConsumer<Integer, String> transcriptConsumer
     ) {
 
         ManagedChannel channel =
@@ -297,7 +298,7 @@ public class ClovaRealtimeSpeechClient {
     private void handleResponse(
             Long recordingSessionId,
             NestResponse response,
-            Consumer<String> transcriptConsumer
+            BiConsumer<Integer, String> transcriptConsumer
     ) {
 
         try {
@@ -330,15 +331,32 @@ public class ClovaRealtimeSpeechClient {
 
             String text = result.getTranscription().getText();
 
+            Integer position = result.getTranscription().getPosition();
 
-            if (text == null
-                    || text.isBlank()) {
 
+            if (text == null || text.isBlank()) {
                 return;
             }
 
+            if (position == null) {
+                log.warn(
+                        "CLOVA transcription position 없음. recordingSessionId={}, text={}",
+                        recordingSessionId,
+                        text
+                );
+                return;
+            }
 
-            transcriptConsumer.accept(text);
+            log.debug(
+                    "CLOVA transcription. recordingSessionId={}, position={}, seqId={}, text={}",
+                    recordingSessionId,
+                    position,
+                    result.getTranscription().getSeqId(),
+                    text
+            );
+
+
+            transcriptConsumer.accept(position,text);
 
 
         } catch (Exception e) {

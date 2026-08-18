@@ -14,20 +14,19 @@ public class LiveTranscriptionServiceImpl implements LiveTranscriptionService {
     private final LiveChecklistAnalysisAsyncService liveChecklistAnalysisAsyncService;
     private static final int ANALYSIS_THRESHOLD = 300;
     private final ClovaRealtimeSpeechClient clovaRealtimeSpeechClient;
-
     @Override
     public void start(Long recordingSessionId) {
 
         contextManager.get(recordingSessionId);
 
-        clovaRealtimeSpeechClient.start(recordingSessionId,
-                text -> onTranscript(
+        clovaRealtimeSpeechClient.start(
+                recordingSessionId,
+                (position, text) -> onTranscript(
                         recordingSessionId,
+                        position,
                         text
                 )
         );
-
-        // 여기서 CLOVA 실시간 STT 연결 시작
     }
 
     //CLOVA에 byte[] 전송
@@ -52,7 +51,7 @@ public class LiveTranscriptionServiceImpl implements LiveTranscriptionService {
     //CLOVA 응답 callback
     public void onTranscript(
             Long recordingSessionId,
-            String text
+            Integer position, String text
     ) {
 
         LiveRecordingContext context =
@@ -62,7 +61,7 @@ public class LiveTranscriptionServiceImpl implements LiveTranscriptionService {
             return;
         }
 
-        context.appendTranscript(text);
+        context.appendTranscript(position,text);
 
         log.info(
                 "실시간 STT 결과. recordingSessionId={}, text={}",
