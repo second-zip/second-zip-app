@@ -18,7 +18,10 @@ import springfox.documentation.annotations.ApiIgnore;
 import javax.validation.Valid;
 import java.util.List;
 
-@Api(tags = "체크리스트 API")
+@Api(
+        tags = "체크리스트 API",
+        description = "녹음 분석 결과를 기반으로 계약 체크리스트를 생성하고 관리합니다."
+)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/checklists")

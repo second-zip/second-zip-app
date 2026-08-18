@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Api(
-        tags = "지도 - 피해현황 조회 API",
-        description = "시도 및 시군구별 전세사기 피해주택 현황을 조회합니다."
+        tags = "지도 API",
+        description = "전세사기 피해현황 및 전세가격지수 관련 기능을 제공합니다."
 )
 @RestController
 @RequiredArgsConstructor
