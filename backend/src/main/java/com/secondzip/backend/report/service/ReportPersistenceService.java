@@ -7,6 +7,7 @@ import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.FraudTypeResult;
 import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.VerifiedChecklistItem;
 import com.secondzip.backend.report.dto.response.*;
 import com.secondzip.backend.report.mapper.ReportMapper;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,8 @@ public class ReportPersistenceService {
         List<CheckResultView> checkViews = insertCheckResults(reportId, evalResult.getCheckResults());
         // 해당 보고서에 사기 유형과 각 유형의 판단 결과 저장
         List<FraudTypeView> fraudViews = insertFraudTypes(reportId, evalResult.getFraudTypeResults());
+        // 분석으로 이미 확인된 항목을 체크리스트에 넘겨준다
+        insertChecklistVerifications(reportId, evalResult);
 
         return new ReportDetailResponse(
                 reportId, roadAddress, detailAddress, deposit,
@@ -129,6 +132,26 @@ public class ReportPersistenceService {
 
             return new FraudTypeView(f.getFraudType(), f.getRiskLevel(), details);
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 분석 판정으로 확인 완료된 체크리스트 항목을 저장한다.
+     *
+     * 사용자가 나중에 이 리포트로 체크리스트를 만들면
+     * ReportChecklistMapper.insertChecklistItems 가 이 행들을 LEFT JOIN 해서
+     * 해당 항목을 처음부터 체크된 상태로 생성한다.
+     */
+    private void insertChecklistVerifications(Long reportId, RiskEvaluationResult evalResult) {
+        List<VerifiedChecklistItem> verified =
+                ChecklistAutoCheckResolver.resolve(evalResult);
+
+        if (verified.isEmpty()) {
+            log.debug("리포트 {} - 자동 체크할 체크리스트 항목 없음", reportId);
+            return;
+        }
+
+        reportMapper.insertChecklistVerifications(reportId, verified);
+        log.debug("리포트 {} - 체크리스트 자동 체크 {}건", reportId, verified.size());
     }
 
     // 필수 점검 판단 데이터 JSON으로 변경
