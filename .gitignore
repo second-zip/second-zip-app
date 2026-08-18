@@ -140,7 +140,5 @@ logs/
 *.md
 !README.md
 !docs/**/*.md
-
-# 문서 폴더
 /docs/
 /_stage/
