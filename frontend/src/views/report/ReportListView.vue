@@ -66,4 +66,13 @@ onMounted(fetchReports);
   padding: 20px;
   gap: 20px;
 }
+
+@media (min-width: 768px) {
+  .report-list-view {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px clamp(24px, 4vw, 48px) 120px;
+    gap: 28px;
+  }
+}
 </style>

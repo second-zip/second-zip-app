@@ -42,7 +42,7 @@ describe('AnalysisProgressView', () => {
 
   it('mount 시 분석을 시작하고 성공 결과를 replace로 전달한다', async () => {
     const analysisRequest = {
-      roadAddress: '서울특별시 강남구 테헤란로 1',
+      addressId: 'address-id',
       detailAddress: '202동 303호',
       deposit: 250_000_000,
     };

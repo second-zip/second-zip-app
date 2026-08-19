@@ -7,6 +7,7 @@ import MyPageHeader from '@/components/mypage/MyPageHeader.vue';
 import ProfileCard from '@/components/mypage/ProfileCard.vue';
 import { useMyPageDashboard } from '@/composables/mypage/useMyPageDashboard';
 import { MYPAGE_ACTIONS, MYPAGE_ROUTES } from '@/constants/mypage';
+import BottomSheetLayout from '@/layouts/BottomSheetLayout.vue';
 import { useAuthStore } from '@/stores/auth';
 import ArrowIcon from '@/assets/icons/mypage/arrow-gray-14.svg';
 
@@ -36,9 +37,12 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="mypage">
-    <MyPageHeader title="마이페이지" />
-    <div class="mypage__sheet">
+  <BottomSheetLayout class="mypage" :title-ratio="15">
+    <template #header>
+      <MyPageHeader class="w-100" title="마이페이지" />
+    </template>
+
+    <div class="mypage__scroll h-100 overflow-y-auto">
       <ProfileCard :email="account.email" />
       <div class="mypage__divider" />
       <div class="mypage__content">
@@ -72,19 +76,17 @@ const handleLogout = async () => {
         </nav>
       </div>
     </div>
-  </div>
+  </BottomSheetLayout>
 </template>
 
 <style scoped>
 .mypage {
-  min-height: 100%;
-  background: #fff;
+  height: 100%;
   color: #111827;
 }
-.mypage__sheet {
-  overflow: hidden;
-  border-radius: 28px 28px 0 0;
-  background: #fff;
+.mypage__scroll {
+  border-radius: 36px 36px 0 0;
+  overscroll-behavior: contain;
 }
 .mypage__divider {
   height: 1px;
@@ -140,5 +142,16 @@ const handleLogout = async () => {
 .mypage__menu img {
   width: 14px;
   height: 14px;
+}
+
+@media (min-width: 768px) {
+  .mypage__scroll {
+    width: min(100%, 900px);
+    margin: 0 auto;
+  }
+
+  .mypage__content {
+    padding: 28px clamp(24px, 5vw, 48px) 48px;
+  }
 }
 </style>

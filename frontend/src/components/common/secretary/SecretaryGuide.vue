@@ -161,4 +161,13 @@ onBeforeUnmount(clearCollapseTimer);
     max-width: none;
   }
 }
+
+@media (min-width: 768px) {
+  .secretary-guide--floating {
+    bottom: 24px;
+    left: calc(50% + (var(--app-sidebar-width) / 2)) !important;
+    width: min(calc(100% - var(--app-sidebar-width) - 32px), 520px);
+    max-width: 520px;
+  }
+}
 </style>

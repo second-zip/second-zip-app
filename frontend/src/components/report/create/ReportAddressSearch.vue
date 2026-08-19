@@ -137,7 +137,7 @@ watch(
         <template v-else-if="results.length > 0">
           <button
             v-for="(address, index) in results"
-            :key="address.id ?? index"
+            :key="address.addressId ?? index"
             type="button"
             class="address-search__result w-100 border-0 text-start"
             @click="selectAddress(address)"

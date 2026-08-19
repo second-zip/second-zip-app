@@ -77,4 +77,10 @@ onMounted(fetchChecklists);
   overscroll-behavior: contain;
 }
 
+@media (min-width: 768px) {
+  .checklist-sheet-scroll {
+    width: min(100%, 1000px) !important;
+    margin: 0 auto;
+  }
+}
 </style>

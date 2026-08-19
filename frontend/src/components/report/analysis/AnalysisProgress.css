@@ -58,3 +58,10 @@
   color: var(--black-500);
   font-size: 0.875rem;
 }
+
+@media (min-width: 768px) {
+  .analysis-progress {
+    max-width: 640px;
+    padding: 48px clamp(40px, 7vw, 80px);
+  }
+}

@@ -353,4 +353,12 @@ const handleSignup = async () => {
   font-weight: 700;
 }
 
+@media (min-width: 768px) {
+  .signup-box {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 36px 40px;
+  }
+}
+
 </style>

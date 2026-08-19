@@ -127,6 +127,14 @@ const routes = [
             },
           },
           {
+            path: 'shared/:shareToken',
+            name: 'analysis-shared',
+            component: () => import('@/views/report/AnalysisView.vue'),
+            meta: {
+              analysisShared: true,
+            },
+          },
+          {
             path: 'analysis',
             name: 'analysis-create',
             component: () => import('@/views/report/AnalysisView.vue'),

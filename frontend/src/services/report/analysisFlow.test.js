@@ -22,7 +22,7 @@ vi.mock('./analysisAuth', () => ({
 }));
 
 const ANALYSIS_REQUEST = {
-  roadAddress: '서울 강남구 테헤란로 1',
+  addressId: 'address-id',
   detailAddress: '202동 303호',
   deposit: 250_000_000,
 };
@@ -34,7 +34,10 @@ describe('analysis flow service', () => {
     vi.stubEnv('VITE_ANALYSIS_TEST_PHONE_NO', 'TEST_PHONE');
     vi.stubEnv('VITE_ANALYSIS_TEST_USER_NAME', 'TEST_USER');
     getExternalReadiness.mockResolvedValue({ ready: true });
-    createAnalysisRequest.mockResolvedValue({ requestId: 'request-id' });
+    createAnalysisRequest.mockResolvedValue({
+      requestId: 'request-id',
+      roadAddress: '서울 강남구 테헤란로 1',
+    });
     startAnalysisAuth.mockResolvedValue({ status: 'AUTH_PENDING' });
     finishAnalysisAuthentication.mockResolvedValue({ status: 'PROCESSING' });
     completeAnalysis.mockResolvedValue({ analysisReportId: 41 });
@@ -48,7 +51,10 @@ describe('analysis flow service', () => {
 
     await expect(
       executeAnalysisFlow({
-        analysisRequest: ANALYSIS_REQUEST,
+        analysisRequest: {
+          ...ANALYSIS_REQUEST,
+          roadAddress: '서울 강남구 테헤란로 1',
+        },
         authPollIntervalMs: 0,
         onStepStart: (step) => events.push(`start:${step}`),
         onStepComplete: (step) => events.push(`complete:${step}`),
@@ -74,7 +80,10 @@ describe('analysis flow service', () => {
     expect(finishAnalysisAuthentication).toHaveBeenCalledWith(
       expect.objectContaining({
         requestId: 'request-id',
-        analysisRequest: ANALYSIS_REQUEST,
+        analysisRequest: {
+          ...ANALYSIS_REQUEST,
+          roadAddress: '서울 강남구 테헤란로 1',
+        },
       }),
     );
     expect(completeAnalysis).toHaveBeenCalledWith('request-id');

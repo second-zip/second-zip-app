@@ -9,6 +9,16 @@ import FGuideCharacter from './guides/F_GuideCharacter.vue';
 import CFraudTypeCard from './fraud/C_FraudTypeCard.vue';
 import BFraudVideoPlayer from './fraud/B_FraudVideoPlayer.vue';
 
+const authStore = vi.hoisted(() => ({
+  isAuthenticated: false,
+  myPage: null,
+  fetchMyPage: vi.fn(),
+}));
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => authStore,
+}));
+
 const fraudType = {
   id: 'trust-property',
   number: 3,

@@ -3,7 +3,20 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { createReport, getReport } from '@/api/report';
+import {
+  addReportFavorite,
+  createReport,
+  deleteReportFavorite,
+  getReport,
+  getSharedReport,
+  shareReport,
+} from '@/api/report';
+import { createChecklist, getChecklists } from '@/api/checklist';
+import { getApiError } from '@/api/utils/error';
+import FavoriteIcon from '@/assets/icons/report/favorite-blue-18.svg';
+import FavoriteLineIcon from '@/assets/icons/report/favorite-line-18.svg';
+import ReportIcon from '@/assets/icons/report/report-blue-18.svg';
+import ShareIcon from '@/assets/icons/report/share-blue-16.svg';
 import AnalysisContent from '@/components/report/analysis/AnalysisContent.vue';
 import {
   ANALYSIS_REQUEST,
@@ -50,10 +63,15 @@ const activeSecretary = computed(() =>
 );
 const address = ref('서울시 마포구 합정동 123-45');
 const deposit = ref('100000000');
+const currentReportId = ref(null);
 const isFavorite = ref(false);
+const isFavoriteUpdating = ref(false);
+const isSharing = ref(false);
+const isChecklistNavigating = ref(false);
 const showCopyToast = ref(false);
 const isReportLoading = ref(false);
 const reportLoadError = ref('');
+const reportActionError = ref('');
 const checks = ref(DEFAULT_CHECKS);
 const fraudTypes = ref(DEFAULT_FRAUD_TYPES);
 const specialTerms = ref(DEFAULT_SPECIAL_TERMS);
@@ -115,8 +133,10 @@ const rentRatioDisplay = computed(() =>
 const applyReport = (report) => {
   const mapped = mapReportDetail(report);
 
+  currentReportId.value = mapped.analysisReportId ?? null;
   address.value = mapped.address;
   deposit.value = mapped.deposit;
+  isFavorite.value = mapped.favorite;
   secretary.value = mapped.secretary ?? secretary.value;
   checks.value = mapped.checks;
   fraudTypes.value = mapped.fraudTypes;
@@ -147,9 +167,10 @@ const getNavigationReport = (analysisReportId) => {
   };
 };
 
-const loadReport = async (analysisReportId) => {
+const loadReport = async (analysisReportId, shareToken) => {
   isReportLoading.value = true;
   reportLoadError.value = '';
+  reportActionError.value = '';
 
   try {
     if (route.meta.analysisPreview) {
@@ -159,6 +180,11 @@ const loadReport = async (analysisReportId) => {
           : route.params.scenario;
 
       applyReport(ANALYSIS_PREVIEW_REPORTS[scenario] ?? MOCK_REPORT_DETAIL);
+      return;
+    }
+
+    if (route.meta.analysisShared) {
+      applyReport(await getSharedReport(shareToken));
       return;
     }
 
@@ -189,29 +215,128 @@ const loadReport = async (analysisReportId) => {
 };
 
 watch(
-  () => [route.params.analysisReportId, route.params.scenario],
-  ([analysisReportId]) => loadReport(analysisReportId),
+  () => [
+    route.params.analysisReportId,
+    route.params.scenario,
+    route.params.shareToken,
+  ],
+  ([analysisReportId, , shareToken]) =>
+    loadReport(analysisReportId, shareToken),
   { immediate: true },
 );
 
-const sharePage = async () => {
+const copyText = async (text) => {
   try {
-    await navigator.clipboard.writeText(window.location.href);
+    await navigator.clipboard.writeText(text);
   } catch {
     const textarea = document.createElement('textarea');
 
-    textarea.value = window.location.href;
+    textarea.value = text;
     document.body.appendChild(textarea);
     textarea.select();
     document.execCommand('copy');
     textarea.remove();
   }
+};
 
+const showLinkCopiedToast = () => {
   window.clearTimeout(toastTimer);
   showCopyToast.value = true;
   toastTimer = window.setTimeout(() => {
     showCopyToast.value = false;
   }, 2000);
+};
+
+const toggleFavorite = async () => {
+  if (!currentReportId.value || isFavoriteUpdating.value) return;
+
+  isFavoriteUpdating.value = true;
+  reportActionError.value = '';
+  const nextFavorite = !isFavorite.value;
+
+  try {
+    const request = nextFavorite
+      ? addReportFavorite
+      : deleteReportFavorite;
+    await request(currentReportId.value);
+    isFavorite.value = nextFavorite;
+  } catch (error) {
+    logger.error('analysis.toggle-favorite', error, {
+      analysisReportId: currentReportId.value,
+    });
+    reportActionError.value = getApiError(error).message;
+  } finally {
+    isFavoriteUpdating.value = false;
+  }
+};
+
+const sharePage = async () => {
+  if (!currentReportId.value || isSharing.value) return;
+
+  isSharing.value = true;
+  reportActionError.value = '';
+
+  try {
+    const { shareToken } = await shareReport(currentReportId.value);
+    if (!shareToken) throw new Error('Share token is missing');
+
+    const sharePath = router.resolve({
+      name: 'analysis-shared',
+      params: { shareToken },
+    }).href;
+    const shareUrl = new URL(sharePath, window.location.origin).href;
+
+    await copyText(shareUrl);
+    showLinkCopiedToast();
+  } catch (error) {
+    logger.error('analysis.share-report', error, {
+      analysisReportId: currentReportId.value,
+    });
+    reportActionError.value = getApiError(error).message;
+  } finally {
+    isSharing.value = false;
+  }
+};
+
+const goToReportList = () => router.push({ name: 'report-list' });
+
+const openChecklist = async () => {
+  if (!currentReportId.value || isChecklistNavigating.value) return;
+
+  isChecklistNavigating.value = true;
+  reportActionError.value = '';
+
+  try {
+    const checklists = await getChecklists();
+    const currentChecklist = Array.isArray(checklists)
+      ? checklists.find(
+          ({ analysisReportId }) =>
+            String(analysisReportId) === String(currentReportId.value),
+        )
+      : null;
+    const hasChecklist = Boolean(
+      currentChecklist?.checklistCreated &&
+        currentChecklist?.reportChecklistId,
+    );
+    const createdChecklist = hasChecklist
+      ? currentChecklist
+      : await createChecklist(currentReportId.value);
+    const reportChecklistId = createdChecklist?.reportChecklistId;
+
+    if (!reportChecklistId) throw new Error('Checklist id is missing');
+
+    await router.push({
+      name: 'checklist-detail',
+      params: { reportChecklistId },
+    });
+  } catch (error) {
+    logger.error('analysis.open-checklist', error, {
+      analysisReportId: currentReportId.value,
+    });
+    reportActionError.value = getApiError(error).message;
+  } finally {
+    isChecklistNavigating.value = false;
+  }
 };
 
 onBeforeUnmount(() => window.clearTimeout(toastTimer));
@@ -223,43 +348,40 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
       class="address-bar d-flex align-items-center justify-content-between"
     >
       <div class="address d-flex align-items-center min-w-0">
-        <svg
+        <img
+          :src="ReportIcon"
           class="address-icon flex-shrink-0"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M7 3h8l4 4v14H7zM15 3v5h4M10 12h6M10 16h6" />
-        </svg>
+          alt=""
+        />
         <h1 class="text-truncate mb-0">{{ address }}</h1>
       </div>
 
-      <div class="header-actions d-flex flex-shrink-0">
+      <div
+        v-if="!route.meta.analysisShared"
+        class="header-actions d-flex flex-shrink-0"
+      >
         <button
           class="icon-button favorite-button"
           :class="{ active: isFavorite }"
           type="button"
+          :disabled="isFavoriteUpdating || !currentReportId"
           :aria-pressed="isFavorite"
           :aria-label="isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'"
-          @click="isFavorite = !isFavorite"
+          @click="toggleFavorite"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="m12 3.5 2.63 5.33 5.88.85-4.25 4.15 1 5.85L12 16.91l-5.26 2.77 1-5.85-4.25-4.15 5.88-.85z"
-            />
-          </svg>
+          <img
+            :src="isFavorite ? FavoriteIcon : FavoriteLineIcon"
+            alt=""
+          />
         </button>
         <button
           class="icon-button share-button"
           type="button"
-          aria-label="현재 페이지 링크 복사"
+          :disabled="isSharing || !currentReportId"
+          aria-label="리포트 공유 링크 복사"
           @click="sharePage"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="18" cy="5" r="2.25" />
-            <circle cx="6" cy="12" r="2.25" />
-            <circle cx="18" cy="19" r="2.25" />
-            <path d="m8 11 8-5M8 13l8 5" />
-          </svg>
+          <img :src="ShareIcon" alt="" />
         </button>
       </div>
     </header>
@@ -272,7 +394,15 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
       class="report-feedback report-feedback--error"
     >
       <span>{{ reportLoadError }}</span>
-      <button type="button" @click="loadReport(route.params.analysisReportId)">
+      <button
+        type="button"
+        @click="
+          loadReport(
+            route.params.analysisReportId,
+            route.params.shareToken,
+          )
+        "
+      >
         다시 시도
       </button>
     </div>
@@ -301,7 +431,38 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
       :special-terms
       :special-terms-notice="SPECIAL_TERMS_NOTICE"
       :default-secretary-image
-    />
+    >
+      <div
+        v-if="!route.meta.analysisShared"
+        class="result-actions"
+        aria-label="분석 결과 다음 동작"
+      >
+        <p
+          v-if="reportActionError"
+          class="result-actions__error"
+          role="alert"
+        >
+          {{ reportActionError }}
+        </p>
+        <div class="result-actions__buttons d-grid">
+          <button
+            type="button"
+            class="result-actions__button result-actions__button--secondary"
+            @click="goToReportList"
+          >
+            목록 보기
+          </button>
+          <button
+            type="button"
+            class="result-actions__button result-actions__button--primary"
+            :disabled="isChecklistNavigating || !currentReportId"
+            @click="openChecklist"
+          >
+            {{ isChecklistNavigating ? '확인 중...' : '체크리스트 확인' }}
+          </button>
+        </div>
+      </div>
+    </AnalysisContent>
 
     <aside class="legal-notices" aria-label="분석 결과 이용 시 유의사항">
       <p>{{ ANALYSIS_AND_CHECKLIST_NOTICE }}</p>
@@ -358,6 +519,48 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
   line-height: 1.6;
 }
 
+.result-actions {
+  width: min(12rem, 100%);
+  margin-top: 2rem;
+}
+
+.result-actions__buttons {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.result-actions__button {
+  min-height: 3rem;
+  padding: 0.75rem;
+  border: 0.0625rem solid var(--blue-700);
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.result-actions__button--secondary {
+  color: var(--blue-700);
+  background: white;
+}
+
+.result-actions__button--primary {
+  color: white;
+  background: var(--blue-700);
+}
+
+.result-actions__button:disabled,
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.result-actions__error {
+  margin: 0 0 0.75rem;
+  color: var(--red-500);
+  font-size: 0.75rem;
+  text-align: left;
+}
+
 .legal-notices p {
   margin: 0;
 }
@@ -402,11 +605,6 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
 .address-icon {
   width: 1.125rem;
   height: 1.125rem;
-  fill: none;
-  stroke: var(--blue-900);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.7;
 }
 
 .header-actions {
@@ -424,29 +622,16 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
   border-radius: 0.875rem;
 }
 
-.icon-button svg {
+.icon-button img {
+  display: block;
   width: 100%;
   height: 100%;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
+  object-fit: contain;
 }
 
 .icon-button.active {
-  color: white;
-  background: var(--blue-900);
-  border-color: var(--blue-900);
-}
-
-.icon-button.active svg {
-  fill: currentColor;
-}
-
-.favorite-button svg,
-.share-button svg {
-  transform: translateY(-0.125rem);
+  background: var(--blue-100);
+  border-color: var(--blue-700);
 }
 
 .copy-toast {
@@ -469,5 +654,18 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
+}
+
+@media (min-width: 768px) {
+  .analysis-page {
+    max-width: 900px;
+    min-height: 100%;
+    padding: 0 clamp(16px, 3vw, 40px) 32px;
+  }
+
+  .copy-toast {
+    bottom: 2rem;
+    left: calc(50% + (var(--app-sidebar-width) / 2)) !important;
+  }
 }
 </style>

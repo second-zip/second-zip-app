@@ -25,7 +25,7 @@ const setDemoAuthEnv = () => {
 };
 
 const TEST_ANALYSIS_REQUEST = Object.freeze({
-  roadAddress: '서울특별시 강남구 테헤란로 1',
+  addressId: 'address-id',
   detailAddress: '202동 303호',
   deposit: 250_000_000,
 });
@@ -50,6 +50,7 @@ describe('useAnalysisFlow', () => {
     });
     apiMocks.createAnalysisRequest.mockResolvedValue({
       requestId: 'request-from-response',
+      roadAddress: '서울특별시 강남구 테헤란로 1',
     });
     apiMocks.startAnalysisAuth.mockResolvedValue({
       requestId: 'request-from-response',

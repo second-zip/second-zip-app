@@ -66,7 +66,7 @@ export const shareReport = async (analysisReportId) => {
 
 // API 명세서 기준: 공유된 분석 보고서 조회
 export const getSharedReport = async (shareToken) => {
-  const response = await api.get(`/shared/${shareToken}`);
+  const response = await api.get(`/analysis-reports/shared/${shareToken}`);
 
   return response.data;
 };

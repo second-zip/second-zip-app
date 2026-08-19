@@ -28,7 +28,11 @@ describe('report API', () => {
   test.each([
     [getReports, [], '/analysis-reports'],
     [getReport, [7], '/analysis-reports/7'],
-    [getSharedReport, ['token'], '/shared/token'],
+    [
+      getSharedReport,
+      ['token'],
+      '/analysis-reports/shared/token',
+    ],
   ])('GET 요청의 data를 반환한다', async (request, args, url) => {
     await expect(request(...args)).resolves.toEqual({ ok: true });
     expect(api.get).toHaveBeenCalledWith(url);

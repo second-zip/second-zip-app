@@ -77,4 +77,12 @@ onMounted(detail.fetchChecklist);
   padding: 20px 20px 112px;
   overscroll-behavior: contain;
 }
+
+@media (min-width: 768px) {
+  .checklist-detail-view {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px clamp(24px, 5vw, 56px) 128px;
+  }
+}
 </style>

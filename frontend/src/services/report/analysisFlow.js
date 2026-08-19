@@ -33,6 +33,10 @@ export const executeAnalysisFlow = async ({
     requestResponse?.requestId,
     '분석 요청 정보를 확인하지 못했습니다.',
   );
+  const authSelectionRequest = {
+    ...requestPayload,
+    roadAddress: requestResponse?.roadAddress ?? '',
+  };
   onStepComplete(2);
 
   onStepStart(3);
@@ -45,7 +49,7 @@ export const executeAnalysisFlow = async ({
     initialResponse: startAuthResponse,
     requestId,
     authPayload,
-    analysisRequest: requestPayload,
+    analysisRequest: authSelectionRequest,
     pollIntervalMs: authPollIntervalMs,
   });
   onStepComplete(4);
