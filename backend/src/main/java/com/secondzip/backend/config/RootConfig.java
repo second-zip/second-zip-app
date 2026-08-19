@@ -14,6 +14,7 @@ import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.bind.annotation.RestController;
 
 
@@ -22,6 +23,7 @@ import javax.sql.DataSource;
 @Import(RestTemplateConfig.class)
 @Configuration
 @EnableScheduling
+@EnableTransactionManagement
 @Log4j2
 @MapperScan(
         basePackages = "com.secondzip.backend",
