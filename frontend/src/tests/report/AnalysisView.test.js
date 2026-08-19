@@ -39,7 +39,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/report', () => ({
   addReportFavorite: mocks.addReportFavorite,
-  createReport: vi.fn(),
   deleteReportFavorite: mocks.deleteReportFavorite,
   getReport: mocks.getReport,
   getSharedReport: mocks.getSharedReport,
