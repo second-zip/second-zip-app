@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -25,11 +26,8 @@ public class JeonsePriceServiceImpl
     private final RegionMapper regionMapper;
 
     @Override
-    public JeonsePriceMapResponse getJeonsePrices(
-            YearMonth baseMonth,
-            RegionLevel regionLevel,
-            String parentRegionCode
-    ) {
+    public JeonsePriceMapResponse getJeonsePrices(RegionLevel regionLevel, String parentRegionCode) {
+        YearMonth baseMonth = getLatestBaseMonth();
         List<JeonsePriceRegionVO> regions;
 
         if (regionLevel == RegionLevel.SIDO) {
@@ -52,6 +50,19 @@ public class JeonsePriceServiceImpl
                 regionLevel,
                 regionLevel == RegionLevel.SIGUNGU ? parentRegionCode : null, regions
         );
+    }
+
+    private YearMonth getLatestBaseMonth() {
+        LocalDate latestBaseMonth = jeonsePriceMapper.selectLatestBaseMonth();
+
+        if (latestBaseMonth == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "전세가격지수 데이터가 존재하지 않습니다."
+            );
+        }
+
+        return YearMonth.from(latestBaseMonth);
     }
 
     private void validateParentRegionCode(String parentRegionCode) {
