@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 name: secondzip
 
@@ -13,11 +13,11 @@ services:
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - '3306:3306'
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,11 +27,11 @@ services:
     container_name: secondzip-redis
     restart: always
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,13 +55,24 @@ services:
       REDIS_PORT: 6379
 
     ports:
-      - "8080:8080"
+      - '8080:8080'
 
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # ==========================
+  # Frontend
+  # ==========================
+  frontend:
+    image: ghcr.io/second-zip/second-zip-frontend:latest
+    container_name: secondzip-frontend
+    restart: always
+
+    ports:
+      - '80:80'
 
 volumes:
   mysql-data:
