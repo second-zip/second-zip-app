@@ -137,10 +137,7 @@ const routes = [
           {
             path: 'analysis',
             name: 'analysis-create',
-            component: () => import('@/views/report/AnalysisView.vue'),
-            meta: {
-              requiresAuth: true,
-            },
+            redirect: { name: 'report-create' },
           },
           {
             path: 'analysis/:analysisReportId(\\d+)',
@@ -154,9 +151,7 @@ const routes = [
       },
       {
         path: 'analysis',
-        redirect: {
-          name: 'analysis-create',
-        },
+        redirect: { name: 'report-create' },
       },
       {
         path: 'analysis/:analysisReportId(\\d+)',

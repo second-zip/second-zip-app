@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import api from './instance';
 import {
   addReportFavorite,
-  createReport,
   deleteReport,
   deleteReportFavorite,
-  generateAiMessages,
   getReport,
   getReports,
   getSharedReport,
@@ -40,8 +38,6 @@ describe('report API', () => {
 
   test.each([
     [addReportFavorite, [7], '/analysis-reports/7/favorite', undefined],
-    [createReport, [{ deposit: 1 }], '/analysis-reports/analyze', { deposit: 1 }],
-    [generateAiMessages, [7], '/analysis-reports/7/ai-generate-messages', undefined],
     [shareReport, [7], '/analysis-reports/7/share', undefined],
   ])('POST 요청의 data를 반환한다', async (request, args, url, body) => {
     await expect(request(...args)).resolves.toEqual({ ok: true });

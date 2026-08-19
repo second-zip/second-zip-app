@@ -57,13 +57,13 @@ describe('analysis report API', () => {
       2,
       '/analysis-reports/requests/request-id/auth/start',
       authPayload,
-      { timeout: 60_000 },
+      { timeout: 300_000 },
     );
     expect(api.post).toHaveBeenNthCalledWith(
       3,
       '/analysis-reports/requests/request-id/auth/continue',
       continuePayload,
-      { timeout: 60_000 },
+      { timeout: 300_000 },
     );
   });
 
@@ -76,19 +76,19 @@ describe('analysis report API', () => {
       1,
       '/analysis-reports/requests/request-id/complete',
       undefined,
-      { timeout: 120_000 },
+      { timeout: 300_000 },
     );
     expect(api.post).toHaveBeenNthCalledWith(
       2,
       '/analysis-reports/requests/request-id/retry',
       undefined,
-      { timeout: 120_000 },
+      { timeout: 300_000 },
     );
     expect(api.post).toHaveBeenNthCalledWith(
       3,
       '/analysis-reports/41/special-terms',
       undefined,
-      { timeout: 120_000 },
+      { timeout: 300_000 },
     );
   });
 });
