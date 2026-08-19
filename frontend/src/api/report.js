@@ -32,22 +32,6 @@ export const deleteReportFavorite = async (analysisReportId) => {
   return response.data;
 };
 
-// Swagger 기준: 전세 위험도 분석 보고서 생성
-export const createReport = async (reportData) => {
-  const response = await api.post('/analysis-reports/analyze', reportData);
-
-  return response.data;
-};
-
-// API 명세서 기준: 분석 보고서 AI 메시지 생성
-export const generateAiMessages = async (analysisReportId) => {
-  const response = await api.post(
-    `/analysis-reports/${analysisReportId}/ai-generate-messages`,
-  );
-
-  return response.data;
-};
-
 // Swagger 기준: 분석 보고서 삭제
 export const deleteReport = async (analysisReportId) => {
   const response = await api.delete(`/analysis-reports/${analysisReportId}`);

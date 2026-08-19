@@ -5,7 +5,6 @@ import { useRoute, useRouter } from 'vue-router';
 
 import {
   addReportFavorite,
-  createReport,
   deleteReportFavorite,
   getReport,
   getSharedReport,
@@ -19,7 +18,6 @@ import ReportIcon from '@/assets/icons/report/report-blue-18.svg';
 import ShareIcon from '@/assets/icons/report/share-blue-16.svg';
 import AnalysisContent from '@/components/report/analysis/AnalysisContent.vue';
 import {
-  ANALYSIS_REQUEST,
   DEFAULT_CHECKS,
   DEFAULT_FRAUD_TYPES,
   DEFAULT_SECRETARY_IMAGES,
@@ -191,19 +189,9 @@ const loadReport = async (analysisReportId, shareToken) => {
     const navigationReport = analysisReportId
       ? getNavigationReport(analysisReportId)
       : null;
-    const report =
-      navigationReport ??
-      (analysisReportId
-        ? await getReport(analysisReportId)
-        : await createReport(ANALYSIS_REQUEST));
+    const report = navigationReport ?? await getReport(analysisReportId);
 
     applyReport(report);
-    if (!analysisReportId) {
-      await router.replace({
-        name: 'analysis',
-        params: { analysisReportId: report.analysisReportId },
-      });
-    }
   } catch (error) {
     logger.error('analysis.load-report', error, {
       analysisReportId,
