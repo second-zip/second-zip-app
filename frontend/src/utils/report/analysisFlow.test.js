@@ -44,20 +44,20 @@ describe('analysis flow utilities', () => {
   it('실제 분석 요청을 정규화하고 deposit을 숫자로 변환한다', () => {
     expect(
       normalizeAnalysisRequest({
-        roadAddress: '  서울 강남구  ',
+        addressId: '  address-id  ',
         detailAddress: ' 101동 1203호 ',
         deposit: '100000000',
       }),
     ).toEqual({
-      roadAddress: '서울 강남구',
+      addressId: 'address-id',
       detailAddress: '101동 1203호',
       deposit: 100_000_000,
     });
   });
 
   it.each([
-    [{ roadAddress: '', detailAddress: '', deposit: 1 }],
-    [{ roadAddress: '서울', detailAddress: '', deposit: 'not-a-number' }],
+    [{ addressId: '', detailAddress: '', deposit: 1 }],
+    [{ addressId: 'address-id', detailAddress: '', deposit: 'not-a-number' }],
   ])('잘못된 분석 요청 %j을 거부한다', (request) => {
     expect(() => normalizeAnalysisRequest(request)).toThrowError(
       '입력한 분석 정보를 확인해주세요.',

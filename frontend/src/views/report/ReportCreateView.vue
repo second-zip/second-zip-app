@@ -17,12 +17,7 @@ const appendAddressUnit = (value = '', unit) => {
 };
 
 const createAnalysisRequest = (formData) => ({
-  roadAddress: String(
-    formData.address?.roadAddress ||
-      formData.address?.jibunAddress ||
-      formData.addressKeyword ||
-      '',
-  ).trim(),
+  addressId: String(formData.address?.addressId ?? '').trim(),
   detailAddress: [
     appendAddressUnit(formData.dong, '동'),
     appendAddressUnit(formData.ho, '호'),
@@ -88,5 +83,17 @@ const handleSubmit = async (formData) => {
 
 .report-create-view__body::-webkit-scrollbar {
   display: none;
+}
+
+@media (min-width: 768px) {
+  .report-create-view {
+    padding: 32px clamp(24px, 5vw, 64px);
+  }
+
+  .report-create-view__body {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
 }
 </style>

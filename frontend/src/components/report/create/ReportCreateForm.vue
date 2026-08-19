@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue';
 import PlusIcon from '@/assets/icons/report/plus-white-14.svg';
 import PlusDisableIcon from '@/assets/icons/report/plus-gray-14.svg';
 
-import { KAKAO_API_KEY_MISSING_ERROR, searchKakaoAddress } from '@/api/address';
+import { searchAddresses } from '@/api/address';
 import ReportCreateBox from '@/components/report/ReportCreateBox.vue';
 import ReportAddressSearch from './ReportAddressSearch.vue';
 import ReportDetailAddressInput from './ReportDetailAddressInput.vue';
@@ -40,7 +40,7 @@ const handleSearchAddress = async (query) => {
   addressErrorMessage.value = '';
 
   try {
-    const results = await searchKakaoAddress(keyword);
+    const results = await searchAddresses(keyword);
 
     if (requestId === addressSearchRequestId) {
       addressResults.value = results;
@@ -49,10 +49,7 @@ const handleSearchAddress = async (query) => {
     if (requestId !== addressSearchRequestId) return;
 
     addressResults.value = [];
-    addressErrorMessage.value =
-      error?.code === KAKAO_API_KEY_MISSING_ERROR
-        ? '주소 검색 설정을 확인해주세요.'
-        : '주소를 검색하지 못했습니다.';
+    addressErrorMessage.value = '주소를 검색하지 못했습니다.';
   } finally {
     if (requestId === addressSearchRequestId) {
       isAddressLoading.value = false;
@@ -77,7 +74,9 @@ const validateDeposit = (value) =>
   Number.isFinite(Number(value)) && Number(value) > 0;
 
 const validateReport = computed(() => {
-  return selectedAddress.value !== null && validateDeposit(deposit.value);
+  return (
+    Boolean(selectedAddress.value?.addressId) && validateDeposit(deposit.value)
+  );
 });
 
 watch(addressKeyword, (value) => {

@@ -36,12 +36,12 @@ export const getAnalysisAuthPayload = () => {
 
 export const normalizeAnalysisRequest = (analysisRequest) => {
   const payload = {
-    roadAddress: analysisRequest?.roadAddress?.trim() ?? '',
+    addressId: analysisRequest?.addressId?.trim() ?? '',
     detailAddress: analysisRequest?.detailAddress?.trim() ?? '',
     deposit: Number(analysisRequest?.deposit),
   };
 
-  if (!payload.roadAddress || !Number.isFinite(payload.deposit)) {
+  if (!payload.addressId || !Number.isFinite(payload.deposit)) {
     throw createAnalysisFlowError('입력한 분석 정보를 확인해주세요.');
   }
 

@@ -25,6 +25,7 @@ describe('ReportCreateView', () => {
 
     wrapper.getComponent(ReportCreateForm).vm.$emit('submit', {
       address: {
+        addressId: 'address-id',
         roadAddress: '서울특별시 강남구 테헤란로 1',
         jibunAddress: '서울특별시 강남구 역삼동 1',
       },
@@ -41,7 +42,7 @@ describe('ReportCreateView', () => {
       name: 'analysis-progress',
       state: {
         analysisRequest: {
-          roadAddress: '서울특별시 강남구 테헤란로 1',
+          addressId: 'address-id',
           detailAddress: '202동 303호',
           deposit: 250_000_000,
         },
@@ -49,51 +50,29 @@ describe('ReportCreateView', () => {
     });
   });
 
-  it.each([
-    [
-      {
-        address: { roadAddress: '', jibunAddress: '서울 역삼동 1' },
-        addressKeyword: '무시됨',
-        dong: '',
-        ho: '303',
-        deposit: 10_000,
-        validateReport: true,
-      },
-      {
-        roadAddress: '서울 역삼동 1',
-        detailAddress: '303호',
-        deposit: 100_000_000,
-      },
-    ],
-    [
-      {
-        address: null,
-        addressKeyword: '  사용자 입력 주소  ',
-        dong: '101동',
-        ho: '',
-        deposit: 5_000,
-        validateReport: true,
-      },
-      {
-        roadAddress: '사용자 입력 주소',
-        detailAddress: '101동',
-        deposit: 50_000_000,
-      },
-    ],
-  ])('도로명이 없을 때 fallback 주소와 선택 동/호만 전달한다', async (
-    formData,
-    analysisRequest,
-  ) => {
+  it('선택한 주소의 addressId와 입력한 호수만 전달한다', async () => {
     const wrapper = mount(ReportCreateView, {
       global: { stubs: { RouterLink: true } },
     });
 
-    wrapper.getComponent(ReportCreateForm).vm.$emit('submit', formData);
+    wrapper.getComponent(ReportCreateForm).vm.$emit('submit', {
+      address: { addressId: 'address-id' },
+      dong: '',
+      ho: '303',
+      deposit: 10_000,
+      validateReport: true,
+    });
     await flushPromises();
 
     expect(router.push).toHaveBeenCalledWith({
       name: 'analysis-progress',
-      state: { analysisRequest },
+      state: {
+        analysisRequest: {
+          addressId: 'address-id',
+          detailAddress: '303호',
+          deposit: 100_000_000,
+        },
+      },
     });
   });
 
@@ -108,8 +87,7 @@ describe('ReportCreateView', () => {
       global: { stubs: { RouterLink: true } },
     });
     const payload = {
-      address: null,
-      addressKeyword: '서울',
+      address: { addressId: 'address-id' },
       dong: '',
       ho: '',
       deposit: 1,

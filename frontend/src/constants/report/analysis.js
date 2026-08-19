@@ -35,7 +35,7 @@ export const DEFAULT_CHECKS = [
   // 필수 점검 3: 건축물 용도
   {
     id: 'residential',
-    label: '주거용건축물',
+    label: '주거용 건축물',
     status: 'safe',
     basis: '건축물대장 기준 주거용 용도 확인',
     amount: '주거용',
@@ -43,7 +43,7 @@ export const DEFAULT_CHECKS = [
   // 필수 점검 4: HUG 보증보험 가입 가능 여부
   {
     id: 'hug',
-    label: 'HUG가입가능여부',
+    label: 'HUG 가입 가능 여부',
     status: 'safe',
     basis: '입력 정보 기준 보증 가입 가능 범위',
     amount: '가입 가능',
@@ -51,7 +51,7 @@ export const DEFAULT_CHECKS = [
   // 필수 점검 5: 압류 등 권리침해 여부
   {
     id: 'rights',
-    label: '권리침해여부',
+    label: '권리침해 여부',
     status: 'danger',
     basis: '등기부등본상 권리침해 항목 확인 필요',
     amount: '확인 필요',
