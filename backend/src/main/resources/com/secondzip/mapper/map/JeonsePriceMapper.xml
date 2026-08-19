@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.secondzip.backend.map.jeonseprice.mapper.JeonsePriceMapper">
+
+
+    <insert
+            id="upsertJeonsePriceIndex"
+            parameterType="com.secondzip.backend.map.jeonseprice.domain.JeonsePriceIndexVO">
+
+        INSERT INTO jeonse_price_indices (
+            region_id,
+            base_month,
+            price_index,
+            change_rate
+        )
+        SELECT
+            region.region_id,
+            #{baseMonth},
+            #{priceIndex},
+            #{changeRate}
+        FROM regions region
+        WHERE region.region_code = #{regionCode}
+
+            ON DUPLICATE KEY UPDATE
+                                 price_index = VALUES(price_index),
+                                 change_rate = VALUES(change_rate)
+
+    </insert>
+
+    <resultMap
+            id="sigunguRegionMappingResultMap"
+            type="com.secondzip.backend.map.jeonseprice.domain.SigunguRegionMappingVO">
+
+        <result
+                property="regionCode"
+                column="region_code"/>
+
+        <result
+                property="regionName"
+                column="region_name"/>
+
+        <result
+                property="parentRegionCode"
+                column="parent_region_code"/>
+
+    </resultMap>
+
+    <select
+            id="selectAllSigunguRegions"
+            resultMap="sigunguRegionMappingResultMap">
+
+        SELECT
+            child.region_code,
+            child.region_name,
+            parent.region_code AS parent_region_code
+        FROM regions child
+
+                 INNER JOIN regions parent
+                            ON parent.region_id = child.parent_region_id
+
+        WHERE child.region_level = 'SIGUNGU'
+          AND parent.region_level = 'SIDO'
+
+        ORDER BY child.region_code
+
+    </select>
+
+    <resultMap
+            id="jeonsePriceRegionResultMap"
+            type="com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegionVO">
+
+        <result
+                property="regionCode"
+                column="region_code"/>
+
+        <result
+                property="regionName"
+                column="region_name"/>
+
+        <result
+                property="priceIndex"
+                column="price_index"/>
+
+        <result
+                property="changeRate"
+                column="change_rate"/>
+
+    </resultMap>
+
+    <select
+            id="selectSidoJeonsePrices"
+            resultMap="jeonsePriceRegionResultMap">
+
+        SELECT
+            region.region_code,
+            region.region_name,
+            price.price_index,
+            price.change_rate
+
+        FROM regions region
+
+                 LEFT JOIN jeonse_price_indices price
+                           ON price.region_id = region.region_id
+                               AND price.base_month = #{baseMonth}
+
+        WHERE region.region_level = 'SIDO'
+
+        ORDER BY region.region_code
+
+    </select>
+
+    <select
+            id="selectSigunguJeonsePrices"
+            resultMap="jeonsePriceRegionResultMap">
+
+        SELECT
+            child.region_code,
+            child.region_name,
+
+            CASE
+                WHEN parent.region_code = '36'
+                    THEN COALESCE(
+                        child_price.price_index,
+                        parent_price.price_index
+                         )
+                ELSE child_price.price_index
+                END AS price_index,
+
+            CASE
+                WHEN parent.region_code = '36'
+                    THEN COALESCE(
+                        child_price.change_rate,
+                        parent_price.change_rate
+                         )
+                ELSE child_price.change_rate
+                END AS change_rate
+
+        FROM regions child
+
+                 INNER JOIN regions parent
+                            ON parent.region_id = child.parent_region_id
+
+                 LEFT JOIN jeonse_price_indices child_price
+                           ON child_price.region_id = child.region_id
+                               AND child_price.base_month = #{baseMonth}
+
+                 LEFT JOIN jeonse_price_indices parent_price
+                           ON parent_price.region_id = parent.region_id
+                               AND parent_price.base_month = #{baseMonth}
+
+        WHERE child.region_level = 'SIGUNGU'
+          AND parent.region_code = #{parentRegionCode}
+
+        ORDER BY child.region_code
+
+    </select>
+
+    <select
+            id="countSidoJeonsePriceIndicesByMonth"
+            resultType="int">
+
+        SELECT COUNT(*)
+        FROM jeonse_price_indices price
+
+                 INNER JOIN regions region
+                            ON region.region_id = price.region_id
+
+        WHERE price.base_month = #{baseMonth}
+          AND region.region_level = 'SIDO'
+
+    </select>
+
+</mapper>

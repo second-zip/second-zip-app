@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.secondzip.backend.report.mapper.ReportMapper">
+
+    <insert id="insertReportMap" useGeneratedKeys="true" keyProperty="reportId" keyColumn="analysis_report_id" parameterType="map">
+        INSERT INTO analysis_reports
+        (account_id, request_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level,
+         housing_category, is_trust_property)
+        VALUES
+            (#{accountId}, #{requestId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{result},
+             #{housingCategory, jdbcType=VARCHAR}, #{trustProperty})
+    </insert>
+
+    <insert id="insertCheckResult" parameterType="map">
+        INSERT INTO report_check_results (analysis_report_id, check_type, risk_level, data_status, evidence)
+        VALUES (#{reportId}, #{checkType}, #{riskLevel}, #{dataStatus}, #{evidenceJson, jdbcType=VARCHAR})
+    </insert>
+
+    <insert id="insertFraudTypeMap" useGeneratedKeys="true" keyProperty="fraudTypeId" keyColumn="report_fraud_type_id" parameterType="map">
+        INSERT INTO report_fraud_types (analysis_report_id, fraud_type, risk_level)
+        VALUES (#{reportId}, #{fraudType}, #{riskLevel})
+    </insert>
+
+    <insert id="insertDetailResult">
+        INSERT INTO report_fraud_detail_results (report_fraud_type_id, detail_type, risk_level, data_status)
+        VALUES (#{fraudTypeId}, #{detailType}, #{riskLevel}, #{dataStatus})
+    </insert>
+
+    <!--
+        분석으로 확인 완료된 체크리스트 항목 저장.
+
+        checklist_items 의 PK는 환경마다 값이 달라질 수 있어,
+        UNIQUE (category, contents) 를 자연키로 써서 id 를 찾는다.
+        시드에 없는 (category, contents) 조합은 그냥 0건 매칭되고 끝난다.
+
+        analysis_report_id 는 같은 트랜잭션에서 방금 만든 리포트라
+        UNIQUE (analysis_report_id, checklist_item_id) 충돌이 날 수 없다.
+    -->
+    <insert id="insertChecklistVerifications">
+        INSERT INTO analysis_report_checklist_results
+            (analysis_report_id, checklist_item_id, is_verified)
+        SELECT
+            #{analysisReportId},
+            ci.checklist_item_id,
+            TRUE
+        FROM checklist_items ci
+        WHERE (ci.category, ci.contents) IN
+        <foreach item="item" collection="items" open="(" separator="," close=")">
+            (#{item.category}, #{item.contents})
+        </foreach>
+    </insert>
+
+    <!-- 리포트 목록 불러오기  -->
+    <select id="findReportsByAccountId" resultType="com.secondzip.backend.report.dto.response.ReportListItem">
+        SELECT
+            analysis_report_id AS analysisReportId,
+            road_address AS roadAddress,
+            detail_address AS detailAddress,
+            risk_level AS result,
+            favorite,
+            favorited_at AS favoritedAt,
+            created_at AS createdAt
+        FROM analysis_reports
+        WHERE account_id = #{accountId}
+        ORDER BY favorite DESC, favorited_at DESC, created_at DESC
+            LIMIT 20
+    </select>
+
+    <!--  리포트 목록 개수 가져오기  -->
+    <select id="countReportsByAccountId" resultType="int">
+        SELECT COUNT(*) FROM analysis_reports WHERE account_id = #{accountId}
+    </select>
+
+    <!--  리포트 상세 조회용  -->
+    <select id="findReportIdByRequestId" resultType="java.lang.Long">
+        SELECT analysis_report_id
+        FROM analysis_reports
+        WHERE account_id = #{accountId}
+          AND request_id = #{requestId}
+    </select>
+
+    <select id="findCheckResultsByReportId" resultType="map">
+        SELECT
+            check_type AS checkType,
+            risk_level AS riskLevel,
+            data_status AS dataStatus,
+            evidence
+        FROM report_check_results
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findAccountIdByReportId" resultType="java.lang.Long">
+        SELECT account_id FROM analysis_reports WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findReportById" resultType="map">
+        SELECT
+            analysis_report_id AS analysisReportId,
+            road_address AS roadAddress,
+            detail_address AS detailAddress,
+            deposit,
+            risk_level AS result,
+            favorite,
+            housing_category AS housingCategory,
+            is_trust_property AS trustProperty
+        FROM analysis_reports
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findFraudTypesByReportId" resultType="map">
+        SELECT
+            report_fraud_type_id AS reportFraudTypeId,
+            fraud_type AS fraudType,
+            risk_level AS riskLevel
+        FROM report_fraud_types
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findDetailResultsByFraudTypeId" resultType="com.secondzip.backend.report.dto.DetailResult">
+        SELECT
+            detail_type AS detailType,
+            risk_level AS riskLevel,
+            data_status AS dataStatus
+        FROM report_fraud_detail_results
+        WHERE report_fraud_type_id = #{fraudTypeId}
+    </select>
+
+    <!-- 특약 교체 중 동일 리포트 동시 수정 방지 -->
+    <select id="lockReportById" resultType="java.lang.Long">
+        SELECT analysis_report_id
+        FROM analysis_reports
+        WHERE analysis_report_id = #{reportId}
+            FOR UPDATE
+    </select>
+
+    <!-- AI 특약 조회 -->
+    <select id="findSpecialTermsByReportId" resultType="map">
+        SELECT
+            ai_generate_message_id AS aiGenerateMessageId,
+            title,
+            content
+        FROM ai_generate_messages
+        WHERE analysis_report_id = #{reportId}
+        ORDER BY ai_generate_message_id ASC
+    </select>
+
+    <!-- AI 특약 저장 -->
+    <insert id="insertSpecialTerm">
+        INSERT INTO ai_generate_messages (
+            analysis_report_id,
+            title,
+            content
+        )
+        VALUES (
+                   #{reportId},
+                   #{title},
+                   #{content}
+               )
+    </insert>
+
+    <!-- AI 특약 전체 삭제 -->
+    <delete id="deleteSpecialTermsByReportId">
+        DELETE FROM ai_generate_messages
+        WHERE analysis_report_id = #{reportId}
+    </delete>
+
+    <delete id="deleteReport">
+        DELETE FROM analysis_reports WHERE analysis_report_id = #{reportId}
+    </delete>
+
+    <!--  즐겨찾기  -->
+    <update id="updateFavorite">
+        UPDATE analysis_reports
+        SET favorite = #{favorite},
+            favorited_at = #{favoritedAt}
+        WHERE analysis_report_id = #{reportId}
+    </update>
+
+    <!--  공유  -->
+    <update id="updateShareToken">
+        UPDATE analysis_reports
+        SET share_token = #{shareToken},
+            share_expires_at = #{shareExpiresAt}
+        WHERE analysis_report_id = #{reportId}
+    </update>
+
+    <select id="findShareInfoByReportId" resultType="map">
+        SELECT
+            share_token AS shareToken,
+            share_expires_at AS shareExpiresAt
+        FROM analysis_reports
+        WHERE analysis_report_id = #{reportId}
+    </select>
+
+    <select id="findReportIdByShareToken" resultType="java.lang.Long">
+        SELECT analysis_report_id
+        FROM analysis_reports
+        WHERE share_token = #{shareToken}
+          AND share_expires_at &gt; NOW()
+    </select>
+
+</mapper>

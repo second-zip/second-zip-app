@@ -1,0 +1,131 @@
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+import MemberSecretaryGuide from '@/components/common/secretary/MemberSecretaryGuide.vue';
+import MainHero from '@/components/main/MainHero.vue';
+import MainDataTabs from '@/components/main/MainDataTabs.vue';
+import RiskMapCard from '@/components/main/RiskMapCard.vue';
+import KoreaRegionMap from '@/components/main/map/KoreaRegionMap.vue';
+import ReportButton from '@/components/main/ReportButton.vue';
+import { MYPAGE_ROUTES } from '@/constants/mypage';
+import { useAuthStore } from '@/stores/auth';
+
+const SECRETARY_MESSAGES = {
+  'fraud-damage': {
+    CAT: '피해 사례를 미리 확인하면\n더 안전한 계약이 가능하다냐-옹!',
+    MAN: '피해 사례를 미리 확인하면\n더 안전하게 계약할 수 있어!',
+    WOMAN: '더욱 안전한 계약을 위해\n피해 사례를 확인해 보시길 바랍니다!',
+  },
+  'price-index': {
+    CAT: '가격 변동률이 큰 지역은\n사기 위험도 높아질 수 있다냥…',
+    MAN: '가격 변동률이 큰 지역은\n사기 위험도 높을 수 있으니 조심해!',
+    WOMAN: '가격 변동률이 큰 지역은\n사기 위험도 높을 수 있으니 조심하세요…',
+  },
+};
+const authStore = useAuthStore();
+const router = useRouter();
+const selectedDataType = ref('fraud-damage');
+
+const goToReport = () => router.push('/report');
+const goToCharacter = () => {
+  const characterSettingsPath = '/mypage/secretary';
+
+  if (!authStore.isAuthenticated) {
+    return router.push({
+      name: 'login',
+      query: { redirect: characterSettingsPath },
+    });
+  }
+
+  return router.push({ name: MYPAGE_ROUTES.secretary });
+};
+
+</script>
+
+<template>
+  <section class="main-page w-100">
+    <!-- 상단 남는 영역의 정중앙 -->
+    <div
+      class="main-page__hero-area d-flex align-items-center justify-content-center"
+    >
+      <MainHero />
+    </div>
+
+    <!-- 가운데 고정 콘텐츠 -->
+    <div class="main-page__content d-flex flex-column gap-4 mx-auto">
+      <MainDataTabs v-model="selectedDataType" />
+
+      <RiskMapCard>
+        <KoreaRegionMap :data-type="selectedDataType" />
+      </RiskMapCard>
+
+      <ReportButton @click="goToReport" />
+    </div>
+
+    <!-- 하단 남는 영역의 아래쪽 -->
+    <div class="main-page__secretary-area d-flex align-items-end">
+      <MemberSecretaryGuide
+        :messages="SECRETARY_MESSAGES[selectedDataType]"
+        change-btn
+        @change="goToCharacter"
+      />
+    </div>
+  </section>
+</template>
+
+<style scoped>
+.main-page {
+  min-height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  background-color: #fff;
+}
+
+.main-page__hero-area,
+.main-page__secretary-area {
+  min-width: 0;
+  min-height: 0;
+}
+
+.main-page__content {
+  width: 100%;
+  padding: 0 20px;
+}
+
+.main-page__secretary-area {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .main-page__content {
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .main-page {
+    grid-template-columns: minmax(260px, 0.75fr) minmax(480px, 1.25fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: 32px;
+    padding: 32px clamp(24px, 4vw, 56px);
+  }
+
+  .main-page__hero-area {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .main-page__content {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    padding: 0;
+  }
+
+  .main-page__secretary-area {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+</style>
