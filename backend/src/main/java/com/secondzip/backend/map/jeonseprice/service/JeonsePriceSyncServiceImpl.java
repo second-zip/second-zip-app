@@ -244,18 +244,17 @@ public class JeonsePriceSyncServiceImpl
                             );
 
             if (sidoRegion.isPresent()
-                    && !containsPathSeparator(
-                    row.getFullRegionName()
-            )) {
+                    && isSidoRow(row)) {
 
                 indexMap.put(
-                        sidoRegion.get()
-                                .getRegionCode(),
+                        sidoRegion.get().getRegionCode(),
                         row.getPriceIndex()
                 );
 
                 continue;
             }
+
+
 
             /*
              * 시군구 행 처리
@@ -270,13 +269,7 @@ public class JeonsePriceSyncServiceImpl
                 continue;
             }
 
-            String rebSidoName = fullRegionName.split(">")[0];
-
-            Optional<RebSidoRegion> parentSido =
-                    RebSidoRegion
-                            .findByRebRegionName(
-                                    rebSidoName
-                            );
+            Optional<RebSidoRegion> parentSido = findParentSido(fullRegionName);
 
             if (parentSido.isEmpty()) {
                 continue;
@@ -305,13 +298,6 @@ public class JeonsePriceSyncServiceImpl
         }
 
         return indexMap;
-    }
-
-    private boolean containsPathSeparator(
-            String fullRegionName
-    ) {
-        return fullRegionName != null
-                && fullRegionName.contains(">");
     }
 
     private String createRegionKey(
@@ -348,5 +334,51 @@ public class JeonsePriceSyncServiceImpl
                         4,
                         RoundingMode.HALF_UP
                 );
+    }
+
+    private boolean isSidoRow(
+            RebJeonsePriceRowDTO row
+    ) {
+        String fullRegionName = row.getFullRegionName();
+
+        if (fullRegionName == null || fullRegionName.isBlank()) {
+            return true;
+        }
+
+        String[] path = fullRegionName.split(">");
+
+        // 서울, 경기 등 일반적인 시도 행
+        if (path.length == 1) {
+            return true;
+        }
+
+        // 전남광주>전남, 전남광주>광주처럼
+        // 통계 권역 아래에 포함된 시도 행
+        return path.length == 2
+                && path[path.length - 1]
+                .equals(row.getRegionName());
+    }
+
+    private Optional<RebSidoRegion> findParentSido(
+            String fullRegionName
+    ) {
+        if (fullRegionName == null || fullRegionName.isBlank()) {
+            return Optional.empty();
+        }
+
+        String[] path = fullRegionName.split(">");
+
+        for (String regionName : path) {
+            Optional<RebSidoRegion> sido =
+                    RebSidoRegion.findByRebRegionName(
+                            regionName.trim()
+                    );
+
+            if (sido.isPresent()) {
+                return sido;
+            }
+        }
+
+        return Optional.empty();
     }
 }
