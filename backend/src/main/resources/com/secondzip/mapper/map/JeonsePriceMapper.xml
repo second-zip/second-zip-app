@@ -174,4 +174,10 @@
 
     </select>
 
+    <select id="selectLatestBaseMonth"
+            resultType="java.time.LocalDate">
+        SELECT MAX(base_month)
+        FROM jeonse_price_indices
+    </select>
+
 </mapper>

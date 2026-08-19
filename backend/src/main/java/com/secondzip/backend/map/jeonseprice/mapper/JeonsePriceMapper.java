@@ -14,6 +14,7 @@ public interface JeonsePriceMapper {
 
     int upsertJeonsePriceIndex(JeonsePriceIndexVO jeonsePriceIndex);
     List<SigunguRegionMappingVO> selectAllSigunguRegions();
+    LocalDate selectLatestBaseMonth();
     List<JeonsePriceRegionVO> selectSidoJeonsePrices(@Param("baseMonth") LocalDate baseMonth);
     List<JeonsePriceRegionVO> selectSigunguJeonsePrices(
             @Param("baseMonth") LocalDate baseMonth,
