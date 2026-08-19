@@ -60,11 +60,13 @@ defineProps({
       :notice="specialTermsNotice"
       :character="defaultSecretaryImage"
     />
+
+    <slot />
   </main>
 </template>
 
 <style scoped>
 .analysis-content {
-  padding: 0 1.25rem 12rem;
+  padding: 0 1.25rem 2rem;
 }
 </style>
