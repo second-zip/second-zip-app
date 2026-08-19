@@ -111,4 +111,23 @@ const goToSignup = () => router.push('/signup');
   color: var(--red-500);
   text-align: center;
 }
+
+@media (min-width: 1024px) {
+  .login-page__visual {
+    width: 50% !important;
+    height: 100%;
+  }
+
+  .login-page__visual img {
+    width: min(80%, 360px);
+    height: auto;
+  }
+
+  .login-page__form {
+    top: 50%;
+    left: 75% !important;
+    max-width: 440px;
+    padding: 0 40px;
+  }
+}
 </style>

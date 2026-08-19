@@ -38,4 +38,12 @@ const handleWithdraw = async () => {
 
 <style scoped>
 .withdraw-page { min-height: 100%; background: #f7f9fd; }.withdraw-page__body { padding: 24px 20px; }.withdraw-card { padding: 28px 20px; border: 1px solid #e1e6ee; border-radius: 18px; background: #fff; text-align: center; }.withdraw-card__icon { width: 46px; height: 46px; margin: 0 auto 14px; color: #ee3f46; border-radius: 50%; background: #ffe7e8; font-size: 28px; font-weight: 800; }.withdraw-card h2 { font-size: 18px; }.withdraw-card > p { margin-bottom: 26px; color: #6c7687; font-size: 13px; line-height: 1.6; }.withdraw-card form { text-align: left; }.withdraw-card form > label:first-child { display: grid; gap: 8px; font-size: 12px; font-weight: 600; }.withdraw-card input[type='password'] { height: 46px; padding: 0 13px; border: 1px solid #d6dce6; border-radius: 10px; }.withdraw-card__agree { display: flex; gap: 8px; align-items: flex-start; margin: 18px 0; font-size: 12px; }.withdraw-card__error { color: #d9363e; font-size: 12px; }.withdraw-card button { width: 100%; height: 46px; border: 0; border-radius: 11px; color: #fff; background: #e54249; font-weight: 700; }.withdraw-card button:disabled { opacity: .55; }
+
+@media (min-width: 768px) {
+  .withdraw-page__body {
+    width: min(100%, 640px);
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+}
 </style>

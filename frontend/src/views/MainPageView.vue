@@ -8,6 +8,7 @@ import MainDataTabs from '@/components/main/MainDataTabs.vue';
 import RiskMapCard from '@/components/main/RiskMapCard.vue';
 import KoreaRegionMap from '@/components/main/map/KoreaRegionMap.vue';
 import ReportButton from '@/components/main/ReportButton.vue';
+import { MYPAGE_ROUTES } from '@/constants/mypage';
 import { useAuthStore } from '@/stores/auth';
 
 const SECRETARY_MESSAGES = {
@@ -28,7 +29,7 @@ const selectedDataType = ref('fraud-damage');
 
 const goToReport = () => router.push('/report');
 const goToCharacter = () => {
-  const characterSettingsPath = '/mypage#ai-secretary';
+  const characterSettingsPath = '/mypage/secretary';
 
   if (!authStore.isAuthenticated) {
     return router.push({
@@ -37,7 +38,7 @@ const goToCharacter = () => {
     });
   }
 
-  return router.push({ name: 'mypage', hash: '#ai-secretary' });
+  return router.push({ name: MYPAGE_ROUTES.secretary });
 };
 
 </script>
@@ -94,5 +95,37 @@ const goToCharacter = () => {
 
 .main-page__secretary-area {
   width: 100%;
+}
+
+@media (min-width: 768px) {
+  .main-page__content {
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .main-page {
+    grid-template-columns: minmax(260px, 0.75fr) minmax(480px, 1.25fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: 32px;
+    padding: 32px clamp(24px, 4vw, 56px);
+  }
+
+  .main-page__hero-area {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .main-page__content {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    padding: 0;
+  }
+
+  .main-page__secretary-area {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }
 </style>

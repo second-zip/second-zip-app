@@ -64,4 +64,12 @@ const { email, formMessage, nickname, passwords, saveAccount, submitting } =
   .password-form { margin-top: 34px; }
   .input-guide { margin-bottom: 18px; }
 }
+
+@media (min-width: 768px) {
+  .profile-edit-page__sheet {
+    width: min(100%, 720px);
+    margin: 0 auto;
+    padding: 48px clamp(32px, 6vw, 64px) 40px;
+  }
+}
 </style>

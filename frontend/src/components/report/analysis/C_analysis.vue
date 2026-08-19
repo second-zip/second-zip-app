@@ -49,14 +49,19 @@ const toggle = (id) => {
           class="accordion-collapse collapse"
           :class="{ show: openedItem === check.id }"
         >
-          <div class="accordion-body" :class="`accordion-body--${check.status}`">
+          <div
+            class="accordion-body"
+            :class="`accordion-body--${check.status}`"
+          >
             <div class="detail-row">
               <span>판정 근거</span>
               <strong>{{ check.basis }}</strong>
             </div>
             <div class="detail-row">
-              <span>사용 금액</span>
-              <strong :class="`text-${check.status}`">{{ check.amount }}</strong>
+              <span>우리 집은?</span>
+              <strong :class="`text-${check.status}`">{{
+                check.amount
+              }}</strong>
             </div>
           </div>
         </div>

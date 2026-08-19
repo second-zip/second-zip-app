@@ -163,21 +163,18 @@ describe('MainPageView', () => {
 
     expect(mocks.push).toHaveBeenCalledWith({
       name: 'login',
-      query: { redirect: '/mypage#ai-secretary' },
+      query: { redirect: '/mypage/secretary' },
     });
   });
 
-  it('로그인 상태에서 AI 비서 변경을 누르면 마이페이지 선택 영역으로 이동한다', async () => {
+  it('로그인 상태에서 AI 비서 변경을 누르면 비서 변경 화면으로 이동한다', async () => {
     mocks.authStore.isAuthenticated = true;
     mocks.authStore.myPage = { characterType: 'CAT' };
     const wrapper = mountView();
 
     await wrapper.get('.secretary-stub').trigger('click');
 
-    expect(mocks.push).toHaveBeenCalledWith({
-      name: 'mypage',
-      hash: '#ai-secretary',
-    });
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'mypage-secretary' });
   });
 
   it('분석 버튼을 누르면 리포트 화면으로 이동한다', async () => {

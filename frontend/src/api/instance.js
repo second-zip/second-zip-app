@@ -24,8 +24,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 응답에서는 사용할 수 없는 토큰을 제거하고 앱에 인증 만료를 알린다.
-// 이번 명세에는 Refresh Token이 없으므로 토큰 재발급은 시도하지 않는다.
+// 재발급 API가 없으므로 401 응답에서는 인증 정보를 정리하고 로그인으로 이동한다.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

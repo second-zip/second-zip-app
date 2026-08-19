@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import ChecklistBlueIcon from '@/assets/icons/nav/checklist-blue-22.svg';
 import ChecklistGrayIcon from '@/assets/icons/nav/checklist-gray-22.svg';
+import MainLogo from '@/assets/images/main-logo.png';
 import BottomNavigation from './BottomNavigation.vue';
 
 const route = { path: '/' };
@@ -27,6 +28,16 @@ const findMenu = (wrapper, label) => wrapper
 
 describe('BottomNavigation', () => {
   beforeEach(() => { route.path = '/'; });
+
+  test('데스크톱 사이드바에 사용할 메인 로고를 표시한다', () => {
+    const wrapper = mount(BottomNavigation, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+
+    expect(wrapper.get('.bottom-nav__logo img').attributes('src')).toBe(
+      MainLogo,
+    );
+  });
 
   test.each(['/checklist', '/checklist/25'])(
     '%s에서 체크리스트 메뉴를 활성화한다',

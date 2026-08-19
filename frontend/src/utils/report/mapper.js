@@ -10,9 +10,9 @@ const RISK_LEVELS = {
 const CHECK_META = {
   MORTGAGE_EXISTENCE: { id: 'mortgage', label: '근저당' },
   ILLEGAL_BUILDING: { id: 'violation', label: '위반건축물 표시' },
-  BUILDING_USE: { id: 'residential', label: '주거용건축물' },
-  HUG_GUARANTEE_ELIGIBILITY: { id: 'hug', label: 'HUG가입가능여부' },
-  RIGHTS_INFRINGEMENT: { id: 'rights', label: '권리침해여부' },
+  BUILDING_USE: { id: 'residential', label: '주거용 건축물' },
+  HUG_GUARANTEE_ELIGIBILITY: { id: 'hug', label: 'HUG 가입 가능 여부' },
+  RIGHTS_INFRINGEMENT: { id: 'rights', label: '권리침해 여부' },
 };
 
 const FRAUD_META = {
