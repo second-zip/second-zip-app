@@ -49,7 +49,7 @@ class ChecklistAutoCheckResolverTest {
         return new RiskEvaluationResult(RiskLevel.SAFE, checks, fraudTypes);
     }
 
-    /** 필수점검 5개 전부 + 세부 9개 전부를 주어진 상태로 채운 판정 결과 */
+    /** 필수점검 5개 전부 + 세부 9개 전부를 SAFE + 주어진 데이터 상태로 채운 판정 결과 */
     private static RiskEvaluationResult allWith(DataStatus status) {
         List<CheckResult> checks = Arrays.stream(CheckType.values())
                 .map(t -> check(t, RiskLevel.SAFE, status))
@@ -69,8 +69,8 @@ class ChecklistAutoCheckResolverTest {
     // ---------- 기본 동작 ----------
 
     @Test
-    @DisplayName("전부 VERIFIED면 규칙에 정의된 항목이 모두 확인 완료로 나온다")
-    void resolvesAllRulesWhenEveryJudgementIsVerified() {
+    @DisplayName("전부 VERIFIED + SAFE면 규칙에 정의된 항목이 모두 확인 완료로 나온다")
+    void resolvesAllRulesWhenEveryJudgementIsVerifiedAndSafe() {
         List<VerifiedChecklistItem> result =
                 ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
 
@@ -100,8 +100,8 @@ class ChecklistAutoCheckResolverTest {
     // ---------- 핵심 설계 결정 ----------
 
     @Test
-    @DisplayName("DANGER로 판정됐어도 데이터를 확인했으면 체크된다 - 체크리스트는 안전도가 아니라 확인 여부를 묻는다")
-    void checksItemEvenWhenJudgementIsDangerous() {
+    @DisplayName("DANGER로 판정되면 데이터를 확인했더라도 체크하지 않는다 - 위험한 항목은 사용자가 직접 확인해야 한다")
+    void doesNotCheckItemWhenJudgementIsDangerous() {
         RiskEvaluationResult evaluation = evaluation(
                 List.of(
                         check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.DANGER, DataStatus.VERIFIED),
@@ -110,8 +110,63 @@ class ChecklistAutoCheckResolverTest {
                 List.of()
         );
 
-        assertTrue(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
+        assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
                 .contains("등기부등본 확인"));
+    }
+
+    @Test
+    @DisplayName("CAUTION도 체크하지 않는다 - 자동 체크 기준은 SAFE 하나뿐이다")
+    void doesNotCheckItemWhenJudgementIsCaution() {
+        RiskEvaluationResult evaluation = evaluation(
+                List.of(
+                        check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.CAUTION, DataStatus.VERIFIED),
+                        check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.SAFE, DataStatus.VERIFIED)
+                ),
+                List.of()
+        );
+
+        Set<String> contents = contentsOf(ChecklistAutoCheckResolver.resolve(evaluation));
+        assertFalse(contents.contains("등기부등본 확인"));
+        // 근저당 하나만 근거로 삼는 다세대 '공동근저당'도 같은 이유로 빠진다
+        assertFalse(contents.contains("공동근저당"));
+    }
+
+    @Test
+    @DisplayName("근거가 여러 개인 항목은 하나만 SAFE가 아니어도 체크하지 않는다")
+    void requiresEveryUnderlyingJudgementToBeSafe() {
+        RiskEvaluationResult evaluation = evaluation(
+                List.of(
+                        check(CheckType.ILLEGAL_BUILDING, RiskLevel.SAFE, DataStatus.VERIFIED),
+                        // 업무용 오피스텔 등 - 확인은 했지만 추가 확인이 필요한 상태
+                        check(CheckType.BUILDING_USE, RiskLevel.CAUTION, DataStatus.VERIFIED)
+                ),
+                List.of()
+        );
+
+        Set<String> contents = contentsOf(ChecklistAutoCheckResolver.resolve(evaluation));
+        assertFalse(contents.contains("건축물대장 확인"));
+        // 위반건축물 하나만 근거로 삼는 항목은 SAFE라 통과한다
+        assertTrue(contents.contains("위반건축물"));
+    }
+
+    @Test
+    @DisplayName("세부 판정(DetailResult)도 SAFE일 때만 체크한다")
+    void checksDetailBasedItemOnlyWhenSafe() {
+        RiskEvaluationResult dangerous = evaluation(
+                List.of(),
+                List.of(new DetailResult(
+                        DetailType.HIGH_JEONSE_RATIO, RiskLevel.DANGER, DataStatus.VERIFIED))
+        );
+        assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(dangerous))
+                .contains("전세가율 확인"));
+
+        RiskEvaluationResult safe = evaluation(
+                List.of(),
+                List.of(new DetailResult(
+                        DetailType.HIGH_JEONSE_RATIO, RiskLevel.SAFE, DataStatus.VERIFIED))
+        );
+        assertTrue(contentsOf(ChecklistAutoCheckResolver.resolve(safe))
+                .contains("전세가율 확인"));
     }
 
     @Test

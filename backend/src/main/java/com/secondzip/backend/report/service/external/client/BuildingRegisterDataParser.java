@@ -116,15 +116,15 @@ public class BuildingRegisterDataParser {
     }
 
     /**
-     * 공시가격(주택가격)을 고른다. <b>기준일이 가장 최근인 값</b>을 쓴다.
+     * 공시가격(주택가격)을 고르고, 기준일이 가장 최근인 값을 씀.
      *
-     * <p>건축물대장 주택가격은 연도별 이력으로 여러 건이 내려온다. 예전에는 그중
-     * 가장 큰 금액을 골랐는데, 공시가격이 하락한 해가 있으면 과거의 높은 값을 쓰게 된다.
-     * 기준가가 실제보다 높아지면 전세가율이 낮게 계산되어 <b>위험을 과소평가</b>한다.
+     * 건축물대장 주택가격은 연도별 이력으로 여러 건이 내려옴. 예전에는 그중
+     * 가장 큰 금액을 골랐는데, 공시가격이 하락한 해가 있으면 과거의 높은 값을 쓰게 됨.
+     * 기준가가 실제보다 높아지면 전세가율이 낮게 계산되어 위험을 과소평가하게 됨.
      *
-     * <p>다만 CODEF 응답에서 기준일 필드명을 확정하지 못해, 날짜로 보이는 필드를
-     * 폭넓게 찾는다. 끝내 날짜를 찾지 못하면 기존 동작(최대 금액)으로 물러난다.
-     * 실제 응답을 확인해 필드명이 확정되면 {@link #DATE_KEY_CANDIDATES} 맨 앞에 두면 된다.
+     * CODEF 응답에서 기준일 필드명을 확정하지 못해, 날짜로 보이는 필드를
+     * 폭넓게 찾고, 끝내 날짜를 찾지 못하면 기존 동작(최대 금액)을 실행.
+     * 실제 응답을 확인해 필드명이 확정되면 #DATE_KEY_CANDIDATES 맨 앞에 두면 됨.
      */
     private Long findLatestBasePrice(Object data) {
         List<Map<String, Object>> entries = new java.util.ArrayList<>();
@@ -155,12 +155,12 @@ public class BuildingRegisterDataParser {
         return findLargestAmount(findTextValues(data, "resBasePrice"));
     }
 
-    /** 실제 응답에서 필드명이 확인되면 맨 앞에 추가한다. */
+    /** 실제 응답에서 필드명이 확인되면 맨 앞에 추가. */
     private static final List<String> DATE_KEY_CANDIDATES = List.of(
             "resBaseDate", "resStdDay", "resDate", "resBaseYm", "resBaseYear"
     );
 
-    /** 가격 항목에 붙은 기준일을 yyyyMMdd 8자리로 정규화해 돌려준다. */
+    /** 가격 항목에 붙은 기준일을 yyyyMMdd 8자리로 정규화해 돌려줌. */
     private String findEntryDate(Map<String, Object> entry) {
         for (String key : DATE_KEY_CANDIDATES) {
             String normalized = normalizeDate(entry.get(key));
@@ -185,8 +185,8 @@ public class BuildingRegisterDataParser {
     }
 
     /**
-     * "2024-01-01" / "20240101" / "202401" / "2024" 를 모두 8자리로 맞춘다.
-     * 자릿수를 맞춰야 문자열 비교로 최신 여부를 판단할 수 있다.
+     * "2024-01-01" / "20240101" / "202401" / "2024" 를 모두 8자리로 고정.
+     * 자릿수를 맞춰야 문자열 비교로 최신 여부를 판단할 수 있음.
      */
     private String normalizeDate(Object raw) {
         if (raw == null) {
@@ -217,7 +217,7 @@ public class BuildingRegisterDataParser {
         }
     }
 
-    /** 지정한 키를 <b>직접</b> 가지고 있는 맵들을 모은다. 가격과 기준일을 같이 보기 위해 필요하다. */
+    /** 지정한 키를 직접 가지고 있는 맵들을 모음. 가격과 기준일을 같이 보기 위해 필요. */
     @SuppressWarnings("unchecked")
     private void collectMapsContainingKey(
             Object node,

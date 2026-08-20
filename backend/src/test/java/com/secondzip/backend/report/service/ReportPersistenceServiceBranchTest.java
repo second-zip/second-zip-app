@@ -115,7 +115,13 @@ class ReportPersistenceServiceBranchTest {
                 eq(99L),
                 verifiedCaptor.capture()
         );
-        assertEquals(2, verifiedCaptor.getValue().size());
+        List<VerifiedChecklistItem> verified = verifiedCaptor.getValue();
+        // HUG는 SAFE라 통과하고, 전세가율은 확인은 했지만 CAUTION이라 제외된다
+        assertEquals(1, verified.size());
+        assertEquals(
+                "HUG/HF/SGI 보증보험 가능 여부 확인",
+                verified.get(0).getContents()
+        );
     }
 
     @Test

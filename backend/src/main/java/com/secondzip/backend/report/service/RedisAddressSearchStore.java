@@ -25,7 +25,7 @@ public class RedisAddressSearchStore implements AddressSearchStore {
     /**
      * 보관 시간.
      *
-     * <p>사용자가 주소를 고른 뒤 보증금을 입력하고 분석을 시작하기까지의 시간을 덮어야 한다.
+     * 사용자가 주소를 고른 뒤 보증금을 입력하고 분석을 시작하기까지의 시간을 덮어야 한다.
      * 너무 짧으면 화면에 머무는 동안 만료돼 다시 검색하게 되고,
      * 너무 길면 쓰이지 않을 후보가 Redis에 오래 남는다.
      */

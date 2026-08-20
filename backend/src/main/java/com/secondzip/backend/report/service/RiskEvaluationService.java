@@ -520,7 +520,7 @@ public class RiskEvaluationService {
     /**
      * 유형별 세부 3개를 유형 대표값으로 집계한다.
      *
-     * <p>{@code NOT_APPLICABLE} 항목은 제외하고, <b>남은 항목이 전부 CAUTION일 때</b> DANGER로 올린다.
+     * NOT_APPLICABLE 항목은 제외하고, 남은 항목이 전부 CAUTION일 때 DANGER로 올린다.
      * 임계값을 3으로 고정하면 해당 없는 항목이 있는 매물(예: 아파트)은
      * 아무리 나빠도 그 조건에 도달하지 못한다.
      */
