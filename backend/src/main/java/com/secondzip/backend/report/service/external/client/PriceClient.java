@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * 국토교통부 실거래가 4종 API(아파트/연립다세대/단독다가구/오피스텔) 클라이언트.
  * buildingType에 맞는 서비스 URL을 선택해 호출하고, 지번(본번/부번)이 일치하는
- * 매물을 찾아 최근 실거래가를 반환한다.
+ * 매물을 찾아 최근 실거래가를 반환.
  *
  * 실패/데이터없음 시 항상 null 반환 (Mock 데이터 생성 금지 원칙 유지).
  */
@@ -49,8 +49,8 @@ public class PriceClient implements PriceDataProvider {
     private static final int MAX_PAGES_PER_MONTH = 100;
 
     /**
-     * @param target       주소 표준화 결과 (sigunguCode, mainNo, subNo 필요)
-     * @param buildingType SINGLE_FAMILY/MULTI_FAMILY/APARTMENT/MULTI_HOUSEHOLD/OFFICETEL
+     * target       주소 표준화 결과 (sigunguCode, mainNo, subNo 필요)
+     * buildingType SINGLE_FAMILY/MULTI_FAMILY/APARTMENT/MULTI_HOUSEHOLD/OFFICETEL
      */
     public PriceData getPriceData(AnalysisTarget target, String buildingType) {
         if (target == null || isBlank(target.sigunguCode())) {

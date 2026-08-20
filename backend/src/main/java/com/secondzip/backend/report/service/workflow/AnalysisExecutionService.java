@@ -217,11 +217,11 @@ public class AnalysisExecutionService {
     }
 
     /**
-     * 실패 사유를 그대로 보존한다.
+     * 실패 사유를 그대로 보존.
      *
-     * <p>예전에는 모든 실패를 한 문장으로 덮어써서, 등기부등본 실패인지 실거래가 실패인지
-     * 위반건축물 실패인지 사용자도 로그도 구분할 수 없었다.
-     * {@link BusinessException}은 이미 구체적인 메시지를 담고 있으므로 그것을 쓴다.
+     * 예전에는 모든 실패를 한 문장으로 덮어써서, 등기부등본 실패인지 실거래가 실패인지
+     * 위반건축물 실패인지 사용자도 로그도 구분할 수 없음.
+     * BusinessException은 이미 구체적인 메시지를 담고 있으므로 그것을 씀.
      */
     private String failureMessageOf(RuntimeException e) {
         if (e instanceof BusinessException && e.getMessage() != null
@@ -232,10 +232,10 @@ public class AnalysisExecutionService {
     }
 
     /**
-     * 워크플로 상태 저장 실패가 본래 흐름을 덮어쓰지 않게 한다.
+     * 워크플로 상태 저장 실패가 본래 흐름을 덮어쓰지 않게 함.
      *
-     * <p>성공 경로에서는 이미 확보한 리포트를 잃지 않기 위해,
-     * 실패 경로에서는 원래 예외가 저장 실패 예외로 바뀌지 않게 하기 위해 필요하다.
+     * 성공 경로에서는 이미 확보한 리포트를 잃지 않기 위해,
+     * 실패 경로에서는 원래 예외가 저장 실패 예외로 바뀌지 않게 하기 위해 필요.
      */
     private void saveStateQuietly(AnalysisWorkflowState state, String what) {
         try {
@@ -254,12 +254,8 @@ public class AnalysisExecutionService {
     /**
      * 유료 조회(등기부등본) 직전 관문.
      *
-     * <p>무료 데이터만으로 판정할 수 있는 실패는 전부 여기서 걸러낸다.
-     * 등기부등본은 열람 건당 전자민원캐시가 차감되므로, 어차피 실패할 분석에
-     * 비용을 쓰지 않기 위한 장치다.
-     *
-     * <p><b>무료 외부 데이터가 새로 추가되면</b> 수집은 이 메서드를 호출하기 전에,
-     * 검증은 이 메서드 안에 추가해야 한다. 그래야 유료 호출이 항상 마지막에 남는다.
+     * 무료 데이터만으로 판정할 수 있는 실패는 전부 여기서 걸러냄.
+     * 실패할 분석에 비용을 쓰지 않기 위한 장치.
      */
     private void verifyFreeDataBeforePaidLookup(
             BuildingRegisterAnalysisData buildingRegister,
@@ -285,10 +281,7 @@ public class AnalysisExecutionService {
     /**
      * 수도권/비수도권 판정에 쓸 주소.
      *
-     * <p>반드시 <b>표준화된</b> 도로명주소를 쓴다. 사용자가 입력한 원본은 건물명이나
-     * 지번일 수 있어 시도명으로 시작하지 않을 수 있고, 그러면 수도권 매물이
-     * 비수도권으로 분류되어 HUG 보증금 한도가 7억이 아닌 5억으로 계산된다.
-     * 그 결과 정상 매물이 DANGER로 판정된다.
+     * 반드시 표준화된 도로명주소를 쓴다.
      */
     private String regionAddress(AnalysisWorkflowState state) {
         AnalysisTarget target = state.getTarget();

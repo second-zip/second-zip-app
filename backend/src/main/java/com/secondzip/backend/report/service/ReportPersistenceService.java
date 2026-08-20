@@ -34,10 +34,10 @@ public class ReportPersistenceService {
 
     // 작성, 수정, 삭제, 저장 담당
     /**
-     * @param housingCategory 건축물 유형. checklist_items.category ENUM과 이름이 일치해야
-     *                        체크리스트 생성 시 유형별 항목이 붙는다.
+     * 건축물 유형. checklist_items.category ENUM과 이름이 일치해야
+     *                        체크리스트 생성 시 유형별 항목이 붙음.
      *                        (SINGLE_FAMILY / MULTI_FAMILY / APARTMENT / MULTI_HOUSEHOLD / OFFICETEL)
-     * @param trustProperty   신탁주택 여부. TRUE면 체크리스트에 TRUST_PROPERTY 항목이 추가된다.
+     * 신탁주택 여부. TRUE면 체크리스트에 TRUST_PROPERTY 항목이 추가.
      */
     @Transactional
     public ReportDetailResponse save(Long accountId, String requestId,
@@ -59,7 +59,7 @@ public class ReportPersistenceService {
         List<CheckResultView> checkViews = insertCheckResults(reportId, evalResult.getCheckResults());
         // 해당 보고서에 사기 유형과 각 유형의 판단 결과 저장
         List<FraudTypeView> fraudViews = insertFraudTypes(reportId, evalResult.getFraudTypeResults());
-        // 분석으로 이미 확인된 항목을 체크리스트에 넘겨준다
+        // 분석에서 안전(VERIFIED + SAFE)으로 판정된 항목을 체크리스트에 넘겨준다
         insertChecklistVerifications(reportId, evalResult);
 
         return new ReportDetailResponse(
@@ -135,11 +135,10 @@ public class ReportPersistenceService {
     }
 
     /**
-     * 분석 판정으로 확인 완료된 체크리스트 항목을 저장한다.
-     *
+     * 분석 판정이 안전(VERIFIED + SAFE)으로 나온 체크리스트 항목을 저장.
      * 사용자가 나중에 이 리포트로 체크리스트를 만들면
      * ReportChecklistMapper.insertChecklistItems 가 이 행들을 LEFT JOIN 해서
-     * 해당 항목을 처음부터 체크된 상태로 생성한다.
+     * 해당 항목을 처음부터 체크된 상태로 생성.
      */
     private void insertChecklistVerifications(Long reportId, RiskEvaluationResult evalResult) {
         List<VerifiedChecklistItem> verified =

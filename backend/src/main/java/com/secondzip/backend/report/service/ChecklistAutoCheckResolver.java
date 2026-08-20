@@ -9,6 +9,7 @@ import com.secondzip.backend.report.dto.VerifiedChecklistItem;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
+import com.secondzip.backend.report.enums.RiskLevel;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,31 +22,7 @@ import java.util.Set;
 /**
  * 분석 판정 결과를 체크리스트 자동 체크 항목으로 변환한다.
  *
- * <h3>왜 RiskLevel 이 아니라 DataStatus 로 판단하는가</h3>
- * 체크리스트는 "이 매물이 안전한가"가 아니라 "사용자가 이 항목을 확인했는가"를 묻는 도구다.
- * 근저당이 잔뜩 잡혀 있어 DANGER 로 판정됐더라도, 그건 등기부를 확인했다는 뜻이므로
- * '등기부등본 확인' 항목은 완료된 것이 맞다. 반대로 외부 API 가 죽어서 아무것도 못 가져온
- * UNVERIFIED 는 위험도와 무관하게 확인되지 않은 것이다.
- * 그래서 자동 체크의 기준은 {@link DataStatus#VERIFIED} 하나뿐이다.
- *
- * <h3>자동 체크하지 않는 항목</h3>
- * <ul>
- *   <li>'잔금 지급 직전 등기부 재확인' — 분석 시점에 아직 일어나지 않은 미래의 행위다.</li>
- *   <li>'국세·지방세 체납' — 대응하는 외부 데이터 소스가 없다.</li>
- *   <li>'대리계약 여부', '신탁회사 동의', '전입세대확인서' 등 — 현장/서류 확인 항목이다.</li>
- *   <li>다가구(MULTI_FAMILY) 전 항목 — 확정일자 부여현황 열람이 필요해 현재 데이터로 판단할 수 없다.</li>
- * </ul>
- * 자동 체크 대상을 늘리는 것보다, 확인하지 않은 것을 확인했다고 표시하지 않는 쪽이 중요하다.
- *
- * <h3>COMMON 과 유형별 항목의 관계</h3>
- * 체크리스트는 "COMMON + 주택유형(+ TRUST_PROPERTY)"으로 조립된다.
- * 유형별 항목이 COMMON 과 같은 판정을 근거로 삼으면 사용자 화면에
- * 사실상 같은 항목이 두 줄로 뜬다. (예: '전세가율 확인' + '전세가율')
- * 그래서 V8 에서 중복 항목을 제거했고, 여기 규칙도 그에 맞춰 정리했다.
- * <b>새 규칙을 추가할 때 COMMON 규칙과 근거 판정이 겹치는지 반드시 확인할 것.</b>
- *
- * <p>의존성이 없는 순수 규칙이라 스프링 빈으로 만들지 않고 정적 유틸로 둔다.
- * ({@code BuildingRegisterDocumentSelector} 와 같은 패턴)
+ * 자동 체크 기준: VERIFIED 이면서 SAFE
  */
 public final class ChecklistAutoCheckResolver {
 
@@ -53,8 +30,22 @@ public final class ChecklistAutoCheckResolver {
     }
 
     /**
+     * 판정 하나의 결과(위험도 + 데이터 상태).
+     */
+    private record Verdict(RiskLevel riskLevel, DataStatus dataStatus) {
+
+        /** 해당 판정 자체가 결과에 없는 경우. */
+        private static final Verdict ABSENT = new Verdict(null, null);
+
+        /** 확인(VERIFIED) 안전한(SAFE) 경우에만 참. */
+        private boolean isCleared() {
+            return dataStatus == DataStatus.VERIFIED && riskLevel == RiskLevel.SAFE;
+        }
+    }
+
+    /**
      * 체크리스트 항목 하나와, 그 항목을 "확인 완료"로 만들기 위해 필요한 판정 항목들.
-     * 근거 항목이 여러 개면 <b>전부</b> VERIFIED 여야 한다.
+     * 근거 항목이 여러 개면 전부 VERIFIED + SAFE 여야 함.
      */
     private static final class Rule {
 
@@ -80,17 +71,17 @@ public final class ChecklistAutoCheckResolver {
             this.requiredDetails = requiredDetails;
         }
 
-        private boolean isVerifiedBy(
-                Map<CheckType, DataStatus> checkStatuses,
-                Map<DetailType, DataStatus> detailStatuses
+        private boolean isClearedBy(
+                Map<CheckType, Verdict> checkVerdicts,
+                Map<DetailType, Verdict> detailVerdicts
         ) {
             for (CheckType checkType : requiredChecks) {
-                if (checkStatuses.get(checkType) != DataStatus.VERIFIED) {
+                if (!checkVerdicts.getOrDefault(checkType, Verdict.ABSENT).isCleared()) {
                     return false;
                 }
             }
             for (DetailType detailType : requiredDetails) {
-                if (detailStatuses.get(detailType) != DataStatus.VERIFIED) {
+                if (!detailVerdicts.getOrDefault(detailType, Verdict.ABSENT).isCleared()) {
                     return false;
                 }
             }
@@ -123,8 +114,11 @@ public final class ChecklistAutoCheckResolver {
     private static final List<Rule> RULES = List.of(
 
             // ---- 공통 ----
+            // 근저당이 하나라도 잡혀 있으면 MORTGAGE_EXISTENCE 가 CAUTION 이상이라
+            // 이 항목은 체크되지 않는다. (근저당 없는 매물만 자동 체크)
             byChecks(Category.COMMON, "등기부등본 확인",
                     CheckType.MORTGAGE_EXISTENCE, CheckType.RIGHTS_INFRINGEMENT),
+            // 업무용 오피스텔은 BUILDING_USE 가 CAUTION 이라 체크되지 않는다.
             byChecks(Category.COMMON, "건축물대장 확인",
                     CheckType.ILLEGAL_BUILDING, CheckType.BUILDING_USE),
             byChecks(Category.COMMON, "HUG/HF/SGI 보증보험 가능 여부 확인",
@@ -139,7 +133,6 @@ public final class ChecklistAutoCheckResolver {
                     DetailType.LAND_BUILDING_OWNERSHIP_MISMATCH),
 
             // ---- 아파트 ----
-            // V8에서 유형별 고유 항목이 전부 제거됨(COMMON과 중복).
             // 아파트는 COMMON 규칙만 적용된다.
 
             // ---- 다세대·연립 ----
@@ -157,13 +150,7 @@ public final class ChecklistAutoCheckResolver {
 
     /**
      * 판정 결과에서 자동 체크할 체크리스트 항목을 뽑아낸다.
-     *
-     * <p>리포트의 주택 유형과 무관하게 전 카테고리 규칙을 평가한다.
-     * 실제로 어떤 항목이 체크리스트에 붙을지는 체크리스트 생성 시점의
-     * {@code insertChecklistItems} 가 category 로 걸러 주므로,
-     * 여기서 유형을 한 번 더 판단하면 규칙이 두 곳으로 흩어진다.
-     *
-     * @return 확인 완료로 표시할 항목들. 없으면 빈 리스트.
+     * 확인 완료(VERIFIED + SAFE)로 표시할 항목들. 없으면 빈 리스트.
      */
     public static List<VerifiedChecklistItem> resolve(RiskEvaluationResult evaluation) {
 
@@ -171,28 +158,34 @@ public final class ChecklistAutoCheckResolver {
             return List.of();
         }
 
-        Map<CheckType, DataStatus> checkStatuses = new EnumMap<>(CheckType.class);
+        Map<CheckType, Verdict> checkVerdicts = new EnumMap<>(CheckType.class);
         for (CheckResult checkResult : nullSafe(evaluation.getCheckResults())) {
             if (checkResult != null && checkResult.getCheckType() != null) {
-                checkStatuses.put(checkResult.getCheckType(), checkResult.getDataStatus());
+                checkVerdicts.put(
+                        checkResult.getCheckType(),
+                        new Verdict(checkResult.getRiskLevel(), checkResult.getDataStatus())
+                );
             }
         }
 
-        Map<DetailType, DataStatus> detailStatuses = new EnumMap<>(DetailType.class);
+        Map<DetailType, Verdict> detailVerdicts = new EnumMap<>(DetailType.class);
         for (FraudTypeResult fraudType : nullSafe(evaluation.getFraudTypeResults())) {
             if (fraudType == null) {
                 continue;
             }
             for (DetailResult detail : nullSafe(fraudType.getDetails())) {
                 if (detail != null && detail.getDetailType() != null) {
-                    detailStatuses.put(detail.getDetailType(), detail.getDataStatus());
+                    detailVerdicts.put(
+                            detail.getDetailType(),
+                            new Verdict(detail.getRiskLevel(), detail.getDataStatus())
+                    );
                 }
             }
         }
 
         List<VerifiedChecklistItem> verified = new ArrayList<>();
         for (Rule rule : RULES) {
-            if (rule.isVerifiedBy(checkStatuses, detailStatuses)) {
+            if (rule.isClearedBy(checkVerdicts, detailVerdicts)) {
                 verified.add(new VerifiedChecklistItem(rule.category, rule.contents));
             }
         }

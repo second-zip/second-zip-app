@@ -104,8 +104,6 @@ public class ReportQueryService {
             );
         }).collect(Collectors.toList());
     }
-
-    /** V3 이전에 저장된 행은 data_status가 없을 수 있어 VERIFIED로 본다. */
     private DataStatus parseDataStatus(Object raw) {
         if (raw == null) {
             return DataStatus.VERIFIED;
