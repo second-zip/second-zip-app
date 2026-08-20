@@ -1,5 +1,7 @@
 import { onBeforeUnmount, ref } from 'vue';
 
+import { createPcmWavBlob } from '@/utils/wav';
+
 import { useAudioAnalyser } from './useAudioAnalyser';
 import { usePcmAudioStream } from './usePcmAudioStream';
 
@@ -16,11 +18,9 @@ export const useAudioRecorder = () => {
   const errorMessage = ref('');
   const { startAnalysis, stopAnalysis, waveformLevels } = useAudioAnalyser();
   const { startPcmStream, stopPcmStream } = usePcmAudioStream();
-  let chunks = [];
+  let pcmChunks = [];
   let elapsedTimer;
-  let mediaRecorder;
   let mediaStream;
-  let stopResolver;
 
   const releaseInput = () => {
     window.clearInterval(elapsedTimer);
@@ -29,34 +29,13 @@ export const useAudioRecorder = () => {
     mediaStream?.getTracks().forEach((track) => track.stop());
     mediaStream = undefined;
   };
-  const attachEvents = (recorder) => {
-    recorder.addEventListener('dataavailable', ({ data }) => {
-      if (!data.size) return;
-      chunks.push(data);
-    });
-    recorder.addEventListener('stop', () => {
-      const options = recorder.mimeType ? { type: recorder.mimeType } : undefined;
-      const blob = new Blob(chunks, options);
-      chunks = [];
-      stopResolver?.(blob);
-      stopResolver = undefined;
-      if (mediaRecorder === recorder) mediaRecorder = undefined;
-    });
-    recorder.addEventListener('error', () => {
-      errorMessage.value = '녹음 데이터를 저장하지 못했어요.';
-      isRecording.value = false;
-      releaseInput();
-      stopResolver?.(null);
-      stopResolver = undefined;
-    });
-  };
 
   const startRecording = async ({ beforeStart, onPcmChunk } = {}) => {
     if (isRecording.value || isStarting.value) return;
     errorMessage.value = '';
     isStarting.value = true;
     try {
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('Audio recording is not supported.');
       }
       mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -65,15 +44,15 @@ export const useAudioRecorder = () => {
           sampleRate: { ideal: 16000 },
         },
       });
-      mediaRecorder = new MediaRecorder(mediaStream);
-      attachEvents(mediaRecorder);
       startAnalysis(mediaStream);
       await beforeStart?.();
-      await startPcmStream(mediaStream, onPcmChunk);
-      chunks = [];
+      pcmChunks = [];
+      await startPcmStream(mediaStream, (chunk) => {
+        pcmChunks.push(chunk);
+        onPcmChunk?.(chunk);
+      });
       elapsedSeconds.value = 0;
       const startedAt = Date.now();
-      mediaRecorder.start(1000);
       isRecording.value = true;
       elapsedTimer = window.setInterval(() => {
         elapsedSeconds.value = Math.floor((Date.now() - startedAt) / 1000);
@@ -81,7 +60,7 @@ export const useAudioRecorder = () => {
     } catch (error) {
       errorMessage.value = getErrorMessage(error);
       isRecording.value = false;
-      mediaRecorder = undefined;
+      pcmChunks = [];
       await stopPcmStream();
       releaseInput();
       throw error;
@@ -90,22 +69,25 @@ export const useAudioRecorder = () => {
     }
   };
   const stopRecording = async () => {
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') return Promise.resolve(null);
-    await stopPcmStream();
-    return new Promise((resolve) => {
-      stopResolver = resolve;
-      isRecording.value = false;
-      mediaRecorder.stop();
+    if (!isRecording.value) return null;
+    isRecording.value = false;
+    try {
+      await stopPcmStream();
+      return createPcmWavBlob(pcmChunks);
+    } catch {
+      errorMessage.value = '녹음 데이터를 저장하지 못했어요.';
+      return null;
+    } finally {
+      pcmChunks = [];
       releaseInput();
-    });
+    }
   };
 
   onBeforeUnmount(() => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     isRecording.value = false;
+    pcmChunks = [];
     releaseInput();
     void stopPcmStream();
-    stopResolver = undefined;
   });
   return {
     clearError: () => (errorMessage.value = ''), elapsedSeconds, errorMessage,

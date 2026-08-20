@@ -74,10 +74,10 @@ export const useLiveRecordingSession = (reportChecklistId, onComplete) => {
     }
   };
 
-  const finish = async () => {
+  const finish = async (recordingFile) => {
     try {
       await socket.waitUntilSent();
-      await stopLiveRecording(recordingSessionId.value);
+      await stopLiveRecording(recordingSessionId.value, recordingFile);
       socket.close();
       status.value = 'ANALYZING';
       isProcessing.value = true;

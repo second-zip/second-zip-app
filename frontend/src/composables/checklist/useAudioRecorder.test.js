@@ -22,34 +22,6 @@ vi.mock('./usePcmAudioStream', () => ({
   }),
 }));
 
-class FakeMediaRecorder extends EventTarget {
-  static instances = [];
-
-  constructor(stream) {
-    super();
-    this.stream = stream;
-    this.state = 'inactive';
-    this.mimeType = 'audio/webm';
-    FakeMediaRecorder.instances.push(this);
-  }
-
-  start(timeslice) {
-    this.state = 'recording';
-    this.timeslice = timeslice;
-  }
-
-  stop() {
-    this.state = 'inactive';
-    this.dispatchEvent(new Event('stop'));
-  }
-
-  emitData(data) {
-    const event = new Event('dataavailable');
-    Object.defineProperty(event, 'data', { value: data });
-    this.dispatchEvent(event);
-  }
-}
-
 const setup = () => {
   let recorder;
   const wrapper = mount({
@@ -67,13 +39,11 @@ describe('useAudioRecorder', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    FakeMediaRecorder.instances = [];
     stream = { getTracks: () => [{ stop: vi.fn() }] };
     getUserMedia = vi.fn().mockResolvedValue(stream);
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true, value: { getUserMedia },
     });
-    vi.stubGlobal('MediaRecorder', FakeMediaRecorder);
     mocks.startPcm.mockResolvedValue(undefined);
     mocks.stopPcm.mockResolvedValue(undefined);
   });
@@ -82,20 +52,23 @@ describe('useAudioRecorder', () => {
     const { recorder } = setup();
     const beforeStart = vi.fn();
     const onPcmChunk = vi.fn();
+    const pcmChunk = new ArrayBuffer(4);
+    new DataView(pcmChunk).setInt16(0, 1000, true);
+    mocks.startPcm.mockImplementation(async (_, handleChunk) => {
+      handleChunk(pcmChunk);
+    });
 
     await recorder.startRecording({ beforeStart, onPcmChunk });
-    const mediaRecorder = FakeMediaRecorder.instances[0];
-    mediaRecorder.emitData(new Blob(['audio']));
     const blob = await recorder.stopRecording();
 
     expect(getUserMedia).toHaveBeenCalledWith({ audio: {
       channelCount: { ideal: 1 }, sampleRate: { ideal: 16000 },
     } });
     expect(beforeStart).toHaveBeenCalledBefore(mocks.startPcm);
-    expect(mocks.startPcm).toHaveBeenCalledWith(stream, onPcmChunk);
-    expect(mediaRecorder.timeslice).toBe(1000);
-    expect(blob.type).toBe('audio/webm');
-    expect(blob.size).toBeGreaterThan(0);
+    expect(mocks.startPcm).toHaveBeenCalledWith(stream, expect.any(Function));
+    expect(onPcmChunk).toHaveBeenCalledWith(pcmChunk);
+    expect(blob.type).toBe('audio/wav');
+    expect(blob.size).toBe(48);
   });
 
   test('마이크 권한 거부를 사용자 메시지로 변환하고 리소스를 정리한다', async () => {
