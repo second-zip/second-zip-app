@@ -68,7 +68,7 @@ describe('useChecklistRecorder', () => {
     await state.finishRecording();
     await mocks.onComplete({ recordingSessionId: 4, transcript: '완료' });
 
-    expect(mocks.finish).toHaveBeenCalledOnce();
+    expect(mocks.finish).toHaveBeenCalledWith(expect.any(Blob));
     expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({ duration: 6, blob: expect.any(Blob) }),
       { recordingSessionId: 4, transcript: '완료' },
@@ -85,5 +85,15 @@ describe('useChecklistRecorder', () => {
 
     expect(mocks.save).not.toHaveBeenCalled();
     expect(state.isFinishing.value).toBe(false);
+  });
+
+  test('녹음 파일 생성에 실패해도 서버 실시간 세션을 종료한다', async () => {
+    mocks.stopRecording.mockResolvedValue(null);
+    const state = useChecklistRecorder(vi.fn(), ref(9));
+
+    await state.finishRecording();
+
+    expect(mocks.finish).toHaveBeenCalledWith(null);
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 });

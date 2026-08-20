@@ -44,7 +44,7 @@ export const useChecklistRecorder = (emit, reportChecklistId) => {
     const blob = await recorder.stopRecording();
     if (blob) pendingRecording = { blob, duration };
     try {
-      if (blob) await live.finish();
+      await live.finish(blob);
     } catch {
       pendingRecording = undefined;
     } finally {

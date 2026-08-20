@@ -57,13 +57,14 @@ describe('useLiveRecordingSession', () => {
 
   test('종료 후 분석 완료 상태를 조회하고 완료 콜백을 호출한다', async () => {
     const { onComplete, state } = setup();
+    const recordingFile = new Blob(['wav'], { type: 'audio/wav' });
     await state.start();
 
-    await state.finish();
+    await state.finish(recordingFile);
     await flushPromises();
 
     expect(mocks.waitUntilSent).toHaveBeenCalledOnce();
-    expect(mocks.stop).toHaveBeenCalledWith(4);
+    expect(mocks.stop).toHaveBeenCalledWith(4, recordingFile);
     expect(mocks.getStatus).toHaveBeenCalledWith(4);
     expect(state.isProcessing.value).toBe(false);
     expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({
@@ -87,9 +88,10 @@ describe('useLiveRecordingSession', () => {
   test('분석 실패 응답의 사유를 사용자에게 표시한다', async () => {
     mocks.getStatus.mockResolvedValue({ status: 'FAILED', failureReason: '음성 없음' });
     const { state } = setup();
+    const recordingFile = new Blob(['wav'], { type: 'audio/wav' });
     await state.start();
 
-    await state.finish();
+    await state.finish(recordingFile);
     await flushPromises();
 
     expect(state.isProcessing.value).toBe(false);

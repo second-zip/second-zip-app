@@ -40,7 +40,23 @@ describe('recording API', () => {
     expect(api.get).toHaveBeenCalledWith(url);
   });
 
-  test('녹음 종료와 삭제 API를 호출한다', async () => {
+  test('녹음 종료 시 WAV 파일을 multipart/form-data로 전달한다', async () => {
+    const recordingFile = new Blob(['wav'], { type: 'audio/wav' });
+
+    await stopLiveRecording(3, recordingFile);
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/recordings/3/stop',
+      expect.any(FormData),
+      { timeout: 120_000 },
+    );
+    const formData = api.post.mock.calls[0][1];
+    expect(formData.get('file')).toEqual(expect.objectContaining({
+      name: 'recording-3.wav', type: 'audio/wav', size: 3,
+    }));
+  });
+
+  test('파일 없는 녹음 종료와 삭제 API를 호출한다', async () => {
     await stopLiveRecording(3);
     await deleteRecording(3);
 
