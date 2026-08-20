@@ -1,4 +1,6 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import {
+  computed, nextTick, onBeforeUnmount, ref, watch,
+} from 'vue';
 
 export const useAudioPlayer = (props) => {
   const audioElement = ref(null);
@@ -14,6 +16,8 @@ export const useAudioPlayer = (props) => {
     if (isPlaying.value) return audioElement.value.pause();
 
     try {
+      await props.beforePlay?.();
+      await nextTick();
       await audioElement.value.play();
     } catch {
       isPlaying.value = false;

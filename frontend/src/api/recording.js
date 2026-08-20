@@ -22,8 +22,8 @@ export const getRecordingStatus = async (recordingSessionId) => {
   return response.data;
 };
 
-export const getRecording = async (recordingSessionId) => {
-  const response = await api.get(`/recordings/${recordingSessionId}/read`);
+export const getRecordingFileUrl = async (recordingSessionId) => {
+  const response = await api.get(`/recordings/${recordingSessionId}/file-url`);
   return response.data;
 };
 

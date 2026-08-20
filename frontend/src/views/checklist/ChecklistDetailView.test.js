@@ -29,6 +29,7 @@ vi.mock('@/composables/checklist/useChecklistDetail', () => ({
     items: ref([item]),
     loadErrorMessage: ref(''),
     progress: ref(100),
+    recordingSessionId: ref(17),
     resetItems: mocks.resetItems,
     toggleItem: mocks.toggleItem,
   }),
@@ -43,6 +44,7 @@ describe('ChecklistDetailView', () => {
 
     expect(mocks.fetchChecklist).toHaveBeenCalledOnce();
     expect(recorder.props('reportChecklistId')).toBe(25);
+    expect(recorder.props('recordingSessionId')).toBe(17);
 
     recorder.vm.$emit('processed');
     await wrapper.vm.$nextTick();

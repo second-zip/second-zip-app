@@ -22,8 +22,10 @@ const liveState = {
   transcript: ref(''),
 };
 const savedState = {
-  deleteErrorMessage: ref(''), errorMessage: ref(''), isDeleteModalOpen: ref(false),
+  deleteErrorMessage: ref(''), ensureFreshUrl: vi.fn(), errorMessage: ref(''),
+  isDeleteModalOpen: ref(false),
   isDeleting: ref(false), isTextLoading: ref(false), isTextModalOpen: ref(false),
+  isLoadingRecording: ref(false),
   openTextModal: mocks.openText, remove: mocks.remove, save: mocks.save,
   savedRecording: ref(null), textErrorMessage: ref(''),
 };

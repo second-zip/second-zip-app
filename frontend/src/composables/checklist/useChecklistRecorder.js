@@ -4,10 +4,14 @@ import { useAudioRecorder } from './useAudioRecorder';
 import { useLiveRecordingSession } from './useLiveRecordingSession';
 import { useSavedRecording } from './useSavedRecording';
 
-export const useChecklistRecorder = (emit, reportChecklistId) => {
+export const useChecklistRecorder = (
+  emit,
+  reportChecklistId,
+  savedRecordingSessionId,
+) => {
   const recorder = useAudioRecorder();
   const isFinishing = ref(false);
-  const saved = useSavedRecording(emit);
+  const saved = useSavedRecording(emit, savedRecordingSessionId);
   let pendingRecording;
 
   const setSavedRecording = (data) => {

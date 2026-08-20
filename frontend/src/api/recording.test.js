@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import api from './instance';
 import {
   deleteRecording,
-  getRecording,
+  getRecordingFileUrl,
   getRecordingStatus,
   getRecordingTranscript,
   startLiveRecording,
@@ -33,7 +33,7 @@ describe('recording API', () => {
 
   test.each([
     [getRecordingStatus, '/recordings/3'],
-    [getRecording, '/recordings/3/read'],
+    [getRecordingFileUrl, '/recordings/3/file-url'],
     [getRecordingTranscript, '/recordings/3/transcript'],
   ])('녹음 조회 API의 data를 반환한다', async (request, url) => {
     await expect(request(3)).resolves.toEqual({ status: 'COMPLETED' });
