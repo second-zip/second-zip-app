@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router';
 
 import { getApiError } from '@/api/utils/error';
 import ActivitySummary from '@/components/mypage/ActivitySummary.vue';
-import MyPageHeader from '@/components/mypage/MyPageHeader.vue';
+import DefaultSheetHeader from '@/layouts/DefaultSheetHeader.vue';
 import ProfileCard from '@/components/mypage/ProfileCard.vue';
 import { useMyPageDashboard } from '@/composables/mypage/useMyPageDashboard';
 import { MYPAGE_ACTIONS, MYPAGE_ROUTES } from '@/constants/mypage';
@@ -39,11 +39,11 @@ const handleLogout = async () => {
 <template>
   <BottomSheetLayout class="mypage" :title-ratio="15">
     <template #header>
-      <MyPageHeader class="w-100" title="마이페이지" />
+      <DefaultSheetHeader class="w-100" title="마이페이지" />
     </template>
 
     <div class="mypage__scroll h-100 overflow-y-auto">
-      <ProfileCard :email="account.email" />
+      <ProfileCard :nickname="account.nickname" :email="account.email" />
       <div class="mypage__divider" />
       <div class="mypage__content">
         <p v-if="errorMessage" class="mypage__error" role="alert">

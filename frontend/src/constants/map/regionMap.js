@@ -2,7 +2,6 @@ export const MAP_WIDTH = 360;
 export const MAP_HEIGHT = 300;
 export const MAP_PADDING = 12;
 export const SIGUNGU_LABEL_MIN_AREA = 220;
-export const JEONSE_PRICE_MONTH = '202606';
 export const NO_DATA_COLOR = 'var(--black-100)';
 
 export const RISK_COLOR_SCALE = [

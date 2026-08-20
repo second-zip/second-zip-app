@@ -578,11 +578,15 @@ onBeforeUnmount(() => window.clearTimeout(toastTimer));
 }
 
 .address {
-  flex: 1;
+  min-width: 0;
+  flex: 1 1 0;
   gap: 0.375rem;
+  overflow: hidden;
 }
 
 .address h1 {
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   font-size: 0.875rem;
   font-weight: 500;

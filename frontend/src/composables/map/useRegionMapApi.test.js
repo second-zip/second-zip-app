@@ -3,7 +3,6 @@ import { nextTick, ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getFraudDamages, getJeonsePriceChanges } from '@/api/map';
-import { JEONSE_PRICE_MONTH } from '@/constants/map/regionMap';
 import { logger } from '@/utils/logger';
 import { useRegionMapApi } from './useRegionMapApi';
 
@@ -60,7 +59,6 @@ describe('useRegionMapApi', () => {
     expect(getJeonsePriceChanges).toHaveBeenCalledWith({
       level: 'SIGUNGU',
       parentRegionCode: '41',
-      month: JEONSE_PRICE_MONTH,
     });
   });
 
@@ -141,7 +139,6 @@ describe('useRegionMapApi', () => {
     expect(getJeonsePriceChanges).toHaveBeenCalledWith({
       level: 'SIGUNGU',
       parentRegionCode: '41',
-      month: JEONSE_PRICE_MONTH,
     });
   });
 
