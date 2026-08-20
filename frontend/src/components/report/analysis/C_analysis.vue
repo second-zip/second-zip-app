@@ -58,7 +58,7 @@ const toggle = (id) => {
               <strong>{{ check.basis }}</strong>
             </div>
             <div class="detail-row">
-              <span>우리 집은?</span>
+              <span>이번 집은?</span>
               <strong :class="`text-${check.status}`">{{
                 check.amount
               }}</strong>
