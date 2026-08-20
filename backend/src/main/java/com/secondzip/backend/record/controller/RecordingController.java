@@ -96,16 +96,18 @@ public class RecordingController {
 
     @ApiOperation(
             value = "실시간 녹음 종료",
-            notes = "실시간 STT를 종료하고 최종 GPT 체크리스트 분석을 시작합니다."
+            notes = "실시간 STT를 종료하고 최종 GPT 체크리스트 분석을 시작합니다.",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     @PostMapping("/{recordingSessionId}/stop")
     public ResponseEntity<Void>
     stopLiveRecording(
             @ApiIgnore @AuthenticationPrincipal Long accountId,
-            @PathVariable Long recordingSessionId
+            @PathVariable Long recordingSessionId,
+            @RequestPart("file") MultipartFile file
     ) {
 
-        recordingService.stopLiveRecording(accountId, recordingSessionId);
+        recordingService.stopLiveRecording(accountId, recordingSessionId,file);
 
         return ResponseEntity.accepted().build();
     }

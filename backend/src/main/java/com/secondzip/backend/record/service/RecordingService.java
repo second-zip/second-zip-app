@@ -24,7 +24,8 @@ public interface RecordingService {
 
     void stopLiveRecording(
             Long accountId,
-            Long recordingSessionId
+            Long recordingSessionId,
+            MultipartFile file
     );
 
     RecordingDetailResponseDTO getRecording(
