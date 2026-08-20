@@ -274,7 +274,8 @@ public class RecordingServiceImpl implements RecordingService {
     @Transactional
     public void stopLiveRecording(
             Long accountId,
-            Long recordingSessionId
+            Long recordingSessionId,
+            MultipartFile file
     ) {
 
         RecordingSessionVO session =
@@ -301,7 +302,9 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
+        validateRecordingFile(file);
 
+        // 1. 실시간 CLOVA 연결 종료
         String transcript = liveTranscriptionService.finish(recordingSessionId);
 
 
@@ -312,11 +315,23 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
+        // 2. 최종 녹음 파일 Object Storage 저장
+        String objectKey = recordingStorage.upload(accountId, file);
 
-        recordingSessionMapper.updateTranscript(recordingSessionId, transcript, RecordingStatus.ANALYZING);
+        // 3. 파일 정보 DB 저장
+        recordingSessionMapper.updateFileInfo(
+                recordingSessionId,
+                file.getOriginalFilename(),
+                objectKey,
+                file.getContentType(),
+                file.getSize()
+        );
 
-
-        recordingFinalAnalysisAsyncService.analyze(recordingSessionId);
+        // 4. 전체 녹음 파일을 다시 CLOVA STT
+        recordingAsyncService.transcribe(
+                recordingSessionId,
+                objectKey
+        );
     }
 
     @Override

@@ -60,4 +60,12 @@ public interface RecordingSessionMapper {
             @Param("recordingSessionId")
             Long recordingSessionId
     );
+
+    int updateFileInfo(
+            @Param("recordingSessionId") Long recordingSessionId,
+            @Param("originalFileName") String originalFileName,
+            @Param("storageObjectKey") String storageObjectKey,
+            @Param("contentType") String contentType,
+            @Param("fileSize") Long fileSize
+    );
 }

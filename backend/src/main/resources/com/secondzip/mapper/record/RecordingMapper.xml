@@ -183,4 +183,13 @@
               #{recordingSessionId}
 
     </delete>
+
+    <update id="updateFileInfo">
+        UPDATE recording_sessions
+        SET original_file_name = #{originalFileName},
+            storage_object_key = #{storageObjectKey},
+            content_type = #{contentType},
+            file_size = #{fileSize}
+        WHERE recording_session_id = #{recordingSessionId}
+    </update>
 </mapper>
