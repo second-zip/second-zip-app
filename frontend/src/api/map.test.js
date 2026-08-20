@@ -31,10 +31,10 @@ describe('map API', () => {
     api.get.mockResolvedValue({ data });
 
     await expect(
-      getJeonsePriceChanges({ level: 'SIDO', month: '202606' }),
+      getJeonsePriceChanges({ level: 'SIDO' }),
     ).resolves.toBe(data);
     expect(api.get).toHaveBeenCalledWith('/maps/jeonse-price', {
-      params: { level: 'SIDO', month: '202606' },
+      params: { level: 'SIDO' },
     });
   });
 

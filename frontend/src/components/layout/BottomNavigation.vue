@@ -48,7 +48,7 @@ const menus = [
   {
     label: 'MY',
     to: '/mypage',
-    activePaths: ['/login', '/signup'],
+    activePaths: ['/mypage', '/login', '/signup'],
     inactiveIcon: mypageGray,
     activeIcon: mypageBlue,
   },

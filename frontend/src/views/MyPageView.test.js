@@ -49,6 +49,9 @@ describe('MyPageView', () => {
     await flushPromises();
     expect(wrapper.text()).not.toContain('테스터 님');
     expect(wrapper.text()).toContain('ID');
+    expect(wrapper.get('.profile-card__nickname').text()).toBe(
+      mocks.authStore.myPage.nickname,
+    );
     expect(wrapper.text()).toContain('user@example.com');
     expect(
       wrapper.findAll('.activity-card__item').map((item) => item.text()),
