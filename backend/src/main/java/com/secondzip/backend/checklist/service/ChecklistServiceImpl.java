@@ -175,13 +175,13 @@ public class ChecklistServiceImpl implements ChecklistService {
             Long reportChecklistId
     ) {
 
-        int updatedCount =
-                reportChecklistMapper.reset(
+        int exists =
+                reportChecklistMapper.existsOwnedChecklist(
                         accountId,
                         reportChecklistId
                 );
 
-        if (updatedCount == 0) {
+        if (exists == 0) {
             throw new BusinessException(
                     ErrorCode.RESOURCE_NOT_FOUND,
                     "체크리스트를 찾을 수 없습니다."
