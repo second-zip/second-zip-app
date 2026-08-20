@@ -335,51 +335,6 @@ public class RecordingServiceImpl implements RecordingService {
 
     @Override
     @Transactional(readOnly = true)
-    public RecordingDetailResponseDTO getRecording(
-            Long accountId,
-            Long recordingSessionId
-    ) {
-
-        RecordingSessionVO session =
-                recordingSessionMapper.findByIdAndAccountId(
-                        recordingSessionId,
-                        accountId
-                );
-
-        if (session == null) {
-            throw new BusinessException(
-                    ErrorCode.RESOURCE_NOT_FOUND,
-                    "녹음 세션을 찾을 수 없습니다."
-            );
-        }
-
-        return RecordingDetailResponseDTO.builder()
-                .recordingSessionId(
-                        session.getRecordingSessionId()
-                )
-                .reportChecklistId(
-                        session.getReportChecklistId()
-                )
-                .originalFileName(
-                        session.getOriginalFileName()
-                )
-                .contentType(
-                        session.getContentType()
-                )
-                .fileSize(
-                        session.getFileSize()
-                )
-                .status(
-                        session.getStatus()
-                )
-                .summary(
-                        session.getSummary()
-                )
-                .build();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public RecordingTranscriptResponseDTO getTranscript(
             Long accountId,
             Long recordingSessionId
@@ -467,5 +422,62 @@ public class RecordingServiceImpl implements RecordingService {
 
         // 혹시 메모리 Context가 남아있다면 정리
         contextManager.remove(recordingSessionId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecordingFileUrlResponseDTO getRecordingFileUrl(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        if (accountId == null) {
+            throw new BusinessException(
+                    ErrorCode.UNAUTHORIZED,
+                    "로그인이 필요합니다."
+            );
+        }
+
+        RecordingSessionVO session =
+                recordingSessionMapper
+                        .findByIdAndAccountId(
+                                recordingSessionId,
+                                accountId
+                        );
+
+        if (session == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        String storageObjectKey =
+                session.getStorageObjectKey();
+
+        if (storageObjectKey == null
+                || storageObjectKey.isBlank()) {
+
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "저장된 녹음 파일이 없습니다."
+            );
+        }
+
+        String url = recordingStorage.generatePresignedUrl(storageObjectKey);
+
+        return RecordingFileUrlResponseDTO.builder()
+                .url(url)
+                .originalFileName(
+                        session.getOriginalFileName()
+                )
+                .contentType(
+                        session.getContentType()
+                )
+                .fileSize(
+                        session.getFileSize()
+                )
+                .expiresIn(600L)
+                .build();
     }
 }
