@@ -25,6 +25,7 @@ public class RecordingServiceImpl implements RecordingService {
     private final LiveRecordingContextManager contextManager;
     private final ReportChecklistMapper reportChecklistMapper;
     private final LiveTranscriptionService liveTranscriptionService;
+    private final ChecklistAnalysisService checklistAnalysisService;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
@@ -182,6 +183,37 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
     }
+
+    private void validatestopRecordingFile(MultipartFile file) {
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "녹음 파일 크기가 허용 범위를 초과했습니다."
+            );
+        }
+
+        String originalFilename = file.getOriginalFilename();
+
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "파일 형식을 확인할 수 없습니다."
+            );
+        }
+
+        String extension = originalFilename
+                .substring(originalFilename.lastIndexOf('.') + 1)
+                .toLowerCase();
+
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "지원하지 않는 녹음 파일 형식입니다."
+            );
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public RecordingStatusResponseDTO getRecordingStatus(
@@ -301,11 +333,41 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        validateRecordingFile(file);
-
-        // 1. 실시간 CLOVA 연결 종료
         String transcript = liveTranscriptionService.finish(recordingSessionId);
 
+        // 2. 파일이 없으면 강제 종료 처리
+        if (file == null || file.isEmpty()) {
+
+            // 지금까지 인식된 내용이 있다면 저장 + 최종 분석
+            if (transcript != null && !transcript.isBlank()) {
+
+                recordingSessionMapper.updateTranscript(
+                        recordingSessionId,
+                        transcript,
+                        RecordingStatus.ANALYZING
+                );
+
+                checklistAnalysisService.analyze(
+                        recordingSessionId
+                );
+
+            } else {
+
+                // 녹취도 없다면 분석할 것이 없으므로 정상 종료 처리
+                recordingSessionMapper.updateStatus(
+                        recordingSessionId,
+                        RecordingStatus.COMPLETED
+                );
+            }
+
+            return;
+        }
+
+        /*
+         * 3. 정상 종료
+         * 파일 존재
+         */
+        validatestopRecordingFile(file);
 
         if (transcript == null || transcript.isBlank()) {
             throw new BusinessException(
@@ -314,10 +376,14 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        // 2. 최종 녹음 파일 Object Storage 저장
-        String objectKey = recordingStorage.upload(accountId, file);
+        // 4. 최종 녹음 파일 Object Storage 저장
+        String objectKey =
+                recordingStorage.upload(
+                        accountId,
+                        file
+                );
 
-        // 3. 파일 정보 DB 저장
+        // 5. 파일 정보 DB 저장
         recordingSessionMapper.updateFileInfo(
                 recordingSessionId,
                 file.getOriginalFilename(),
@@ -326,7 +392,9 @@ public class RecordingServiceImpl implements RecordingService {
                 file.getSize()
         );
 
-        // 4. 전체 녹음 파일을 다시 CLOVA STT
+        // 6. 전체 녹음 파일 CLOVA 재-STT
+        // → 최종 transcript 저장
+        // → 최종 체크리스트 분석
         recordingAsyncService.transcribe(
                 recordingSessionId,
                 objectKey
