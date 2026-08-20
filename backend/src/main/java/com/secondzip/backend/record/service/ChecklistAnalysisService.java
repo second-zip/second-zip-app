@@ -67,9 +67,17 @@ public class ChecklistAnalysisService {
         if (checklistItems == null
                 || checklistItems.isEmpty()) {
 
-            throw new IllegalStateException(
-                    "대화로 분석할 체크리스트 항목이 없습니다."
+            recordingSessionMapper.updateSummary(
+                    recordingSessionId,
+                    "분석할 체크리스트 항목이 없습니다."
             );
+
+            recordingSessionMapper.updateStatus(
+                    recordingSessionId,
+                    RecordingStatus.COMPLETED
+            );
+
+            return;
         }
 
 
