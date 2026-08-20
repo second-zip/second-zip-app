@@ -23,7 +23,7 @@ public class NcloudRecordingStorage implements RecordingStorage {
     @Value("${NCLOUD_OBJECT_STORAGE_BUCKET}")
     private String bucketName;
 
-    private static final long PRESIGNED_URL_EXPIRATION_MS = 10 * 60 * 1000L; // 10분
+    private static final long PRESIGNED_URL_EXPIRATION_MS = 2 * 60 * 60 * 1000L; // 10분
 
     @Override
     public String upload(
