@@ -1,7 +1,6 @@
 import { computed, ref, watch } from 'vue';
 
 import { getFraudDamages, getJeonsePriceChanges } from '@/api/map';
-import { JEONSE_PRICE_MONTH } from '@/constants/map/regionMap';
 import { createRegionDataMap } from '@/utils/map/regionData';
 import { logger } from '@/utils/logger';
 
@@ -74,8 +73,7 @@ export const useRegionMapApi = (state, dataType) => {
       errors: priceErrors,
       pending: pricePending,
       key,
-      request: () =>
-        getJeonsePriceChanges({ ...params, month: JEONSE_PRICE_MONTH }),
+      request: () => getJeonsePriceChanges(params),
     });
   };
 
