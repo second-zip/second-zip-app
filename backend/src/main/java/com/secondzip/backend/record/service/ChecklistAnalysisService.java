@@ -3,7 +3,7 @@ package com.secondzip.backend.record.service;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.record.mapper.ChecklistItemMapper;
 import com.secondzip.backend.record.client.ChecklistAnalysisClient;
-import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.domain.RecordingSession;
 import com.secondzip.backend.record.dto.request.ChecklistItemInput;
 import com.secondzip.backend.record.dto.response.ChecklistAnalysisResult;
 import com.secondzip.backend.record.enums.ChecklistAnalysisStatus;
@@ -40,7 +40,7 @@ public class ChecklistAnalysisService {
     public void analyze(
             Long recordingSessionId) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findById(
                         recordingSessionId
                 );
@@ -131,7 +131,7 @@ public class ChecklistAnalysisService {
 
 
     private void validateSession(
-            RecordingSessionVO session
+            RecordingSession session
     ) {
 
         if (session == null) {

@@ -1,6 +1,6 @@
 package com.secondzip.backend.account.service;
 
-import com.secondzip.backend.account.domain.AccountVO;
+import com.secondzip.backend.account.domain.Account;
 import com.secondzip.backend.account.dto.request.*;
 import com.secondzip.backend.account.dto.response.AccountResponseDTO;
 import com.secondzip.backend.account.dto.response.ActivitySummaryDTO;
@@ -12,7 +12,7 @@ import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.security.jwt.JwtTokenBlacklistService;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.secondzip.backend.security.service.RefreshTokenService;
-import com.secondzip.backend.terms.domain.TermVO;
+import com.secondzip.backend.terms.domain.Term;
 import com.secondzip.backend.terms.dto.request.TermConsentRequestDTO;
 import com.secondzip.backend.terms.mapper.TermMapper;
 import io.jsonwebtoken.Claims;
@@ -45,14 +45,14 @@ public class AccountServiceImpl implements AccountService {
         validateDuplicateEmail(signupDTO.getEmail());
         validateDuplicateNickname(signupDTO.getNickname());
 
-        List<TermVO> latestTerms = termMapper.findLatestTerms();
+        List<Term> latestTerms = termMapper.findLatestTerms();
 
         validateTermConsents(
                 latestTerms,
                 signupDTO.getTermConsents()
         );
 
-        AccountVO account = AccountVO.builder()
+        Account account = Account.builder()
                 .email(signupDTO.getEmail())
                 .password(passwordEncoder.encode(signupDTO.getPassword()))
                 .nickname(signupDTO.getNickname())
@@ -80,7 +80,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional(readOnly = true)
     public LoginResponseDTO login(LoginDTO loginDTO) {
-        AccountVO account = accountMapper.findByEmail(loginDTO.getEmail());
+        Account account = accountMapper.findByEmail(loginDTO.getEmail());
 
         if (account == null) {
             throw new IllegalArgumentException(
@@ -147,7 +147,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional(readOnly = true)
     public AccountResponseDTO getMyAccount(Long accountId) {
 
-        AccountVO account = accountMapper.findById(accountId);
+        Account account = accountMapper.findById(accountId);
 
         if (account == null) {
             throw new BusinessException(
@@ -161,7 +161,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public AccountResponseDTO updateMyAccount(Long accountId, UpdateAccountDTO updateDTO) {
-        AccountVO account = accountMapper.findById(accountId);
+        Account account = accountMapper.findById(accountId);
 
         if (account == null) {
             throw new BusinessException(
@@ -187,7 +187,7 @@ public class AccountServiceImpl implements AccountService {
             );
         }
 
-        AccountVO updatedAccount = accountMapper.findById(accountId);
+        Account updatedAccount = accountMapper.findById(accountId);
 
         return AccountResponseDTO.from(updatedAccount);
 
@@ -195,7 +195,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public AccountResponseDTO updateCharacter(Long accountId, UpdateCharacterDTO updateDTO) {
-        AccountVO account = accountMapper.findById(accountId);
+        Account account = accountMapper.findById(accountId);
 
         if (account == null) {
             throw new BusinessException(
@@ -222,7 +222,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void withdraw(Long accountId, String accessToken, WithdrawAccountDTO withdrawDTO) {
-        AccountVO account = accountMapper.findById(accountId);
+        Account account = accountMapper.findById(accountId);
 
         if (account == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "회원정보를 찾을 수 없습니다.");
@@ -250,7 +250,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void updatePassword(Long accountId, String accessToken, UpdatePasswordDTO updatePasswordDTO) {
-        AccountVO account = accountMapper.findById(accountId);
+        Account account = accountMapper.findById(accountId);
 
         if (account == null) {
             throw new BusinessException(
@@ -307,7 +307,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional(readOnly = true)
     public MyPageResponseDTO getMyPage(Long accountId) {
 
-        AccountVO account = accountMapper.findById(accountId);
+        Account account = accountMapper.findById(accountId);
 
         if (account == null) {
             throw new BusinessException(
@@ -341,7 +341,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private void validateTermConsents(
-            List<TermVO> latestTerms,
+            List<Term> latestTerms,
             List<TermConsentRequestDTO> consents
     ) {
         if (consents == null || consents.isEmpty()) {
@@ -375,7 +375,7 @@ public class AccountServiceImpl implements AccountService {
 
         //list 형식을 stream으로 꺼내서 각각 map으로 바꾼 후 collect로 합침
         Set<Long> latestTermIds = latestTerms.stream()
-                .map(TermVO::getTermId)
+                .map(Term::getTermId)
                 .collect(Collectors.toSet());
 
         boolean containsInvalidTerm = consentMap.keySet().stream()

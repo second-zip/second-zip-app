@@ -7,7 +7,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TermVO {
+public class Term {
     private Long termId;
     private String title;
     private String content;

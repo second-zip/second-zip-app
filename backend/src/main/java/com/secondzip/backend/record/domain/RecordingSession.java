@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RecordingSessionVO {
+public class RecordingSession {
 
     private Long recordingSessionId;
 

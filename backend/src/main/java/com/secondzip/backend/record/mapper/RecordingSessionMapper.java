@@ -1,6 +1,6 @@
 package com.secondzip.backend.record.mapper;
 
-import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.domain.RecordingSession;
 import com.secondzip.backend.record.enums.RecordingStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -8,14 +8,14 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface RecordingSessionMapper {
 
-    int insert(RecordingSessionVO session);
+    int insert(RecordingSession session);
 
-    RecordingSessionVO findByIdAndAccountId(
+    RecordingSession findByIdAndAccountId(
             @Param("recordingSessionId") Long recordingSessionId,
             @Param("accountId") Long accountId
     );
 
-    RecordingSessionVO findById(
+    RecordingSession findById(
             @Param("recordingSessionId")
             Long recordingSessionId
     );
@@ -45,7 +45,7 @@ public interface RecordingSessionMapper {
     );
 
     int insertLiveSession(
-            RecordingSessionVO session
+            RecordingSession session
     );
 
     int deleteByIdAndAccountId(

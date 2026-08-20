@@ -3,7 +3,7 @@ package com.secondzip.backend.record.service;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.domain.RecordingSession;
 import com.secondzip.backend.record.dto.response.*;
 import com.secondzip.backend.record.enums.RecordingStatus;
 import com.secondzip.backend.record.mapper.RecordingSessionMapper;
@@ -69,8 +69,8 @@ public class RecordingServiceImpl implements RecordingService {
                         file
                 );
 
-        RecordingSessionVO session =
-                RecordingSessionVO.builder()
+        RecordingSession session =
+                RecordingSession.builder()
                         .accountId(accountId)
                         .reportChecklistId(
                                 reportChecklistId
@@ -122,7 +122,7 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -221,7 +221,7 @@ public class RecordingServiceImpl implements RecordingService {
             Long recordingSessionId
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -280,8 +280,8 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        RecordingSessionVO session =
-                RecordingSessionVO.builder()
+        RecordingSession session =
+                RecordingSession.builder()
                         .accountId(accountId)
                         .reportChecklistId(reportChecklistId)
                         .status(RecordingStatus.RECORDING)
@@ -309,7 +309,7 @@ public class RecordingServiceImpl implements RecordingService {
             MultipartFile file
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper
                         .findByIdAndAccountId(
                                 recordingSessionId,
@@ -408,7 +408,7 @@ public class RecordingServiceImpl implements RecordingService {
             Long recordingSessionId
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -438,7 +438,7 @@ public class RecordingServiceImpl implements RecordingService {
             Long recordingSessionId
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -506,7 +506,7 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper
                         .findByIdAndAccountId(
                                 recordingSessionId,

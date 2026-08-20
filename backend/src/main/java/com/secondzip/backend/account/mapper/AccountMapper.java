@@ -1,6 +1,6 @@
 package com.secondzip.backend.account.mapper;
 
-import com.secondzip.backend.account.domain.AccountVO;
+import com.secondzip.backend.account.domain.Account;
 import com.secondzip.backend.account.dto.request.UpdateAccountDTO;
 import com.secondzip.backend.account.dto.response.ActivitySummaryDTO;
 import com.secondzip.backend.account.enums.CharacterType;
@@ -14,11 +14,11 @@ public interface AccountMapper {
 
     int countByNickname(String nickname);
 
-    int insert(AccountVO account);
+    int insert(Account account);
 
-    AccountVO findByEmail(String email);
+    Account findByEmail(String email);
 
-    AccountVO findById(Long accountId);
+    Account findById(Long accountId);
 
     int countByNicknameExcludingAccount(@Param("nickname") String nickname, @Param("accountId") Long accountId);
 

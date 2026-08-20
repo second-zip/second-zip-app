@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountTermConsentVO {
+public class AccountTermConsent {
 
     private Long accountTermConsentId;
     private Long accountId;

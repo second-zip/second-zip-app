@@ -1,6 +1,6 @@
 package com.secondzip.backend.checklist.mapper;
 
-import com.secondzip.backend.checklist.domain.ReportChecklistVO;
+import com.secondzip.backend.checklist.domain.ReportChecklist;
 import com.secondzip.backend.checklist.dto.response.*;
 import com.secondzip.backend.checklist.enums.Category;
 import org.apache.ibatis.annotations.Mapper;
@@ -31,7 +31,7 @@ public interface ReportChecklistMapper {
     );
 
     int insertChecklist(
-            ReportChecklistVO checklist
+            ReportChecklist checklist
     );
 
     int insertChecklistItems(

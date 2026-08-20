@@ -1,6 +1,6 @@
 package com.secondzip.backend.checklist.service;
 
-import com.secondzip.backend.checklist.domain.ReportChecklistVO;
+import com.secondzip.backend.checklist.domain.ReportChecklist;
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
 import com.secondzip.backend.checklist.dto.response.*;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
@@ -72,8 +72,8 @@ public class ChecklistServiceImpl implements ChecklistService {
         }
 
 
-        ReportChecklistVO checklist =
-                ReportChecklistVO.builder()
+        ReportChecklist checklist =
+                ReportChecklist.builder()
                         .analysisReportId(
                                 analysisReportId
                         )

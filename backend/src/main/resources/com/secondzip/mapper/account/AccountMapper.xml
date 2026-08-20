@@ -7,7 +7,7 @@
 
     <resultMap
             id="accountMap"
-            type="com.secondzip.backend.account.domain.AccountVO">
+            type="com.secondzip.backend.account.domain.Account">
 
         <id
                 column="account_id"
@@ -52,7 +52,7 @@
 
     <insert
             id="insert"
-            parameterType="com.secondzip.backend.account.domain.AccountVO"
+            parameterType="com.secondzip.backend.account.domain.Account"
             useGeneratedKeys="true"
             keyProperty="accountId"
             keyColumn="account_id">
@@ -88,7 +88,7 @@
 
     <select id="findById"
             parameterType="long"
-            resultType="com.secondzip.backend.account.domain.AccountVO">
+            resultType="com.secondzip.backend.account.domain.Account">
         SELECT
             account_id AS accountId,
             email,

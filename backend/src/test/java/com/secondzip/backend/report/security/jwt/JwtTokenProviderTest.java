@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.security.jwt;
 
-import com.secondzip.backend.account.domain.AccountVO;
+import com.secondzip.backend.account.domain.Account;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -20,7 +20,7 @@ class JwtTokenProviderTest {
     private static final long REFRESH_EXPIRATION = 120_000L;
 
     private JwtTokenProvider jwtTokenProvider;
-    private AccountVO account;
+    private Account account;
 
     @BeforeEach
     void setUp() {
@@ -30,7 +30,7 @@ class JwtTokenProviderTest {
                 REFRESH_EXPIRATION
         );
 
-        account = AccountVO.builder()
+        account = Account.builder()
                 .accountId(1L)
                 .email("test@test.com")
                 .build();

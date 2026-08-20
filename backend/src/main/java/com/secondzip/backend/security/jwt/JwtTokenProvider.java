@@ -1,11 +1,9 @@
 package com.secondzip.backend.security.jwt;
 
-import com.secondzip.backend.account.domain.AccountVO;
+import com.secondzip.backend.account.domain.Account;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -25,7 +23,7 @@ public class JwtTokenProvider {
         this.refreshExpiration = refreshExpiration;
     }
 
-    public String createAccessToken(AccountVO account) {
+    public String createAccessToken(Account account) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessExpiration);
 
@@ -40,7 +38,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String createRefreshToken(AccountVO account) {
+    public String createRefreshToken(Account account) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + refreshExpiration);
 
