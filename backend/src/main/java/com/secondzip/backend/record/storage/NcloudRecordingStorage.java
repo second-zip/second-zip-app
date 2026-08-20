@@ -1,6 +1,8 @@
 package com.secondzip.backend.record.storage;
 
+import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URL;
+import java.util.Date;
 import java.util.UUID;
 
 @Component
@@ -18,6 +22,8 @@ public class NcloudRecordingStorage implements RecordingStorage {
 
     @Value("${NCLOUD_OBJECT_STORAGE_BUCKET}")
     private String bucketName;
+
+    private static final long PRESIGNED_URL_EXPIRATION_MS = 2 * 60 * 60 * 1000L; // 10분
 
     @Override
     public String upload(
@@ -70,6 +76,27 @@ public class NcloudRecordingStorage implements RecordingStorage {
                 bucketName,
                 objectKey
         );
+    }
+
+    @Override
+    public String generatePresignedUrl(String objectKey) {
+        Date expiration =
+                new Date(System.currentTimeMillis() + PRESIGNED_URL_EXPIRATION_MS);
+
+        GeneratePresignedUrlRequest request =
+                new GeneratePresignedUrlRequest(
+                        bucketName,
+                        objectKey
+                )
+                        .withMethod(HttpMethod.GET)
+                        .withExpiration(expiration);
+
+        URL url =
+                amazonS3.generatePresignedUrl(
+                        request
+                );
+
+        return url.toString();
     }
 
     private String sanitizeFilename(String originalFilename) {

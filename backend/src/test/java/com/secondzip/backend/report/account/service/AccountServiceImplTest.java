@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.account.service;
 
-import com.secondzip.backend.account.domain.AccountVO;
+import com.secondzip.backend.account.domain.Account;
 import com.secondzip.backend.account.dto.request.*;
 import com.secondzip.backend.account.dto.response.AccountResponseDTO;
 import com.secondzip.backend.account.dto.response.LoginResponseDTO;
@@ -12,7 +12,7 @@ import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.security.jwt.JwtTokenBlacklistService;
 import com.secondzip.backend.security.jwt.JwtTokenProvider;
 import com.secondzip.backend.security.service.RefreshTokenService;
-import com.secondzip.backend.terms.domain.TermVO;
+import com.secondzip.backend.terms.domain.Term;
 import com.secondzip.backend.terms.dto.request.TermConsentRequestDTO;
 import com.secondzip.backend.terms.mapper.TermMapper;
 import io.jsonwebtoken.Claims;
@@ -79,7 +79,7 @@ class AccountServiceImplTest {
                     .termConsents(List.of(consent))
                     .build();
 
-            TermVO requiredTerm = TermVO.builder()
+            Term requiredTerm = Term.builder()
                     .termId(1L)
                     .required(true)
                     .build();
@@ -97,9 +97,9 @@ class AccountServiceImplTest {
                     .thenReturn("encoded-password");
 
             // 실제 MyBatis에서는 insert 이후 generated key가 account.accountId에 들어간다고 가정
-            when(accountMapper.insert(any(AccountVO.class)))
+            when(accountMapper.insert(any(Account.class)))
                     .thenAnswer(invocation -> {
-                        AccountVO account = invocation.getArgument(0);
+                        Account account = invocation.getArgument(0);
                         account.setAccountId(1L);
                         return 1;
                     });
@@ -108,12 +108,12 @@ class AccountServiceImplTest {
             accountService.signup(signupDTO);
 
             // then
-            ArgumentCaptor<AccountVO> accountCaptor =
-                    ArgumentCaptor.forClass(AccountVO.class);
+            ArgumentCaptor<Account> accountCaptor =
+                    ArgumentCaptor.forClass(Account.class);
 
             verify(accountMapper).insert(accountCaptor.capture());
 
-            AccountVO savedAccount = accountCaptor.getValue();
+            Account savedAccount = accountCaptor.getValue();
 
             assertEquals("test@test.com", savedAccount.getEmail());
             assertEquals("encoded-password", savedAccount.getPassword());
@@ -157,7 +157,7 @@ class AccountServiceImplTest {
             );
 
             verify(accountMapper, never())
-                    .insert(any(AccountVO.class));
+                    .insert(any(Account.class));
         }
 
         @Test
@@ -193,7 +193,7 @@ class AccountServiceImplTest {
             );
 
             verify(accountMapper, never())
-                    .insert(any(AccountVO.class));
+                    .insert(any(Account.class));
         }
 
         @Test
@@ -212,7 +212,7 @@ class AccountServiceImplTest {
                     .termConsents(List.of(consent))
                     .build();
 
-            TermVO requiredTerm = TermVO.builder()
+            Term requiredTerm = Term.builder()
                     .termId(1L)
                     .required(true)
                     .build();
@@ -239,7 +239,7 @@ class AccountServiceImplTest {
             );
 
             verify(accountMapper, never())
-                    .insert(any(AccountVO.class));
+                    .insert(any(Account.class));
         }
     }
 
@@ -254,7 +254,7 @@ class AccountServiceImplTest {
             LoginDTO loginDTO =
                     new LoginDTO("test@test.com", "Password1!");
 
-            AccountVO account = AccountVO.builder()
+            Account account = Account.builder()
                     .accountId(1L)
                     .email("test@test.com")
                     .password("encoded-password")
@@ -331,7 +331,7 @@ class AccountServiceImplTest {
             LoginDTO loginDTO =
                     new LoginDTO("test@test.com", "WrongPassword!");
 
-            AccountVO account = AccountVO.builder()
+            Account account = Account.builder()
                     .accountId(1L)
                     .email("test@test.com")
                     .password("encoded-password")
@@ -467,7 +467,7 @@ class AccountServiceImplTest {
         @DisplayName("회원이 존재하면 회원정보를 반환한다")
         void getMyAccount_success() {
             // given
-            AccountVO account = createAccount();
+            Account account = createAccount();
 
             when(accountMapper.findById(1L))
                     .thenReturn(account);
@@ -518,9 +518,9 @@ class AccountServiceImplTest {
             when(updateDTO.getNickname())
                     .thenReturn("새닉네임");
 
-            AccountVO account = createAccount();
+            Account account = createAccount();
 
-            AccountVO updatedAccount = AccountVO.builder()
+            Account updatedAccount = Account.builder()
                     .accountId(1L)
                     .email("test@test.com")
                     .password("encoded-password")
@@ -613,7 +613,7 @@ class AccountServiceImplTest {
             when(updateDTO.getNewPasswordConfirm())
                     .thenReturn("NewPassword1!");
 
-            AccountVO account = createAccount();
+            Account account = createAccount();
 
             when(accountMapper.findById(1L))
                     .thenReturn(account);
@@ -900,8 +900,8 @@ class AccountServiceImplTest {
 
 
     // 여러 테스트에서 공통으로 사용할 회원 데이터
-    private AccountVO createAccount() {
-        return AccountVO.builder()
+    private Account createAccount() {
+        return Account.builder()
                 .accountId(1L)
                 .email("test@test.com")
                 .password("encoded-password")

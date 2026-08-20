@@ -29,7 +29,7 @@
 
 
     <insert id="insertChecklist"
-            parameterType="com.secondzip.backend.checklist.domain.ReportChecklistVO"
+            parameterType="com.secondzip.backend.checklist.domain.ReportChecklist"
             useGeneratedKeys="true"
             keyProperty="reportChecklistId">
 

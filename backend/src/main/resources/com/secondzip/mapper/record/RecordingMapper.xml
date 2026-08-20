@@ -6,7 +6,7 @@
 
     <!-- 파일 업로드 녹음 세션 생성 -->
     <insert id="insert"
-            parameterType="com.secondzip.backend.record.domain.RecordingSessionVO"
+            parameterType="com.secondzip.backend.record.domain.RecordingSession"
             useGeneratedKeys="true"
             keyProperty="recordingSessionId"
             keyColumn="recording_session_id">
@@ -35,7 +35,7 @@
 
     <!-- 녹음 세션 조회: 사용자 소유권 포함 -->
     <select id="findByIdAndAccountId"
-            resultType="com.secondzip.backend.record.domain.RecordingSessionVO">
+            resultType="com.secondzip.backend.record.domain.RecordingSession">
 
         SELECT
             recording_session_id AS recordingSessionId,
@@ -62,7 +62,7 @@
 
     <!-- 녹음 세션 단건 조회 -->
     <select id="findById"
-            resultType="com.secondzip.backend.record.domain.RecordingSessionVO">
+            resultType="com.secondzip.backend.record.domain.RecordingSession">
 
         SELECT
             recording_session_id AS recordingSessionId,
@@ -140,7 +140,7 @@
 
     <!-- 실시간 녹음 세션 생성 -->
     <insert id="insertLiveSession"
-            parameterType="com.secondzip.backend.record.domain.RecordingSessionVO"
+            parameterType="com.secondzip.backend.record.domain.RecordingSession"
             useGeneratedKeys="true"
             keyProperty="recordingSessionId"
             keyColumn="recording_session_id">
@@ -192,4 +192,28 @@
             file_size = #{fileSize}
         WHERE recording_session_id = #{recordingSessionId}
     </update>
+    <select id="findByReportChecklistId"
+            resultType="com.secondzip.backend.record.domain.RecordingSession">
+
+        SELECT
+            recording_session_id AS recordingSessionId,
+            account_id AS accountId,
+            analysis_report_checklist_id AS reportChecklistId,
+            original_file_name AS originalFileName,
+            storage_object_key AS storageObjectKey,
+            content_type AS contentType,
+            file_size AS fileSize,
+            status,
+            full_transcript AS fullTranscript,
+            summary,
+            failure_reason AS failureReason,
+            started_at AS startedAt,
+            ended_at AS endedAt,
+            created_at AS createdAt,
+            modified_at AS modifiedAt
+        FROM recording_sessions
+        WHERE analysis_report_checklist_id = #{reportChecklistId}
+            LIMIT 1
+
+    </select>
 </mapper>

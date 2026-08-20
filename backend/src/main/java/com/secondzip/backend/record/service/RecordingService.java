@@ -28,17 +28,17 @@ public interface RecordingService {
             MultipartFile file
     );
 
-    RecordingDetailResponseDTO getRecording(
-            Long accountId,
-            Long recordingSessionId
-    );
-
     RecordingTranscriptResponseDTO getTranscript(
             Long accountId,
             Long recordingSessionId
     );
 
     void deleteRecording(
+            Long accountId,
+            Long recordingSessionId
+    );
+
+    RecordingFileUrlResponseDTO getRecordingFileUrl(
             Long accountId,
             Long recordingSessionId
     );

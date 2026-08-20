@@ -104,7 +104,7 @@ public class RecordingController {
     stopLiveRecording(
             @ApiIgnore @AuthenticationPrincipal Long accountId,
             @PathVariable Long recordingSessionId,
-            @RequestPart("file") MultipartFile file
+            @RequestPart(value = "file", required = false) MultipartFile file
     ) {
 
         recordingService.stopLiveRecording(accountId, recordingSessionId,file);
@@ -113,17 +113,21 @@ public class RecordingController {
     }
 
     @ApiOperation(
-            value = "녹음 조회",
-            notes = "녹음 세션 정보를 조회합니다."
+            value = "녹음 파일 URL 조회",
+            notes = "저장된 녹음 파일을 재생할 수 있는 임시 URL을 발급합니다."
     )
-    @GetMapping("/{recordingSessionId}/read")
-    public ResponseEntity<RecordingDetailResponseDTO>
-    getRecording(
-            @ApiIgnore @AuthenticationPrincipal Long accountId,
-            @PathVariable Long recordingSessionId
+    @GetMapping("/{recordingSessionId}/file-url")
+    public ResponseEntity<RecordingFileUrlResponseDTO>
+    getRecordingFileUrl(
+            @ApiIgnore
+            @AuthenticationPrincipal Long accountId,
+
+            @PathVariable
+            Long recordingSessionId
     ) {
+
         return ResponseEntity.ok(
-                recordingService.getRecording(
+                recordingService.getRecordingFileUrl(
                         accountId,
                         recordingSessionId
                 )

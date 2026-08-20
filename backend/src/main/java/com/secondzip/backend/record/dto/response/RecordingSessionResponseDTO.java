@@ -1,6 +1,6 @@
 package com.secondzip.backend.record.dto.response;
 
-import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.domain.RecordingSession;
 import com.secondzip.backend.record.enums.RecordingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +17,7 @@ public class RecordingSessionResponseDTO {
     private RecordingStatus status;
 
     public static RecordingSessionResponseDTO from(
-            RecordingSessionVO session
+            RecordingSession session
     ) {
         return RecordingSessionResponseDTO.builder()
                 .recordingSessionId(

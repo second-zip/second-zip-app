@@ -3,7 +3,7 @@ package com.secondzip.backend.record.service;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.domain.RecordingSession;
 import com.secondzip.backend.record.dto.response.*;
 import com.secondzip.backend.record.enums.RecordingStatus;
 import com.secondzip.backend.record.mapper.RecordingSessionMapper;
@@ -25,7 +25,7 @@ public class RecordingServiceImpl implements RecordingService {
     private final LiveRecordingContextManager contextManager;
     private final ReportChecklistMapper reportChecklistMapper;
     private final LiveTranscriptionService liveTranscriptionService;
-    private final RecordingFinalAnalysisAsyncService recordingFinalAnalysisAsyncService;
+    private final ChecklistAnalysisService checklistAnalysisService;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
@@ -69,8 +69,8 @@ public class RecordingServiceImpl implements RecordingService {
                         file
                 );
 
-        RecordingSessionVO session =
-                RecordingSessionVO.builder()
+        RecordingSession session =
+                RecordingSession.builder()
                         .accountId(accountId)
                         .reportChecklistId(
                                 reportChecklistId
@@ -122,7 +122,7 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -183,6 +183,37 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
     }
+
+    private void validatestopRecordingFile(MultipartFile file) {
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "녹음 파일 크기가 허용 범위를 초과했습니다."
+            );
+        }
+
+        String originalFilename = file.getOriginalFilename();
+
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "파일 형식을 확인할 수 없습니다."
+            );
+        }
+
+        String extension = originalFilename
+                .substring(originalFilename.lastIndexOf('.') + 1)
+                .toLowerCase();
+
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "지원하지 않는 녹음 파일 형식입니다."
+            );
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public RecordingStatusResponseDTO getRecordingStatus(
@@ -190,7 +221,7 @@ public class RecordingServiceImpl implements RecordingService {
             Long recordingSessionId
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -249,8 +280,8 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        RecordingSessionVO session =
-                RecordingSessionVO.builder()
+        RecordingSession session =
+                RecordingSession.builder()
                         .accountId(accountId)
                         .reportChecklistId(reportChecklistId)
                         .status(RecordingStatus.RECORDING)
@@ -278,7 +309,7 @@ public class RecordingServiceImpl implements RecordingService {
             MultipartFile file
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper
                         .findByIdAndAccountId(
                                 recordingSessionId,
@@ -302,11 +333,41 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        validateRecordingFile(file);
-
-        // 1. 실시간 CLOVA 연결 종료
         String transcript = liveTranscriptionService.finish(recordingSessionId);
 
+        // 2. 파일이 없으면 강제 종료 처리
+        if (file == null || file.isEmpty()) {
+
+            // 지금까지 인식된 내용이 있다면 저장 + 최종 분석
+            if (transcript != null && !transcript.isBlank()) {
+
+                recordingSessionMapper.updateTranscript(
+                        recordingSessionId,
+                        transcript,
+                        RecordingStatus.ANALYZING
+                );
+
+                checklistAnalysisService.analyze(
+                        recordingSessionId
+                );
+
+            } else {
+
+                // 녹취도 없다면 분석할 것이 없으므로 정상 종료 처리
+                recordingSessionMapper.updateStatus(
+                        recordingSessionId,
+                        RecordingStatus.COMPLETED
+                );
+            }
+
+            return;
+        }
+
+        /*
+         * 3. 정상 종료
+         * 파일 존재
+         */
+        validatestopRecordingFile(file);
 
         if (transcript == null || transcript.isBlank()) {
             throw new BusinessException(
@@ -315,10 +376,14 @@ public class RecordingServiceImpl implements RecordingService {
             );
         }
 
-        // 2. 최종 녹음 파일 Object Storage 저장
-        String objectKey = recordingStorage.upload(accountId, file);
+        // 4. 최종 녹음 파일 Object Storage 저장
+        String objectKey =
+                recordingStorage.upload(
+                        accountId,
+                        file
+                );
 
-        // 3. 파일 정보 DB 저장
+        // 5. 파일 정보 DB 저장
         recordingSessionMapper.updateFileInfo(
                 recordingSessionId,
                 file.getOriginalFilename(),
@@ -327,56 +392,13 @@ public class RecordingServiceImpl implements RecordingService {
                 file.getSize()
         );
 
-        // 4. 전체 녹음 파일을 다시 CLOVA STT
+        // 6. 전체 녹음 파일 CLOVA 재-STT
+        // → 최종 transcript 저장
+        // → 최종 체크리스트 분석
         recordingAsyncService.transcribe(
                 recordingSessionId,
                 objectKey
         );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public RecordingDetailResponseDTO getRecording(
-            Long accountId,
-            Long recordingSessionId
-    ) {
-
-        RecordingSessionVO session =
-                recordingSessionMapper.findByIdAndAccountId(
-                        recordingSessionId,
-                        accountId
-                );
-
-        if (session == null) {
-            throw new BusinessException(
-                    ErrorCode.RESOURCE_NOT_FOUND,
-                    "녹음 세션을 찾을 수 없습니다."
-            );
-        }
-
-        return RecordingDetailResponseDTO.builder()
-                .recordingSessionId(
-                        session.getRecordingSessionId()
-                )
-                .reportChecklistId(
-                        session.getReportChecklistId()
-                )
-                .originalFileName(
-                        session.getOriginalFileName()
-                )
-                .contentType(
-                        session.getContentType()
-                )
-                .fileSize(
-                        session.getFileSize()
-                )
-                .status(
-                        session.getStatus()
-                )
-                .summary(
-                        session.getSummary()
-                )
-                .build();
     }
 
     @Override
@@ -386,7 +408,7 @@ public class RecordingServiceImpl implements RecordingService {
             Long recordingSessionId
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -416,7 +438,7 @@ public class RecordingServiceImpl implements RecordingService {
             Long recordingSessionId
     ) {
 
-        RecordingSessionVO session =
+        RecordingSession session =
                 recordingSessionMapper.findByIdAndAccountId(
                         recordingSessionId,
                         accountId
@@ -468,5 +490,62 @@ public class RecordingServiceImpl implements RecordingService {
 
         // 혹시 메모리 Context가 남아있다면 정리
         contextManager.remove(recordingSessionId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecordingFileUrlResponseDTO getRecordingFileUrl(
+            Long accountId,
+            Long recordingSessionId
+    ) {
+
+        if (accountId == null) {
+            throw new BusinessException(
+                    ErrorCode.UNAUTHORIZED,
+                    "로그인이 필요합니다."
+            );
+        }
+
+        RecordingSession session =
+                recordingSessionMapper
+                        .findByIdAndAccountId(
+                                recordingSessionId,
+                                accountId
+                        );
+
+        if (session == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "녹음 세션을 찾을 수 없습니다."
+            );
+        }
+
+        String storageObjectKey =
+                session.getStorageObjectKey();
+
+        if (storageObjectKey == null
+                || storageObjectKey.isBlank()) {
+
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "저장된 녹음 파일이 없습니다."
+            );
+        }
+
+        String url = recordingStorage.generatePresignedUrl(storageObjectKey);
+
+        return RecordingFileUrlResponseDTO.builder()
+                .url(url)
+                .originalFileName(
+                        session.getOriginalFileName()
+                )
+                .contentType(
+                        session.getContentType()
+                )
+                .fileSize(
+                        session.getFileSize()
+                )
+                .expiresIn(600L)
+                .build();
     }
 }

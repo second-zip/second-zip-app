@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReportChecklistVO {
+public class ReportChecklist {
 
     private Long reportChecklistId;
 

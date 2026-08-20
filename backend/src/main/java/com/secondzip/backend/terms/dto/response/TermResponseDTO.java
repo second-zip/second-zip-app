@@ -1,6 +1,6 @@
 package com.secondzip.backend.terms.dto.response;
 
-import com.secondzip.backend.terms.domain.TermVO;
+import com.secondzip.backend.terms.domain.Term;
 import com.secondzip.backend.terms.enums.TermType;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -8,8 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @ApiModel(description = "약관 조회 응답")
 @Getter
@@ -40,7 +38,7 @@ public class TermResponseDTO {
     @ApiModelProperty(value = "약관 버전", example = "1.0")
     private String version;
 
-    public static TermResponseDTO from(TermVO term) {
+    public static TermResponseDTO from(Term term) {
         return TermResponseDTO.builder()
                 .termId(term.getTermId())
                 .title(term.getTitle())
