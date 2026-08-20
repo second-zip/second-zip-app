@@ -68,4 +68,6 @@ public interface RecordingSessionMapper {
             @Param("contentType") String contentType,
             @Param("fileSize") Long fileSize
     );
+
+    RecordingSession findByReportChecklistId(Long reportChecklistId);
 }
