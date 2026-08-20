@@ -104,7 +104,7 @@ public class RecordingController {
     stopLiveRecording(
             @ApiIgnore @AuthenticationPrincipal Long accountId,
             @PathVariable Long recordingSessionId,
-            @RequestPart("file") MultipartFile file
+            @RequestPart(value = "file", required = false) MultipartFile file
     ) {
 
         recordingService.stopLiveRecording(accountId, recordingSessionId,file);
