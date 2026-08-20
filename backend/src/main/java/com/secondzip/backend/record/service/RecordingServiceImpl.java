@@ -25,7 +25,6 @@ public class RecordingServiceImpl implements RecordingService {
     private final LiveRecordingContextManager contextManager;
     private final ReportChecklistMapper reportChecklistMapper;
     private final LiveTranscriptionService liveTranscriptionService;
-    private final RecordingFinalAnalysisAsyncService recordingFinalAnalysisAsyncService;
 
     private static final long MAX_FILE_SIZE = 200L * 1024 * 1024;
 
