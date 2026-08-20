@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import ChecklistBlueIcon from '@/assets/icons/nav/checklist-blue-22.svg';
 import ChecklistGrayIcon from '@/assets/icons/nav/checklist-gray-22.svg';
+import MyPageBlueIcon from '@/assets/icons/nav/mypage-blue-22.svg';
 import MainLogo from '@/assets/images/main-logo.png';
 import BottomNavigation from './BottomNavigation.vue';
 
@@ -52,6 +53,21 @@ describe('BottomNavigation', () => {
       expect(checklist.attributes('aria-current')).toBe('page');
       expect(checklist.get('img').attributes('src'))
         .toBe(ChecklistBlueIcon);
+    },
+  );
+
+  test.each(['/mypage/profile', '/mypage/secretary'])(
+    '%s activates the MY menu',
+    (path) => {
+      route.path = path;
+      const wrapper = mount(BottomNavigation, {
+        global: { stubs: { RouterLink: RouterLinkStub } },
+      });
+      const myPage = findMenu(wrapper, 'MY');
+
+      expect(myPage.classes()).toContain('is-active');
+      expect(myPage.attributes('aria-current')).toBe('page');
+      expect(myPage.get('img').attributes('src')).toBe(MyPageBlueIcon);
     },
   );
 
