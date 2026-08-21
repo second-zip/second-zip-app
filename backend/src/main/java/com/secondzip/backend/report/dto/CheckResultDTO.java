@@ -11,17 +11,17 @@ import java.util.Map;
 // 필수점검
 @Getter
 @AllArgsConstructor
-public class CheckResult {
+public class CheckResultDTO {
     private CheckType checkType;
     private RiskLevel riskLevel;
     private DataStatus dataStatus;
     private Map<String, Object> evidence;
 
-    public CheckResult(
+    public CheckResultDTO(
             CheckType checkType,
-            Judgement judgement,
+            JudgementDTO judgementDTO,
             Map<String, Object> evidence
     ) {
-        this(checkType, judgement.riskLevel(), judgement.dataStatus(), evidence);
+        this(checkType, judgementDTO.riskLevel(), judgementDTO.dataStatus(), evidence);
     }
 }

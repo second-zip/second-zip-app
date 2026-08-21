@@ -1,6 +1,6 @@
 package com.secondzip.backend.map.frauddamage.mapper;
 
-import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegionVO;
+import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegion;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -11,11 +11,11 @@ import java.util.List;
 public interface FraudDamageMapper {
     LocalDate selectLatestBaseDate(); //피해주택 통계 가장 최신 기준일 조회
     //시도별 피해주택 수 조회
-    List<FraudDamageRegionVO> selectSidoFraudDamages(
+    List<FraudDamageRegion> selectSidoFraudDamages(
             @Param("baseDate") LocalDate baseDate
     );
     //시군구 피해 주택 수 조회
-    List<FraudDamageRegionVO> selectSigunguFraudDamages(
+    List<FraudDamageRegion> selectSigunguFraudDamages(
             @Param("baseDate") LocalDate baseDate,
             @Param("parentRegionCode") String parentRegionCode
     );

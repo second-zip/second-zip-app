@@ -13,13 +13,13 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class DetailResult {
+public class DetailResultDTO {
     private DetailType detailType;
     private RiskLevel riskLevel;
     private DataStatus dataStatus;
 
-    public DetailResult(DetailType detailType, Judgement judgement) {
-        this(detailType, judgement.riskLevel(), judgement.dataStatus());
+    public DetailResultDTO(DetailType detailType, JudgementDTO judgementDTO) {
+        this(detailType, judgementDTO.riskLevel(), judgementDTO.dataStatus());
     }
 
     public boolean isApplicable() {

@@ -23,7 +23,7 @@ import lombok.ToString;
 @RequiredArgsConstructor
 @EqualsAndHashCode
 @ToString
-public class VerifiedChecklistItem {
+public class VerifiedChecklistItemDTO {
 
     private final Category category;
     private final String contents;

@@ -7,7 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AnalysisSelectionOption {
-    private String value;
-    private String label;
+public class CodefTwoWayStateDTO {
+    private Integer jobIndex;
+    private Integer threadIndex;
+    private String jti;
+    private String twoWayTimestamp;
 }

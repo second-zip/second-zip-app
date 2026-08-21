@@ -1,15 +1,15 @@
 package com.secondzip.backend.report.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @NoArgsConstructor
-public class SpecialTermGenerationResult {
-
-    private List<SpecialTermResult> specialTerms;
+@AllArgsConstructor
+public class SpecialTermResultDTO {
+    private String title;
+    private String content;
 }

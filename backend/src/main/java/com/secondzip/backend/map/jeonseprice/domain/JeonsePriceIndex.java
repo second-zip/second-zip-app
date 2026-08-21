@@ -1,17 +1,22 @@
 package com.secondzip.backend.map.jeonseprice.domain;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class JeonsePriceRegionVO {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class JeonsePriceIndex {
 
     private String regionCode;
-    private String regionName;
+    private LocalDate baseMonth;
     private BigDecimal priceIndex;
     private BigDecimal changeRate;
 }

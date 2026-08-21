@@ -12,25 +12,25 @@ import com.secondzip.backend.report.enums.RiskLevel;
  * <p>이 둘을 따로 반환하면 "CAUTION인데 데이터 상태를 안 실어 보내는" 실수가 나기 쉬워
  * 항상 함께 다니도록 묶었다.
  */
-public record Judgement(RiskLevel riskLevel, DataStatus dataStatus) {
+public record JudgementDTO(RiskLevel riskLevel, DataStatus dataStatus) {
 
-    public Judgement {
+    public JudgementDTO {
         if (riskLevel == null || dataStatus == null) {
             throw new IllegalArgumentException("위험도와 데이터 상태는 모두 필요합니다.");
         }
     }
 
     /** 데이터를 확보해 실제로 판정한 경우. */
-    public static Judgement verified(RiskLevel riskLevel) {
-        return new Judgement(riskLevel, DataStatus.VERIFIED);
+    public static JudgementDTO verified(RiskLevel riskLevel) {
+        return new JudgementDTO(riskLevel, DataStatus.VERIFIED);
     }
 
     /**
      * 데이터를 확보하지 못한 경우.
      * 위험도는 CAUTION으로 두되, 화면에서는 "확인 불가"로 구분해 보여줄 수 있다.
      */
-    public static Judgement unverified() {
-        return new Judgement(RiskLevel.CAUTION, DataStatus.UNVERIFIED);
+    public static JudgementDTO unverified() {
+        return new JudgementDTO(RiskLevel.CAUTION, DataStatus.UNVERIFIED);
     }
 
     /**
@@ -44,8 +44,8 @@ public record Judgement(RiskLevel riskLevel, DataStatus dataStatus) {
      * <p>클라이언트가 {@code NOT_APPLICABLE}을 "해당 없음"으로 따로 표시하게 되면
      * 이 값은 무의미해진다.
      */
-    public static Judgement notApplicable() {
-        return new Judgement(RiskLevel.CAUTION, DataStatus.NOT_APPLICABLE);
+    public static JudgementDTO notApplicable() {
+        return new JudgementDTO(RiskLevel.CAUTION, DataStatus.NOT_APPLICABLE);
     }
 
     public boolean isApplicable() {

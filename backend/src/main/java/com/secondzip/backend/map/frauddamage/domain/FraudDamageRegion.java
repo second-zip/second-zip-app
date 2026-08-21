@@ -8,7 +8,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class FraudDamageRegionVO {
+public class FraudDamageRegion {
 
     private String regionCode;
     private String regionName;

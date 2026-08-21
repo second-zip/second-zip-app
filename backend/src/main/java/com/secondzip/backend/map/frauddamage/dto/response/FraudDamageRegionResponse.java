@@ -1,6 +1,6 @@
 package com.secondzip.backend.map.frauddamage.dto.response;
 
-import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegionVO;
+import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegion;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,13 +14,13 @@ public class FraudDamageRegionResponse {
     private final Long damageHouseCount;
 
     public static FraudDamageRegionResponse from(
-            FraudDamageRegionVO fraudDamageRegionVO
+            FraudDamageRegion fraudDamageRegion
     ) {
         return FraudDamageRegionResponse.builder()
-                .regionCode(fraudDamageRegionVO.getRegionCode())
-                .regionName(fraudDamageRegionVO.getRegionName())
+                .regionCode(fraudDamageRegion.getRegionCode())
+                .regionName(fraudDamageRegion.getRegionName())
                 .damageHouseCount(
-                        fraudDamageRegionVO.getDamageHouseCount()
+                        fraudDamageRegion.getDamageHouseCount()
                 )
                 .build();
     }
