@@ -2,10 +2,10 @@ package com.secondzip.backend.map.jeonseprice.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.map.common.domain.RegionVO;
+import com.secondzip.backend.map.common.domain.Region;
 import com.secondzip.backend.map.common.enums.RegionLevel;
 import com.secondzip.backend.map.common.mapper.RegionMapper;
-import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegionVO;
+import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegion;
 import com.secondzip.backend.map.jeonseprice.dto.response.JeonsePriceMapResponse;
 import com.secondzip.backend.map.jeonseprice.mapper.JeonsePriceMapper;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class JeonsePriceServiceImpl
     @Override
     public JeonsePriceMapResponse getJeonsePrices(RegionLevel regionLevel, String parentRegionCode) {
         YearMonth baseMonth = getLatestBaseMonth();
-        List<JeonsePriceRegionVO> regions;
+        List<JeonsePriceRegion> regions;
 
         if (regionLevel == RegionLevel.SIDO) {
             regions = jeonsePriceMapper.selectSidoJeonsePrices(baseMonth.atDay(1));
@@ -72,7 +72,7 @@ public class JeonsePriceServiceImpl
     }
 
     private void validateSidoRegion(String parentRegionCode) {
-        RegionVO parentRegion = regionMapper.selectByRegionCode(parentRegionCode);
+        Region parentRegion = regionMapper.selectByRegionCode(parentRegionCode);
 
         if (parentRegion == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "존재하지 않는 행정구역 코드입니다.");
@@ -83,7 +83,7 @@ public class JeonsePriceServiceImpl
         }
     }
 
-    private void validateJeonsePriceData(List<JeonsePriceRegionVO> regions, YearMonth baseMonth) {
+    private void validateJeonsePriceData(List<JeonsePriceRegion> regions, YearMonth baseMonth) {
         if (regions.isEmpty()) {
             throw new BusinessException(
                     ErrorCode.RESOURCE_NOT_FOUND, "조회 가능한 행정구역이 없습니다."

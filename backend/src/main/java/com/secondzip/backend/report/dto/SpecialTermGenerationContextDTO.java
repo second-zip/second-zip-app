@@ -10,7 +10,7 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor
-public class SpecialTermGenerationContext {
+public class SpecialTermGenerationContextDTO {
 
     private Long analysisReportId;
     private Long deposit;

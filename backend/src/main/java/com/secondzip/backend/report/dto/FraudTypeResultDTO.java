@@ -10,8 +10,8 @@ import java.util.List;
 // 사기 유형
 @Getter
 @AllArgsConstructor
-public class FraudTypeResult {
+public class FraudTypeResultDTO {
     private FraudType fraudType;
     private RiskLevel riskLevel;        // 세부 3개 중 최악값
-    private List<DetailResult> details; // 세부 3개
+    private List<DetailResultDTO> details; // 세부 3개
 }

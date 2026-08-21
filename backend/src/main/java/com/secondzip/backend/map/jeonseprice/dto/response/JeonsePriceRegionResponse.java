@@ -1,6 +1,6 @@
 package com.secondzip.backend.map.jeonseprice.dto.response;
 
-import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegionVO;
+import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegion;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +17,7 @@ public class JeonsePriceRegionResponse {
     private BigDecimal changeRate;
 
     public static JeonsePriceRegionResponse from(
-            JeonsePriceRegionVO region
+            JeonsePriceRegion region
     ) {
         return JeonsePriceRegionResponse.builder()
                 .regionCode(region.getRegionCode())

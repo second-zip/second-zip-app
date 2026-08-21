@@ -3,8 +3,8 @@ package com.secondzip.backend.map.jeonseprice.service;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.map.jeonseprice.client.RebJeonsePriceClient;
-import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceIndexVO;
-import com.secondzip.backend.map.jeonseprice.domain.SigunguRegionMappingVO;
+import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceIndex;
+import com.secondzip.backend.map.jeonseprice.domain.SigunguRegionMapping;
 import com.secondzip.backend.map.jeonseprice.domain.enums.RebSidoRegion;
 import com.secondzip.backend.map.jeonseprice.dto.external.RebJeonsePriceRowDTO;
 import com.secondzip.backend.map.jeonseprice.mapper.JeonsePriceMapper;
@@ -18,7 +18,6 @@ import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,7 +48,7 @@ public class JeonsePriceSyncServiceImpl
         List<RebJeonsePriceRowDTO> previousRows = rebJeonsePriceClient.getMonthlyPriceIndices(previousMonth);
 
         // 우리 DB의 시군구 148개 조회
-        List<SigunguRegionMappingVO> sigunguRegions = jeonsePriceMapper.selectAllSigunguRegions();
+        List<SigunguRegionMapping> sigunguRegions = jeonsePriceMapper.selectAllSigunguRegions();
 
         /*
          * 예:
@@ -106,8 +105,8 @@ public class JeonsePriceSyncServiceImpl
                             previousIndex
                     );
 
-            JeonsePriceIndexVO jeonsePriceIndex =
-                    JeonsePriceIndexVO.builder()
+            JeonsePriceIndex jeonsePriceIndex =
+                    JeonsePriceIndex.builder()
                             .regionCode(regionCode)
                             .baseMonth(
                                     targetMonth.atDay(1)
@@ -184,11 +183,11 @@ public class JeonsePriceSyncServiceImpl
      * "부모 시도 코드|시군구 이름" 형태로 변환
      */
     private Map<String, String> createSigunguCodeMap(
-            List<SigunguRegionMappingVO> regions
+            List<SigunguRegionMapping> regions
     ) {
         Map<String, String> regionCodeMap = new HashMap<>();
 
-        for (SigunguRegionMappingVO region : regions) {
+        for (SigunguRegionMapping region : regions) {
             String key = createRegionKey(
                     region.getParentRegionCode(),
                     region.getRegionName()

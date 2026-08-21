@@ -4,11 +4,14 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SigunguRegionMappingVO {
+public class JeonsePriceRegion {
 
     private String regionCode;
     private String regionName;
-    private String parentRegionCode;
+    private BigDecimal priceIndex;
+    private BigDecimal changeRate;
 }
