@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ class RedisAnalysisWorkflowStoreTest {
 
     @Test
     void saveSerializesStateWithRemainingTtl() {
-        AnalysisWorkflowState state = unexpiredState(60_000L);
+        AnalysisWorkflowStateDTO state = unexpiredState(60_000L);
         org.mockito.ArgumentCaptor<String> jsonCaptor =
                 org.mockito.ArgumentCaptor.forClass(String.class);
         org.mockito.ArgumentCaptor<Duration> ttlCaptor =
@@ -67,7 +67,7 @@ class RedisAnalysisWorkflowStoreTest {
 
     @Test
     void saveDeletesAlreadyExpiredStateAndReturnsNotFound() {
-        AnalysisWorkflowState state = unexpiredState(-1L);
+        AnalysisWorkflowStateDTO state = unexpiredState(-1L);
 
         BusinessException thrown = catchThrowableOfType(
                 () -> store.save(state),
@@ -84,7 +84,7 @@ class RedisAnalysisWorkflowStoreTest {
         ObjectMapper failingMapper = mock(ObjectMapper.class);
         RedisAnalysisWorkflowStore failingStore =
                 new RedisAnalysisWorkflowStore(redisTemplate, failingMapper);
-        AnalysisWorkflowState state = unexpiredState(60_000L);
+        AnalysisWorkflowStateDTO state = unexpiredState(60_000L);
         JsonProcessingException cause = new JsonProcessingException("boom") { };
         when(failingMapper.writeValueAsString(state)).thenThrow(cause);
 
@@ -99,11 +99,11 @@ class RedisAnalysisWorkflowStoreTest {
 
     @Test
     void findOwnedReturnsValidOwnedState() throws Exception {
-        AnalysisWorkflowState state = unexpiredState(60_000L);
+        AnalysisWorkflowStateDTO state = unexpiredState(60_000L);
         when(valueOperations.get(WORKFLOW_KEY))
                 .thenReturn(objectMapper.writeValueAsString(state));
 
-        AnalysisWorkflowState found = store.findOwned(REQUEST_ID, ACCOUNT_ID);
+        AnalysisWorkflowStateDTO found = store.findOwned(REQUEST_ID, ACCOUNT_ID);
 
         assertThat(found.getRequestId()).isEqualTo(REQUEST_ID);
         assertThat(found.getAccountId()).isEqualTo(ACCOUNT_ID);
@@ -124,7 +124,7 @@ class RedisAnalysisWorkflowStoreTest {
 
     @Test
     void findOwnedDeletesExpiredWorkflow() throws Exception {
-        AnalysisWorkflowState state = unexpiredState(-1L);
+        AnalysisWorkflowStateDTO state = unexpiredState(-1L);
         when(valueOperations.get(WORKFLOW_KEY))
                 .thenReturn(objectMapper.writeValueAsString(state));
 
@@ -139,7 +139,7 @@ class RedisAnalysisWorkflowStoreTest {
 
     @Test
     void findOwnedHidesAnotherAccountsWorkflowWithoutDeletingIt() throws Exception {
-        AnalysisWorkflowState state = unexpiredState(60_000L);
+        AnalysisWorkflowStateDTO state = unexpiredState(60_000L);
         when(valueOperations.get(WORKFLOW_KEY))
                 .thenReturn(objectMapper.writeValueAsString(state));
 
@@ -231,8 +231,8 @@ class RedisAnalysisWorkflowStoreTest {
         verifyNoInteractions(isolatedRedis);
     }
 
-    private AnalysisWorkflowState unexpiredState(long remainingMillis) {
-        AnalysisWorkflowState state = new AnalysisWorkflowState();
+    private AnalysisWorkflowStateDTO unexpiredState(long remainingMillis) {
+        AnalysisWorkflowStateDTO state = new AnalysisWorkflowStateDTO();
         state.setRequestId(REQUEST_ID);
         state.setAccountId(ACCOUNT_ID);
         state.setStatus(AnalysisRequestStatus.AUTH_REQUIRED);

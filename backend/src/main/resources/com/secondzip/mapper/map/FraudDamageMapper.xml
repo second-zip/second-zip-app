@@ -8,7 +8,7 @@
 
     <resultMap
             id="fraudDamageRegionResultMap"
-            type="com.secondzip.backend.map.frauddamage.domain.FraudDamageRegionVO">
+            type="com.secondzip.backend.map.frauddamage.domain.FraudDamageRegion">
 
         <result
                 property="regionCode"

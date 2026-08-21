@@ -5,8 +5,8 @@ import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.domain.ReportFraudType;
 import com.secondzip.backend.report.domain.ReportShareInfo;
 import com.secondzip.backend.report.domain.ReportSpecialTerm;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.dto.DetailResultDTO;
+import com.secondzip.backend.report.dto.VerifiedChecklistItemDTO;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -45,7 +45,7 @@ public interface ReportMapper {
      */
     void insertChecklistVerifications(
             @Param("analysisReportId") Long analysisReportId,
-            @Param("items") List<VerifiedChecklistItem> items
+            @Param("items") List<VerifiedChecklistItemDTO> items
     );
 
     // 리포트 목록 조회
@@ -61,7 +61,7 @@ public interface ReportMapper {
     AnalysisReport findReportById(@Param("reportId") Long reportId);
     List<ReportCheckResult> findCheckResultsByReportId(@Param("reportId") Long reportId);
     List<ReportFraudType> findFraudTypesByReportId(@Param("reportId") Long reportId);
-    List<DetailResult> findDetailResultsByFraudTypeId(@Param("fraudTypeId") Long fraudTypeId);
+    List<DetailResultDTO> findDetailResultsByFraudTypeId(@Param("fraudTypeId") Long fraudTypeId);
 
 
     // 특약 저장 처리 중 리포트 잠금

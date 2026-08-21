@@ -7,7 +7,7 @@ import com.secondzip.backend.report.domain.AnalysisReport;
 import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.domain.ReportFraudType;
 import com.secondzip.backend.report.domain.ReportSpecialTerm;
-import com.secondzip.backend.report.dto.DetailResult;
+import com.secondzip.backend.report.dto.DetailResultDTO;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.dto.response.ReportListResponse;
@@ -154,12 +154,12 @@ class ReportQueryServiceTest {
                         .build()
         ));
         when(reportMapper.findDetailResultsByFraudTypeId(20L)).thenReturn(List.of(
-                new DetailResult(
+                new DetailResultDTO(
                         DetailType.HIGH_JEONSE_RATIO,
                         RiskLevel.DANGER,
                         DataStatus.VERIFIED
                 ),
-                new DetailResult(
+                new DetailResultDTO(
                         DetailType.PRIORITY_DEBT_BURDEN,
                         RiskLevel.CAUTION,
                         null

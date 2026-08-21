@@ -2,7 +2,7 @@ package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AddressCandidate;
+import com.secondzip.backend.report.dto.AddressCandidateDTO;
 import com.secondzip.backend.report.dto.response.AddressSearchItem;
 import com.secondzip.backend.report.dto.response.AddressSearchResponse;
 import com.secondzip.backend.report.service.external.client.AddressClient;
@@ -27,7 +27,7 @@ public class AddressSearchService {
             );
         }
 
-        List<AddressCandidate> candidates = addressClient.search(query.trim());
+        List<AddressCandidateDTO> candidates = addressClient.search(query.trim());
 
         // 후보마다 식별값을 보관하고 addressId를 발급한다.
         // 응답에는 법정동코드·본번 같은 내부 값을 담지 않는다. 프론트가 알 필요가 없고,

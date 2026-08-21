@@ -9,7 +9,7 @@ import com.secondzip.backend.report.domain.AnalysisReport;
 import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.domain.ReportFraudType;
 import com.secondzip.backend.report.domain.ReportSpecialTerm;
-import com.secondzip.backend.report.dto.DetailResult;
+import com.secondzip.backend.report.dto.DetailResultDTO;
 import com.secondzip.backend.report.dto.response.*;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.mapper.ReportMapper;
@@ -119,7 +119,7 @@ public class ReportQueryService {
     private List<FraudTypeView> buildFraudTypeViews(Long reportId) {
         List<ReportFraudType> fraudTypeRows = reportMapper.findFraudTypesByReportId(reportId);
         return fraudTypeRows.stream().map(row -> {
-            List<DetailResult> details =
+            List<DetailResultDTO> details =
                     reportMapper.findDetailResultsByFraudTypeId(row.getReportFraudTypeId());
 
             List<DetailResultView> detailViews = details.stream()

@@ -2,9 +2,9 @@ package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisSelectionOption;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.CodefTwoWayState;
+import com.secondzip.backend.report.dto.AnalysisSelectionOptionDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.CodefTwoWayStateDTO;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.response.AnalysisAuthResponse;
@@ -66,7 +66,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void releasesLockWhenGatewayStartFails() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.AUTH_REQUIRED,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of()
@@ -86,7 +86,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void completedStartMovesToNextDocumentAndClearsTwoWayState() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.AUTH_REQUIRED,
                 List.of(
                         BuildingRegisterDocumentType.COLLECTIVE_TITLE,
@@ -96,8 +96,8 @@ class AnalysisAuthenticationServiceTest {
         );
         state.setPendingDocument(BuildingRegisterDocumentType.COLLECTIVE_TITLE);
         state.setNextAction(AnalysisNextAction.CAPTCHA);
-        state.setTwoWayState(new CodefTwoWayState(1, 2, "jti", "timestamp"));
-        state.setSelectionOptions(List.of(new AnalysisSelectionOption("1", "one")));
+        state.setTwoWayState(new CodefTwoWayStateDTO(1, 2, "jti", "timestamp"));
+        state.setSelectionOptions(List.of(new AnalysisSelectionOptionDTO("1", "one")));
         Map<String, Object> data = Map.of("resViolationStatus", "정상");
         stubOwnedState(state);
         when(gateway.start(eq(state), eq(BuildingRegisterDocumentType.COLLECTIVE_TITLE), any()))
@@ -125,14 +125,14 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void incompleteSimpleAuthenticationPersistsContinuationContext() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.AUTH_REQUIRED,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of()
         );
-        CodefTwoWayState twoWay = new CodefTwoWayState(3, 4, "jti", "timestamp");
-        List<AnalysisSelectionOption> options =
-                List.of(new AnalysisSelectionOption("PASS", "인증 완료"));
+        CodefTwoWayStateDTO twoWay = new CodefTwoWayStateDTO(3, 4, "jti", "timestamp");
+        List<AnalysisSelectionOptionDTO> options =
+                List.of(new AnalysisSelectionOptionDTO("PASS", "인증 완료"));
         BuildingRegisterGatewayResult pending = new BuildingRegisterGatewayResult(
                 false,
                 AnalysisNextAction.SIMPLE_AUTH,
@@ -164,7 +164,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void incompleteContinuationMovesToSelectionRequired() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.AUTH_PENDING,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of()
@@ -173,8 +173,8 @@ class AnalysisAuthenticationServiceTest {
         BuildingRegisterGatewayResult pending = new BuildingRegisterGatewayResult(
                 false,
                 AnalysisNextAction.HO_SELECTION,
-                new CodefTwoWayState(),
-                List.of(new AnalysisSelectionOption("1203", "1203호")),
+                new CodefTwoWayStateDTO(),
+                List.of(new AnalysisSelectionOptionDTO("1203", "1203호")),
                 null,
                 null
         );
@@ -195,7 +195,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void completedContinuationDoesNotDuplicateDocumentAndStartsProcessing() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.SELECTION_REQUIRED,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of(BuildingRegisterDocumentType.GENERAL)
@@ -223,7 +223,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void invalidStartStatusSkipsGatewayAndStillReleasesLock() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.PROCESSING,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of(BuildingRegisterDocumentType.GENERAL)
@@ -242,7 +242,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void startFailsWhenAuthRequiredStateHasNoRemainingDocument() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.AUTH_REQUIRED,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of(BuildingRegisterDocumentType.GENERAL)
@@ -261,7 +261,7 @@ class AnalysisAuthenticationServiceTest {
 
     @Test
     void invalidContinuationStatusSkipsGatewayAndStillReleasesLock() {
-        AnalysisWorkflowState state = state(
+        AnalysisWorkflowStateDTO state = state(
                 AnalysisRequestStatus.AUTH_REQUIRED,
                 List.of(BuildingRegisterDocumentType.GENERAL),
                 List.of()
@@ -282,17 +282,17 @@ class AnalysisAuthenticationServiceTest {
         verify(workflowStore).releaseExecutionLock(REQUEST_ID, LOCK_TOKEN);
     }
 
-    private void stubOwnedState(AnalysisWorkflowState state) {
+    private void stubOwnedState(AnalysisWorkflowStateDTO state) {
         when(workflowStore.tryAcquireExecutionLock(REQUEST_ID)).thenReturn(LOCK_TOKEN);
         when(workflowStore.findOwned(REQUEST_ID, ACCOUNT_ID)).thenReturn(state);
     }
 
-    private AnalysisWorkflowState state(
+    private AnalysisWorkflowStateDTO state(
             AnalysisRequestStatus status,
             List<BuildingRegisterDocumentType> required,
             List<BuildingRegisterDocumentType> completed
     ) {
-        AnalysisWorkflowState state = new AnalysisWorkflowState();
+        AnalysisWorkflowStateDTO state = new AnalysisWorkflowStateDTO();
         state.setRequestId(REQUEST_ID);
         state.setAccountId(ACCOUNT_ID);
         state.setStatus(status);

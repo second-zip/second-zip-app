@@ -5,8 +5,8 @@ import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.domain.ReportFraudType;
 import com.secondzip.backend.report.domain.ReportShareInfo;
 import com.secondzip.backend.report.domain.ReportSpecialTerm;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.dto.DetailResultDTO;
+import com.secondzip.backend.report.dto.VerifiedChecklistItemDTO;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -46,7 +46,7 @@ public class StubReportMapper implements ReportMapper {
     @Override
     public void insertChecklistVerifications(
             Long analysisReportId,
-            List<VerifiedChecklistItem> items
+            List<VerifiedChecklistItemDTO> items
     ) {
     }
 
@@ -86,7 +86,7 @@ public class StubReportMapper implements ReportMapper {
     }
 
     @Override
-    public List<DetailResult> findDetailResultsByFraudTypeId(Long fraudTypeId) {
+    public List<DetailResultDTO> findDetailResultsByFraudTypeId(Long fraudTypeId) {
         return List.of();
     }
 

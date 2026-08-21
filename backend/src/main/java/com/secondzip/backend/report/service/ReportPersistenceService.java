@@ -7,10 +7,10 @@ import com.secondzip.backend.common.exception.ErrorCode;
 import com.secondzip.backend.report.domain.AnalysisReport;
 import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.domain.ReportFraudType;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.FraudTypeResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.dto.CheckResultDTO;
+import com.secondzip.backend.report.dto.FraudTypeResultDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
+import com.secondzip.backend.report.dto.VerifiedChecklistItemDTO;
 import com.secondzip.backend.report.dto.response.*;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.mapper.ReportMapper;
@@ -45,7 +45,7 @@ public class ReportPersistenceService {
     @Transactional
     public ReportDetailResponse save(Long accountId, String requestId,
                                      String roadAddress, String detailAddress,
-                                     Long deposit, RiskEvaluationResult evalResult,
+                                     Long deposit, RiskEvaluationResultDTO evalResult,
                                      String housingCategory, boolean trustProperty) {
         // 보고서 만들고 저장 -> 그 보고서의 ID를 반환
         Long reportId = insertReport(
@@ -59,9 +59,9 @@ public class ReportPersistenceService {
                 trustProperty
         );
         // 해당 보고서에 필수 점검 결과 저장
-        List<CheckResultView> checkViews = insertCheckResults(reportId, evalResult.getCheckResults());
+        List<CheckResultView> checkViews = insertCheckResults(reportId, evalResult.getCheckResultDTOS());
         // 해당 보고서에 사기 유형과 각 유형의 판단 결과 저장
-        List<FraudTypeView> fraudViews = insertFraudTypes(reportId, evalResult.getFraudTypeResults());
+        List<FraudTypeView> fraudViews = insertFraudTypes(reportId, evalResult.getFraudTypeResultDTOS());
         // 분석에서 안전(VERIFIED + SAFE)으로 판정된 항목을 체크리스트에 넘겨준다
         insertChecklistVerifications(reportId, evalResult);
 
@@ -75,7 +75,7 @@ public class ReportPersistenceService {
 
     private Long insertReport(Long accountId, String requestId,
                               String roadAddress, String detailAddress,
-                              Long deposit, RiskEvaluationResult evalResult,
+                              Long deposit, RiskEvaluationResultDTO evalResult,
                               String housingCategory, boolean trustProperty) {
         AnalysisReport report = AnalysisReport.builder()
                 .accountId(accountId)
@@ -93,7 +93,7 @@ public class ReportPersistenceService {
         return report.getAnalysisReportId();
     }
 
-    private List<CheckResultView> insertCheckResults(Long reportId, List<CheckResult> results) {
+    private List<CheckResultView> insertCheckResults(Long reportId, List<CheckResultDTO> results) {
         return results.stream().map(c -> {
             reportMapper.insertCheckResult(
                     ReportCheckResult.builder()
@@ -114,7 +114,7 @@ public class ReportPersistenceService {
         }).collect(Collectors.toList());
     }
 
-    private List<FraudTypeView> insertFraudTypes(Long reportId, List<FraudTypeResult> fraudResults) {
+    private List<FraudTypeView> insertFraudTypes(Long reportId, List<FraudTypeResultDTO> fraudResults) {
         return fraudResults.stream().map(f -> {
             ReportFraudType fraudTypeRow = ReportFraudType.builder()
                     .analysisReportId(reportId)
@@ -150,8 +150,8 @@ public class ReportPersistenceService {
      * ReportChecklistMapper.insertChecklistItems 가 이 행들을 LEFT JOIN 해서
      * 해당 항목을 처음부터 체크된 상태로 생성.
      */
-    private void insertChecklistVerifications(Long reportId, RiskEvaluationResult evalResult) {
-        List<VerifiedChecklistItem> verified =
+    private void insertChecklistVerifications(Long reportId, RiskEvaluationResultDTO evalResult) {
+        List<VerifiedChecklistItemDTO> verified =
                 ChecklistAutoCheckResolver.resolve(evalResult);
 
         if (verified.isEmpty()) {

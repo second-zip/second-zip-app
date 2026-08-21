@@ -3,18 +3,11 @@ package com.secondzip.backend.report.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.response.ReportListItem;
-import com.secondzip.backend.report.enums.DetailType;
-import com.secondzip.backend.report.enums.RiskLevel;
-import com.secondzip.backend.report.mapper.ReportMapper;
 import com.secondzip.backend.report.mapper.StubReportMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
