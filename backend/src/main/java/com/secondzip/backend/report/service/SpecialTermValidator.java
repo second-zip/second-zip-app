@@ -2,7 +2,7 @@ package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.SpecialTermResult;
+import com.secondzip.backend.report.dto.SpecialTermResultDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -18,19 +18,19 @@ public class SpecialTermValidator {
     private static final int MAX_TITLE_LENGTH = 50;
     private static final int MAX_CONTENT_LENGTH = 200;
 
-    public List<SpecialTermResult> validateAndNormalize(List<SpecialTermResult> terms) {
+    public List<SpecialTermResultDTO> validateAndNormalize(List<SpecialTermResultDTO> terms) {
         if (terms == null || terms.size() < MIN_TERM_COUNT || terms.size() > MAX_TERM_COUNT) {
             throw invalidResponse(
                     "AI 특약은 3개 이상 5개 이하이어야 합니다."
             );
         }
 
-        List<SpecialTermResult> normalizedTerms = new ArrayList<>();
+        List<SpecialTermResultDTO> normalizedTerms = new ArrayList<>();
 
         Set<String> titles = new HashSet<>();
         Set<String> contents = new HashSet<>();
 
-        for (SpecialTermResult term : terms) {
+        for (SpecialTermResultDTO term : terms) {
             if (term == null) {
                 throw invalidResponse(
                         "AI 특약 응답에 비어 있는 항목이 있습니다."
@@ -55,7 +55,7 @@ public class SpecialTermValidator {
                 );
             }
 
-            normalizedTerms.add(new SpecialTermResult(title, content));
+            normalizedTerms.add(new SpecialTermResultDTO(title, content));
         }
 
         return normalizedTerms;

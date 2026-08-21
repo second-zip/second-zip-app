@@ -9,7 +9,7 @@
 
     <insert
             id="upsertJeonsePriceIndex"
-            parameterType="com.secondzip.backend.map.jeonseprice.domain.JeonsePriceIndexVO">
+            parameterType="com.secondzip.backend.map.jeonseprice.domain.JeonsePriceIndex">
 
         INSERT INTO jeonse_price_indices (
             region_id,
@@ -33,7 +33,7 @@
 
     <resultMap
             id="sigunguRegionMappingResultMap"
-            type="com.secondzip.backend.map.jeonseprice.domain.SigunguRegionMappingVO">
+            type="com.secondzip.backend.map.jeonseprice.domain.SigunguRegionMapping">
 
         <result
                 property="regionCode"
@@ -71,7 +71,7 @@
 
     <resultMap
             id="jeonsePriceRegionResultMap"
-            type="com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegionVO">
+            type="com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegion">
 
         <result
                 property="regionCode"

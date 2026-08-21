@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service.external.mock;
 
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
@@ -30,7 +30,7 @@ class MockExternalProvidersTest {
 
     @Test
     void priceProviderReturnsFixedSaleAndDefersOfficialPriceToRegister() {
-        PriceData data = new MockPriceDataProvider().getPriceData(null, "APARTMENT");
+        PriceData data = new MockPriceDataProvider().getPriceData(null, "APARTMENT", null, null);
 
         assertThat(data.getRecentSalePrice()).isEqualTo(900_000_000L);
         assertThat(data.getOfficialPrice()).isNull();
@@ -42,7 +42,7 @@ class MockExternalProvidersTest {
         authentication.setUserName("테스터");
 
         BuildingRegisterGatewayResult result = new MockBuildingRegisterGateway().start(
-                new AnalysisWorkflowState(),
+                new AnalysisWorkflowStateDTO(),
                 BuildingRegisterDocumentType.GENERAL,
                 authentication
         );
@@ -53,7 +53,7 @@ class MockExternalProvidersTest {
     @Test
     void buildingRegisterContinueIsDefensivelyIdempotent() {
         BuildingRegisterGatewayResult result = new MockBuildingRegisterGateway().continueRequest(
-                new AnalysisWorkflowState(),
+                new AnalysisWorkflowStateDTO(),
                 new ContinueAnalysisAuthRequest()
         );
 

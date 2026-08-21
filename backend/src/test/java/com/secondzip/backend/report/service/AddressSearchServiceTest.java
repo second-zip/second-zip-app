@@ -2,8 +2,8 @@ package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AddressCandidate;
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AddressCandidateDTO;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.dto.response.AddressSearchResponse;
 import com.secondzip.backend.report.service.external.client.AddressClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,20 +60,20 @@ class AddressSearchServiceTest {
     @Test
     @DisplayName("검색어를 trim하고 각 후보의 내부 식별값은 저장소에 보관한 뒤 화면 필드만 반환한다")
     void storesCandidatesAndReturnsPublicAddressFields() {
-        AnalysisTarget firstTarget = target(
+        AnalysisTargetDTO firstTarget = target(
                 "서울특별시 강남구 테헤란로 1",
                 "서울특별시 강남구 역삼동 1"
         );
-        AnalysisTarget secondTarget = target(
+        AnalysisTargetDTO secondTarget = target(
                 "서울특별시 강남구 테헤란로 2",
                 "서울특별시 강남구 역삼동 2"
         );
-        AddressCandidate first = new AddressCandidate(
+        AddressCandidateDTO first = new AddressCandidateDTO(
                 firstTarget,
                 "06236",
                 "첫 번째 건물"
         );
-        AddressCandidate second = new AddressCandidate(
+        AddressCandidateDTO second = new AddressCandidateDTO(
                 secondTarget,
                 null,
                 null
@@ -129,8 +129,8 @@ class AddressSearchServiceTest {
         verifyNoInteractions(addressSearchStore);
     }
 
-    private AnalysisTarget target(String roadAddress, String lotAddress) {
-        return new AnalysisTarget(
+    private AnalysisTargetDTO target(String roadAddress, String lotAddress) {
+        return new AnalysisTargetDTO(
                 roadAddress,
                 roadAddress,
                 "1168010100",

@@ -8,7 +8,7 @@
 
     <resultMap
             id="regionResultMap"
-            type="com.secondzip.backend.map.common.domain.RegionVO">
+            type="com.secondzip.backend.map.common.domain.Region">
 
         <id
                 property="regionId"

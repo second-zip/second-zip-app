@@ -41,9 +41,17 @@ class TrustPropertyResolverTest {
     }
 
     @Test
-    @DisplayName("판정 근거가 없으면 신탁주택이 아니다 - 체크리스트에 TRUST_PROPERTY를 붙이지 않는다")
-    void missingDataIsNotTrustProperty() {
-        assertFalse(resolver.resolve(null));
-        assertFalse(resolver.resolve(new RegistryData()));
+    @DisplayName("판정 근거가 없으면 확인용 신탁 체크리스트를 보수적으로 포함한다")
+    void missingDataKeepsTrustChecklist() {
+        assertTrue(resolver.resolve(null));
+        assertTrue(resolver.resolve(new RegistryData()));
+
+        RegistryData unknownRegistration = new RegistryData();
+        unknownRegistration.setOwnerType("INDIVIDUAL");
+        assertTrue(resolver.resolve(unknownRegistration));
+
+        RegistryData unknownOwnerType = new RegistryData();
+        unknownOwnerType.setHasTrustRegistration(false);
+        assertTrue(resolver.resolve(unknownOwnerType));
     }
 }

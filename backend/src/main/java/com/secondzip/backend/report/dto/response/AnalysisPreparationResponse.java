@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.dto.response;
 
-import com.secondzip.backend.report.dto.AnalysisSelectionOption;
+import com.secondzip.backend.report.dto.AnalysisSelectionOptionDTO;
 import com.secondzip.backend.report.enums.AnalysisNextAction;
 import com.secondzip.backend.report.enums.AnalysisRequestStatus;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
@@ -23,5 +23,5 @@ public class AnalysisPreparationResponse {
     private final String failureMessage;
     private final BuildingRegisterDocumentType pendingDocument;
     private final AnalysisNextAction nextAction;
-    private final List<AnalysisSelectionOption> selectionOptions;
+    private final List<AnalysisSelectionOptionDTO> selectionOptions;
 }

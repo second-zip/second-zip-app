@@ -124,7 +124,7 @@
         WHERE analysis_report_id = #{reportId}
     </select>
 
-    <select id="findDetailResultsByFraudTypeId" resultType="com.secondzip.backend.report.dto.DetailResult">
+    <select id="findDetailResultsByFraudTypeId" resultType="com.secondzip.backend.report.dto.DetailResultDTO">
         SELECT
             detail_type AS detailType,
             risk_level AS riskLevel,

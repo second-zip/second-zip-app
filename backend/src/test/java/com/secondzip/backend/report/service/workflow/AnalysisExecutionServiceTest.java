@@ -1,9 +1,9 @@
 package com.secondzip.backend.report.service.workflow;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
@@ -42,12 +42,13 @@ class AnalysisExecutionServiceTest {
     void combinesAuthenticatedBuildingRegisterWithRegistryAndPrice() {
         InMemoryStore store = new InMemoryStore(state());
         CapturingRiskService riskService = new CapturingRiskService();
+        FixedPriceClient priceClient = new FixedPriceClient();
         ReportDetailResponse saved = report(77L);
         AnalysisExecutionService service = new AnalysisExecutionService(
                 store,
                 new BuildingRegisterDataParser(),
                 new FixedRegistryClient(),
-                new FixedPriceClient(),
+                priceClient,
                 riskService,
                 new FixedPersistenceService(saved),
                 new FixedQueryService(saved),
@@ -67,11 +68,13 @@ class AnalysisExecutionServiceTest {
         assertTrue(store.state.getBuildingRegisterData().isEmpty());
         assertTrue(riskService.building.getIsIllegalBuilding());
         assertEquals(550_000_000L, riskService.price.getOfficialPrice());
+        assertEquals(new java.math.BigDecimal("84.12"), priceClient.transactionAreaSqm);
+        assertEquals(12, priceClient.transactionFloor);
     }
 
     @Test
     void retriesFailedFinalAnalysisWithoutRepeatingAuthentication() {
-        AnalysisWorkflowState failed = state();
+        AnalysisWorkflowStateDTO failed = state();
         failed.setStatus(AnalysisRequestStatus.FAILED);
         failed.setCompletedDocuments(failed.getRequiredDocuments());
         failed.setFailureMessage("temporary failure");
@@ -149,7 +152,7 @@ class AnalysisExecutionServiceTest {
 
     @Test
     void failsWhenViolationStatusIsUnavailable() {
-        AnalysisWorkflowState state = state();
+        AnalysisWorkflowStateDTO state = state();
         state.getBuildingRegisterData().put(
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
                 Map.of("resBasePrice", "550,000,000")
@@ -176,14 +179,14 @@ class AnalysisExecutionServiceTest {
 
     @Test
     void failsWhenNoTransactionOrOfficialPriceIsAvailable() {
-        AnalysisWorkflowState state = state();
+        AnalysisWorkflowStateDTO state = state();
         state.getBuildingRegisterData().put(
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
                 Map.of("resViolationStatus", "")
         );
         InMemoryStore store = new InMemoryStore(state);
         PriceDataProvider unavailablePrice =
-                (target, buildingType) -> null;
+                (target, buildingType, transactionAreaSqm, transactionFloor) -> null;
         AnalysisExecutionService service = new AnalysisExecutionService(
                 store,
                 new BuildingRegisterDataParser(),
@@ -204,8 +207,109 @@ class AnalysisExecutionServiceTest {
     }
 
     @Test
+    void priceLookupFailureFallsBackToVerifiedOfficialPrice() {
+        // 실거래가 API의 간헐적 장애로 리포트 전체를 실패시키지 않는다.
+        // 공시가격은 이미 건축물대장에서 확인했고 판정 단계에서 140% 환산해
+        // 같은 척도로 쓰므로, "그 달에 거래가 없었다"와 결과 품질이 다르지 않다.
+        InMemoryStore store = new InMemoryStore(state());
+        CapturingRiskService riskService = new CapturingRiskService();
+        ReportDetailResponse saved = report(95L);
+        PriceDataProvider failedPriceLookup =
+                (target, buildingType, transactionAreaSqm, transactionFloor) -> {
+                    throw new IllegalStateException("RTMS unavailable");
+                };
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                new FixedRegistryClient(),
+                failedPriceLookup,
+                riskService,
+                new FixedPersistenceService(saved),
+                new FixedQueryService(saved),
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
+        );
+
+        service.execute(1L, "request-id");
+
+        assertEquals(AnalysisRequestStatus.COMPLETED, store.state.getStatus());
+        assertEquals(550_000_000L, riskService.price.getOfficialPrice());
+        assertEquals(null, riskService.price.getRecentSalePrice());
+    }
+
+    @Test
+    void priceLookupFailureWithoutAnyPriceStopsBeforePaidRegistry() {
+        AnalysisWorkflowStateDTO state = state();
+        // 공시가격도 확보하지 못한 상태
+        state.getBuildingRegisterData().put(
+                BuildingRegisterDocumentType.COLLECTIVE_TITLE,
+                Map.of("resViolationStatus", "")
+        );
+        state.getBuildingRegisterData().put(
+                BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE,
+                Map.of("resViolationStatus", "")
+        );
+        InMemoryStore store = new InMemoryStore(state);
+        CountingRegistryProvider registry = new CountingRegistryProvider();
+        PriceDataProvider failedPriceLookup =
+                (target, buildingType, transactionAreaSqm, transactionFloor) -> {
+                    throw new IllegalStateException("RTMS unavailable");
+                };
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                registry,
+                failedPriceLookup,
+                new CapturingRiskService(),
+                new FixedPersistenceService(report(95L)),
+                new FixedQueryService(report(95L)),
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
+        );
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.execute(1L, "request-id")
+        );
+
+        assertTrue(exception.getMessage().contains("공시가격"));
+        assertEquals(
+                0,
+                registry.callCount,
+                "기준가가 하나도 없으면 유료 조회로 넘어가 과금하면 안 된다"
+        );
+        assertEquals(AnalysisRequestStatus.FAILED, store.state.getStatus());
+    }
+
+    @Test
+    void normalNoMatchingTradeMayUseVerifiedOfficialPrice() {
+        InMemoryStore store = new InMemoryStore(state());
+        CapturingRiskService riskService = new CapturingRiskService();
+        PriceDataProvider noMatchingTrade =
+                (target, buildingType, transactionAreaSqm, transactionFloor) -> null;
+        ReportDetailResponse saved = report(96L);
+        AnalysisExecutionService service = new AnalysisExecutionService(
+                store,
+                new BuildingRegisterDataParser(),
+                new FixedRegistryClient(),
+                noMatchingTrade,
+                riskService,
+                new FixedPersistenceService(saved),
+                new FixedQueryService(saved),
+                new StubSpecialTermService(),
+                new TrustPropertyResolver()
+        );
+
+        ReportDetailResponse result = service.execute(1L, "request-id");
+
+        assertEquals(96L, result.getAnalysisReportId());
+        assertEquals(550_000_000L, riskService.price.getOfficialPrice());
+        assertEquals(null, riskService.price.getRecentSalePrice());
+    }
+
+    @Test
     void usesStandardizedAddressForRegionJudgement() {
-        AnalysisWorkflowState state = state();
+        AnalysisWorkflowStateDTO state = state();
         // 사용자가 건물명으로 입력한 경우. 시도명으로 시작하지 않는다.
         state.setRoadAddress("테헤란로152빌딩");
         InMemoryStore store = new InMemoryStore(state);
@@ -235,7 +339,7 @@ class AnalysisExecutionServiceTest {
 
     @Test
     void skipsPaidRegistryLookupWhenViolationStatusIsUnavailable() {
-        AnalysisWorkflowState state = state();
+        AnalysisWorkflowStateDTO state = state();
         state.getBuildingRegisterData().put(
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
                 Map.of("resBasePrice", "550,000,000")
@@ -264,14 +368,15 @@ class AnalysisExecutionServiceTest {
 
     @Test
     void skipsPaidRegistryLookupWhenPriceBasisIsUnavailable() {
-        AnalysisWorkflowState state = state();
+        AnalysisWorkflowStateDTO state = state();
         state.getBuildingRegisterData().put(
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
                 Map.of("resViolationStatus", "")
         );
         InMemoryStore store = new InMemoryStore(state);
         CountingRegistryProvider registry = new CountingRegistryProvider();
-        PriceDataProvider unavailablePrice = (target, buildingType) -> null;
+        PriceDataProvider unavailablePrice =
+                (target, buildingType, transactionAreaSqm, transactionFloor) -> null;
         AnalysisExecutionService service = new AnalysisExecutionService(
                 store,
                 new BuildingRegisterDataParser(),
@@ -292,8 +397,8 @@ class AnalysisExecutionServiceTest {
         assertEquals(AnalysisRequestStatus.FAILED, store.state.getStatus());
     }
 
-    private AnalysisWorkflowState state() {
-        AnalysisTarget target = new AnalysisTarget(
+    private AnalysisWorkflowStateDTO state() {
+        AnalysisTargetDTO target = new AnalysisTargetDTO(
                 "서울 강남구 테헤란로 152",
                 "서울 강남구 테헤란로 152",
                 "1168010100",
@@ -313,15 +418,24 @@ class AnalysisExecutionServiceTest {
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
                 Map.of(
                         "resBasePrice", "550,000,000",
+                        "resBaseDate", "20260101",
+                        "resDong", "101동",
+                        "resHo", "1203호",
                         "resViolationStatus", ""
                 )
         );
         data.put(
                 BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE,
-                Map.of("resViolationStatus", "위반건축물")
+                Map.of(
+                        "resViolationStatus", "위반건축물",
+                        "resDong", "101동",
+                        "resHo", "1203호",
+                        "resExclusiveArea", "84.12",
+                        "resFloor", "12층"
+                )
         );
 
-        AnalysisWorkflowState state = new AnalysisWorkflowState();
+        AnalysisWorkflowStateDTO state = new AnalysisWorkflowStateDTO();
         state.setRequestId("request-id");
         state.setAccountId(1L);
         state.setRoadAddress(target.roadAddress());
@@ -361,7 +475,7 @@ class AnalysisExecutionServiceTest {
 
         @Override
         public RegistryData getRegistryDataForAnalysis(
-                AnalysisTarget target,
+                AnalysisTargetDTO target,
                 String detailAddress,
                 String buildingType
         ) {
@@ -375,19 +489,19 @@ class AnalysisExecutionServiceTest {
     }
 
     private static class InMemoryStore implements AnalysisWorkflowStore {
-        private AnalysisWorkflowState state;
+        private AnalysisWorkflowStateDTO state;
 
-        private InMemoryStore(AnalysisWorkflowState state) {
+        private InMemoryStore(AnalysisWorkflowStateDTO state) {
             this.state = state;
         }
 
         @Override
-        public void save(AnalysisWorkflowState state) {
+        public void save(AnalysisWorkflowStateDTO state) {
             this.state = state;
         }
 
         @Override
-        public AnalysisWorkflowState findOwned(
+        public AnalysisWorkflowStateDTO findOwned(
                 String requestId,
                 Long accountId
         ) {
@@ -425,7 +539,7 @@ class AnalysisExecutionServiceTest {
 
         @Override
         public RegistryData getRegistryDataForAnalysis(
-                AnalysisTarget target,
+                AnalysisTargetDTO target,
                 String detailAddress,
                 String buildingType
         ) {
@@ -434,15 +548,22 @@ class AnalysisExecutionServiceTest {
     }
 
     private static class FixedPriceClient extends PriceClient {
+        private java.math.BigDecimal transactionAreaSqm;
+        private Integer transactionFloor;
+
         private FixedPriceClient() {
-            super(new RestTemplate());
+            super(new RestTemplate(), null);
         }
 
         @Override
         public PriceData getPriceData(
-                AnalysisTarget target,
-                String buildingType
+                AnalysisTargetDTO target,
+                String buildingType,
+                java.math.BigDecimal transactionAreaSqm,
+                Integer transactionFloor
         ) {
+            this.transactionAreaSqm = transactionAreaSqm;
+            this.transactionFloor = transactionFloor;
             PriceData price = new PriceData();
             price.setRecentSalePrice(900_000_000L);
             return price;
@@ -456,7 +577,7 @@ class AnalysisExecutionServiceTest {
         private String roadAddress;
 
         @Override
-        public RiskEvaluationResult evaluate(
+        public RiskEvaluationResultDTO evaluate(
                 RegistryData registry,
                 BuildingData building,
                 PriceData price,
@@ -466,7 +587,7 @@ class AnalysisExecutionServiceTest {
             this.building = building;
             this.price = price;
             this.roadAddress = roadAddress;
-            return new RiskEvaluationResult(
+            return new RiskEvaluationResultDTO(
                     RiskLevel.DANGER,
                     List.of(),
                     List.of()
@@ -493,7 +614,7 @@ class AnalysisExecutionServiceTest {
                 String roadAddress,
                 String detailAddress,
                 Long deposit,
-                RiskEvaluationResult evalResult,
+                RiskEvaluationResultDTO evalResult,
                 String housingCategory,
                 boolean trustProperty
         ) {

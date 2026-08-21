@@ -1,9 +1,9 @@
 package com.secondzip.backend.report.service.external.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.CodefTwoWayState;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.CodefTwoWayStateDTO;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.enums.AnalysisNextAction;
@@ -86,13 +86,13 @@ class CodefBuildingRegisterGatewayTest {
     @Test
     @SuppressWarnings("unchecked")
     void continuesWithExactTwoWayFields() {
-        AnalysisWorkflowState state = workflowState();
+        AnalysisWorkflowStateDTO state = workflowState();
         state.setPendingDocument(
                 BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE
         );
         state.setNextAction(AnalysisNextAction.SIMPLE_AUTH);
         state.setTwoWayState(
-                new CodefTwoWayState(1, 2, "test-jti", "123456789")
+                new CodefTwoWayStateDTO(1, 2, "test-jti", "123456789")
         );
         ContinueAnalysisAuthRequest request =
                 new ContinueAnalysisAuthRequest();
@@ -149,8 +149,8 @@ class CodefBuildingRegisterGatewayTest {
         assertEquals(captchaImage, result.getCaptchaImage());
     }
 
-    private AnalysisWorkflowState workflowState() {
-        AnalysisTarget target = new AnalysisTarget(
+    private AnalysisWorkflowStateDTO workflowState() {
+        AnalysisTargetDTO target = new AnalysisTargetDTO(
                 "서울 강남구 테헤란로 152",
                 "서울 강남구 테헤란로 152",
                 "1168010100",
@@ -162,11 +162,11 @@ class CodefBuildingRegisterGatewayTest {
                 "",
                 ""
         );
-        return new AnalysisWorkflowState(
+        return new AnalysisWorkflowStateDTO(
                 "request-id",
                 1L,
                 target.roadAddress(),
-                "101동 1203호",
+                "역삼동 101동 1203호",
                 100_000_000L,
                 target,
                 "APARTMENT",
@@ -183,6 +183,7 @@ class CodefBuildingRegisterGatewayTest {
                 new java.util.LinkedHashMap<>(),
                 1L,
                 Long.MAX_VALUE,
+                null,
                 null,
                 null,
                 null
