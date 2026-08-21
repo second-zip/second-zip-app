@@ -3,6 +3,7 @@ package com.secondzip.backend.report.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.report.domain.ReportShareInfo;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.dto.response.ReportListItem;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,10 +40,10 @@ class ReportShareServiceTest {
     @DisplayName("유효한 공유 링크가 있으면 재발급하지 않고 재사용한다")
     void reusesUnexpiredToken() throws Exception {
         StubMapper mapper = new StubMapper();
-        mapper.shareInfo = Map.of(
-                "shareToken", "existing-token",
-                "shareExpiresAt", LocalDateTime.now().plusDays(3)
-        );
+        mapper.shareInfo = ReportShareInfo.builder()
+                .shareToken("existing-token")
+                .shareExpiresAt(LocalDateTime.now().plusDays(3))
+                .build();
         ReportShareService service = service(mapper, true);
 
         ShareResponse response = service.createShareLink(1L, 10L);
@@ -56,10 +56,10 @@ class ReportShareServiceTest {
     @DisplayName("만료된 공유 링크는 새 토큰으로 교체한다")
     void replacesExpiredToken() throws Exception {
         StubMapper mapper = new StubMapper();
-        mapper.shareInfo = Map.of(
-                "shareToken", "old-token",
-                "shareExpiresAt", LocalDateTime.now().minusDays(1)
-        );
+        mapper.shareInfo = ReportShareInfo.builder()
+                .shareToken("old-token")
+                .shareExpiresAt(LocalDateTime.now().minusDays(1))
+                .build();
         ReportShareService service = service(mapper, true);
 
         ShareResponse response = service.createShareLink(1L, 10L);
@@ -173,7 +173,7 @@ class ReportShareServiceTest {
     }
 
     private static class StubMapper extends StubReportMapper {
-        private Map<String, Object> shareInfo;
+        private ReportShareInfo shareInfo;
         private String savedToken;
         private Long reportIdByToken;
         private Long ownerId;
@@ -189,7 +189,7 @@ class ReportShareServiceTest {
         }
 
         @Override
-        public Map<String, Object> findShareInfoByReportId(Long reportId) {
+        public ReportShareInfo findShareInfoByReportId(Long reportId) {
             return shareInfo;
         }
 

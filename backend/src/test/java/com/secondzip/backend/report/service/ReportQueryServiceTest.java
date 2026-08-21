@@ -3,6 +3,10 @@ package com.secondzip.backend.report.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
+import com.secondzip.backend.report.domain.ReportSpecialTerm;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.dto.response.ReportListItem;
@@ -24,9 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -109,44 +111,47 @@ class ReportQueryServiceTest {
     void buildsCompleteReportDetail() {
         when(reportMapper.findAccountIdByReportId(10L)).thenReturn(42L);
 
-        Map<String, Object> report = new HashMap<>();
-        report.put("analysisReportId", 10L);
-        report.put("roadAddress", "서울특별시 강남구 테헤란로 1");
-        report.put("detailAddress", "101호");
-        report.put("deposit", 300_000_000L);
-        report.put("result", "DANGER");
-        report.put("favorite", true);
-        report.put("housingCategory", null);
-        report.put("trustProperty", false);
+        AnalysisReport report = AnalysisReport.builder()
+                .analysisReportId(10L)
+                .roadAddress("서울특별시 강남구 테헤란로 1")
+                .detailAddress("101호")
+                .deposit(300_000_000L)
+                .riskLevel(RiskLevel.DANGER)
+                .favorite(true)
+                .housingCategory(null)
+                .trustProperty(false)
+                .build();
         when(reportMapper.findReportById(10L)).thenReturn(report);
 
         when(reportMapper.findCheckResultsByReportId(10L)).thenReturn(List.of(
-                row(
-                        "checkType", "MORTGAGE_EXISTENCE",
-                        "riskLevel", "CAUTION",
-                        "dataStatus", "UNVERIFIED",
-                        "evidence", "{\"mortgageAmount\":120000000,\"source\":\"CODEF\"}"
-                ),
-                row(
-                        "checkType", "ILLEGAL_BUILDING",
-                        "riskLevel", "SAFE",
-                        "dataStatus", null,
-                        "evidence", null
-                ),
-                row(
-                        "checkType", "BUILDING_USE",
-                        "riskLevel", "CAUTION",
-                        "dataStatus", "UNKNOWN_LEGACY_VALUE",
-                        "evidence", "not-json"
-                )
+                ReportCheckResult.builder()
+                        .checkType(CheckType.MORTGAGE_EXISTENCE)
+                        .riskLevel(RiskLevel.CAUTION)
+                        .dataStatus("UNVERIFIED")
+                        .evidence("{\"mortgageAmount\":120000000,\"source\":\"CODEF\"}")
+                        .build(),
+                ReportCheckResult.builder()
+                        .checkType(CheckType.ILLEGAL_BUILDING)
+                        .riskLevel(RiskLevel.SAFE)
+                        .dataStatus(null)
+                        .evidence(null)
+                        .build(),
+                // data_status 는 V3 에서 추가된 컬럼이라, 모르는 값이 들어와도
+                // 500 대신 VERIFIED 로 흘려보내는 방어가 걸려 있다.
+                ReportCheckResult.builder()
+                        .checkType(CheckType.BUILDING_USE)
+                        .riskLevel(RiskLevel.CAUTION)
+                        .dataStatus("UNKNOWN_LEGACY_VALUE")
+                        .evidence("not-json")
+                        .build()
         ));
 
         when(reportMapper.findFraudTypesByReportId(10L)).thenReturn(List.of(
-                row(
-                        "reportFraudTypeId", 20L,
-                        "fraudType", "UNDERWATER_JEONSE",
-                        "riskLevel", "DANGER"
-                )
+                ReportFraudType.builder()
+                        .reportFraudTypeId(20L)
+                        .fraudType(FraudType.UNDERWATER_JEONSE)
+                        .riskLevel(RiskLevel.DANGER)
+                        .build()
         ));
         when(reportMapper.findDetailResultsByFraudTypeId(20L)).thenReturn(List.of(
                 new DetailResult(
@@ -161,8 +166,8 @@ class ReportQueryServiceTest {
                 )
         ));
         when(reportMapper.findSpecialTermsByReportId(10L)).thenReturn(List.of(
-                Map.of("title", "특약 A", "content", "내용 A"),
-                Map.of("title", "특약 B", "content", "내용 B")
+                ReportSpecialTerm.builder().title("특약 A").content("내용 A").build(),
+                ReportSpecialTerm.builder().title("특약 B").content("내용 B").build()
         ));
 
         ReportDetailResponse result = service.getReportDetail(42L, 10L);
@@ -219,13 +224,5 @@ class ReportQueryServiceTest {
         verify(reportMapper, never()).findCheckResultsByReportId(10L);
         verify(reportMapper, never()).findFraudTypesByReportId(10L);
         verify(reportMapper, never()).findSpecialTermsByReportId(10L);
-    }
-
-    private Map<String, Object> row(Object... keyValues) {
-        Map<String, Object> row = new HashMap<>();
-        for (int index = 0; index < keyValues.length; index += 2) {
-            row.put((String) keyValues[index], keyValues[index + 1]);
-        }
-        return row;
     }
 }
