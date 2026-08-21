@@ -1,6 +1,9 @@
 package com.secondzip.backend.report.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
 import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.FraudTypeResult;
@@ -25,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
@@ -41,15 +43,13 @@ class ReportPersistenceServiceBranchTest {
         ReportMapper mapper = mock(ReportMapper.class);
         ReportQueryService queryService = mock(ReportQueryService.class);
         doAnswer(invocation -> {
-            Map<String, Object> params = invocation.getArgument(0);
-            params.put("reportId", 99L);
+            invocation.getArgument(0, AnalysisReport.class).setAnalysisReportId(99L);
             return null;
-        }).when(mapper).insertReportMap(anyMap());
+        }).when(mapper).insertReport(any(AnalysisReport.class));
         doAnswer(invocation -> {
-            Map<String, Object> params = invocation.getArgument(0);
-            params.put("fraudTypeId", 200L);
+            invocation.getArgument(0, ReportFraudType.class).setReportFraudTypeId(200L);
             return null;
-        }).when(mapper).insertFraudTypeMap(anyMap());
+        }).when(mapper).insertFraudType(any(ReportFraudType.class));
         ReportPersistenceService service = new ReportPersistenceService(
                 mapper,
                 new ObjectMapper(),
@@ -94,13 +94,16 @@ class ReportPersistenceServiceBranchTest {
         assertEquals(1, result.getFraudTypes().size());
         assertFalse(result.getTrustProperty());
 
-        ArgumentCaptor<Map<String, Object>> checkCaptor =
-                ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<ReportCheckResult> checkCaptor =
+                ArgumentCaptor.forClass(ReportCheckResult.class);
         verify(mapper).insertCheckResult(checkCaptor.capture());
-        assertEquals(DataStatus.VERIFIED, checkCaptor.getValue().get("dataStatus"));
+        assertEquals(
+                DataStatus.VERIFIED.name(),
+                checkCaptor.getValue().getDataStatus()
+        );
         assertEquals(
                 "{\"deposit\":100000000}",
-                checkCaptor.getValue().get("evidenceJson")
+                checkCaptor.getValue().getEvidence()
         );
         verify(mapper).insertDetailResult(
                 200L,
@@ -129,10 +132,9 @@ class ReportPersistenceServiceBranchTest {
     void skipsChecklistVerificationInsertWhenNothingWasVerified() {
         ReportMapper mapper = mock(ReportMapper.class);
         doAnswer(invocation -> {
-            Map<String, Object> params = invocation.getArgument(0);
-            params.put("reportId", 1L);
+            invocation.getArgument(0, AnalysisReport.class).setAnalysisReportId(1L);
             return null;
-        }).when(mapper).insertReportMap(anyMap());
+        }).when(mapper).insertReport(any(AnalysisReport.class));
         ReportPersistenceService service = new ReportPersistenceService(
                 mapper,
                 new ObjectMapper(),

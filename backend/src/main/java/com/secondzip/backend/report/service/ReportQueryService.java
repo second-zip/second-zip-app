@@ -5,12 +5,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
+import com.secondzip.backend.report.domain.ReportSpecialTerm;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.response.*;
-import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
-import com.secondzip.backend.report.enums.FraudType;
-import com.secondzip.backend.report.enums.RiskLevel;
 import com.secondzip.backend.report.mapper.ReportMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +59,7 @@ public class ReportQueryService {
     public ReportDetailResponse getReportDetail(Long accountId, Long reportId) {
         validateOwnership(accountId, reportId);
 
-        Map<String, Object> report = reportMapper.findReportById(reportId);
+        AnalysisReport report = reportMapper.findReportById(reportId);
         // validateOwnership 통과 후 조회 전에 다른 요청이 리포트를 지울 수 있다.
         // 그 경우 아래에서 NPE가 나 500으로 나가므로 여기서 404로 정리한다.
         if (report == null) {
@@ -74,15 +76,15 @@ public class ReportQueryService {
         List<SpecialTermView> specialTermViews = buildSpecialTermViews(reportId);
 
         return new ReportDetailResponse(
-                (Long) report.get("analysisReportId"),
-                (String) report.get("roadAddress"),
-                (String) report.get("detailAddress"),
-                (Long) report.get("deposit"),
-                RiskLevel.valueOf(report.get("result").toString()),
-                (Boolean) report.get("favorite"),
+                report.getAnalysisReportId(),
+                report.getRoadAddress(),
+                report.getDetailAddress(),
+                report.getDeposit(),
+                report.getRiskLevel(),
+                report.getFavorite(),
                 // 이 필드가 추가되기 전에 저장된 리포트는 값이 없다. null 그대로 내려보낸다.
-                (String) report.get("housingCategory"),
-                (Boolean) report.get("trustProperty"),
+                report.getHousingCategory(),
+                report.getTrustProperty(),
                 checkViews,
                 fraudViews,
                 specialTermViews
@@ -91,25 +93,23 @@ public class ReportQueryService {
 
     // 필수 점검 항목 조회
     private List<CheckResultView> buildCheckResultViews(Long reportId) {
-        List<Map<String, Object>> rows = reportMapper.findCheckResultsByReportId(reportId);
-        return rows.stream().map(row -> {
-            CheckType checkType = CheckType.valueOf(row.get("checkType").toString());
-            RiskLevel riskLevel = RiskLevel.valueOf(row.get("riskLevel").toString());
-            Map<String, Object> evidence = parseEvidence(row.get("evidence"));
-            return new CheckResultView(
-                    checkType,
-                    riskLevel,
-                    parseDataStatus(row.get("dataStatus")),
-                    evidence
-            );
-        }).collect(Collectors.toList());
+        List<ReportCheckResult> rows = reportMapper.findCheckResultsByReportId(reportId);
+        return rows.stream()
+                .map(row -> new CheckResultView(
+                        row.getCheckType(),
+                        row.getRiskLevel(),
+                        parseDataStatus(row.getDataStatus()),
+                        parseEvidence(row.getEvidence())
+                ))
+                .collect(Collectors.toList());
     }
-    private DataStatus parseDataStatus(Object raw) {
+
+    private DataStatus parseDataStatus(String raw) {
         if (raw == null) {
             return DataStatus.VERIFIED;
         }
         try {
-            return DataStatus.valueOf(raw.toString());
+            return DataStatus.valueOf(raw);
         } catch (IllegalArgumentException e) {
             return DataStatus.VERIFIED;
         }
@@ -117,13 +117,11 @@ public class ReportQueryService {
 
     // 사기 유형 조회
     private List<FraudTypeView> buildFraudTypeViews(Long reportId) {
-        List<Map<String, Object>> fraudTypeRows = reportMapper.findFraudTypesByReportId(reportId);
+        List<ReportFraudType> fraudTypeRows = reportMapper.findFraudTypesByReportId(reportId);
         return fraudTypeRows.stream().map(row -> {
-            Long fraudTypeId = (Long) row.get("reportFraudTypeId");
-            FraudType fraudType = FraudType.valueOf(row.get("fraudType").toString());
-            RiskLevel riskLevel = RiskLevel.valueOf(row.get("riskLevel").toString());
+            List<DetailResult> details =
+                    reportMapper.findDetailResultsByFraudTypeId(row.getReportFraudTypeId());
 
-            List<DetailResult> details = reportMapper.findDetailResultsByFraudTypeId(fraudTypeId);
             List<DetailResultView> detailViews = details.stream()
                     .map(d -> new DetailResultView(
                             d.getDetailType(),
@@ -134,38 +132,37 @@ public class ReportQueryService {
                     ))
                     .collect(Collectors.toList());
 
-            return new FraudTypeView(fraudType, riskLevel, detailViews);
+            return new FraudTypeView(row.getFraudType(), row.getRiskLevel(), detailViews);
         }).collect(Collectors.toList());
     }
 
     // AI 추천 특약 조회
     private List<SpecialTermView> buildSpecialTermViews(Long reportId) {
-        List<Map<String, Object>> rows =
+        List<ReportSpecialTerm> rows =
                 reportMapper.findSpecialTermsByReportId(reportId);
 
-        return java.util.stream.IntStream.range(0, rows.size())
+        // 순번은 테이블에 없다. 조회 순서대로 1부터 붙인다.
+        return IntStream.range(0, rows.size())
                 .mapToObj(index -> {
-                    Map<String, Object> row = rows.get(index);
+                    ReportSpecialTerm row = rows.get(index);
 
                     return new SpecialTermView(
                             index + 1,
-                            (String) row.get("title"),
-                            (String) row.get("content")
+                            row.getTitle(),
+                            row.getContent()
                     );
                 })
                 .collect(Collectors.toList());
     }
 
     // evidence JSON 파싱
-    private Map<String, Object> parseEvidence(Object evidenceRaw) {
+    private Map<String, Object> parseEvidence(String evidenceRaw) {
         if (evidenceRaw == null) return Collections.emptyMap();
         try {
-            return objectMapper.readValue(evidenceRaw.toString(), new TypeReference<Map<String, Object>>() {});
+            return objectMapper.readValue(evidenceRaw, new TypeReference<Map<String, Object>>() {});
         } catch (JsonProcessingException e) {
             log.error("evidence JSON 파싱 실패: {}", evidenceRaw, e);
             return Collections.emptyMap();
         }
     }
 }
-
-

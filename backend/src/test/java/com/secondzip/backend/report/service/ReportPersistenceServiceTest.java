@@ -3,6 +3,8 @@ package com.secondzip.backend.report.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.RiskEvaluationResult;
@@ -91,23 +93,23 @@ class ReportPersistenceServiceTest {
                 true
         );
 
-        assertEquals("OFFICETEL", mapper.lastReportParams.get("housingCategory"));
-        assertEquals(true, mapper.lastReportParams.get("trustProperty"));
+        assertEquals("OFFICETEL", mapper.lastReport.getHousingCategory());
+        assertEquals(true, mapper.lastReport.getTrustProperty());
     }
 
     private static class CountingStubMapper extends StubReportMapper {
         private int insertedCheckResults;
-        private Map<String, Object> lastReportParams;
+        private AnalysisReport lastReport;
 
         @Override
-        public void insertCheckResult(Map<String, Object> params) {
+        public void insertCheckResult(ReportCheckResult checkResult) {
             insertedCheckResults++;
         }
 
         @Override
-        public void insertReportMap(Map<String, Object> params) {
-            lastReportParams = new java.util.HashMap<>(params);
-            params.put("reportId", 1L);
+        public void insertReport(AnalysisReport report) {
+            lastReport = report;
+            report.setAnalysisReportId(1L);
         }
     }
 }

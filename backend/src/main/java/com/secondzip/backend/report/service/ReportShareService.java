@@ -2,6 +2,7 @@ package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.report.domain.ReportShareInfo;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.dto.response.ShareResponse;
 import com.secondzip.backend.report.mapper.ReportMapper;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -32,14 +32,14 @@ public class ReportShareService {
     public ShareResponse createShareLink(Long accountId, Long reportId) {
         reportQueryService.validateOwnership(accountId, reportId);
 
-        Map<String, Object> shareInfo =
+        ReportShareInfo shareInfo =
                 reportMapper.findShareInfoByReportId(reportId);
 
         String existingToken = shareInfo != null
-                ? (String) shareInfo.get("shareToken")
+                ? shareInfo.getShareToken()
                 : null;
         LocalDateTime existingExpiresAt = shareInfo != null
-                ? (LocalDateTime) shareInfo.get("shareExpiresAt")
+                ? shareInfo.getShareExpiresAt()
                 : null;
 
         // 공유 토큰 존재하고 유효한 경우

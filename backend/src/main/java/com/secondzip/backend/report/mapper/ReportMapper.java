@@ -1,5 +1,10 @@
 package com.secondzip.backend.report.mapper;
 
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
+import com.secondzip.backend.report.domain.ReportShareInfo;
+import com.secondzip.backend.report.domain.ReportSpecialTerm;
 import com.secondzip.backend.report.dto.DetailResult;
 import com.secondzip.backend.report.dto.VerifiedChecklistItem;
 import com.secondzip.backend.report.dto.response.ReportListItem;
@@ -11,16 +16,18 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDateTime;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface ReportMapper {
 
-    // 필수 항목 5
-    void insertCheckResult(Map<String, Object> params);
+    // 리포트 생성. 저장 후 report.analysisReportId 에 생성된 PK 가 채워진다.
+    void insertReport(AnalysisReport report);
 
-    // 사기 유형 3
-    void insertFraudTypeMap(Map<String, Object> params);
+    // 필수 항목 5
+    void insertCheckResult(ReportCheckResult checkResult);
+
+    // 사기 유형 3. 저장 후 fraudType.reportFraudTypeId 에 생성된 PK 가 채워진다.
+    void insertFraudType(ReportFraudType fraudType);
 
     // 상세 항목
     void insertDetailResult(
@@ -29,9 +36,6 @@ public interface ReportMapper {
             @Param("riskLevel") RiskLevel riskLevel,
             @Param("dataStatus") DataStatus dataStatus
     );
-
-    // 리포트 생성
-    void insertReportMap(Map<String, Object> params);
 
     /**
      * 분석으로 확인 완료된 체크리스트 항목 저장.
@@ -54,9 +58,9 @@ public interface ReportMapper {
             @Param("requestId") String requestId
     );
     Long findAccountIdByReportId(@Param("reportId") Long reportId);
-    Map<String, Object> findReportById(@Param("reportId") Long reportId);
-    List<Map<String, Object>> findCheckResultsByReportId(@Param("reportId") Long reportId);
-    List<Map<String, Object>> findFraudTypesByReportId(@Param("reportId") Long reportId);
+    AnalysisReport findReportById(@Param("reportId") Long reportId);
+    List<ReportCheckResult> findCheckResultsByReportId(@Param("reportId") Long reportId);
+    List<ReportFraudType> findFraudTypesByReportId(@Param("reportId") Long reportId);
     List<DetailResult> findDetailResultsByFraudTypeId(@Param("fraudTypeId") Long fraudTypeId);
 
 
@@ -64,7 +68,7 @@ public interface ReportMapper {
     Long lockReportById(@Param("reportId") Long reportId);
 
     // AI 특약 조회
-    List<Map<String, Object>> findSpecialTermsByReportId(@Param("reportId") Long reportId);
+    List<ReportSpecialTerm> findSpecialTermsByReportId(@Param("reportId") Long reportId);
 
     // AI 특약 저장
     void insertSpecialTerm(
@@ -90,11 +94,10 @@ public interface ReportMapper {
             @Param("shareToken") String shareToken,
             @Param("shareExpiresAt") LocalDateTime shareExpiresAt
     );
-    Map<String, Object> findShareInfoByReportId(@Param("reportId") Long reportId);
+    ReportShareInfo findShareInfoByReportId(@Param("reportId") Long reportId);
     Long findReportIdByShareToken(@Param("shareToken") String shareToken);
 
 
     // 리포트 삭제
     void deleteReport(@Param("reportId") Long reportId);
 }
-

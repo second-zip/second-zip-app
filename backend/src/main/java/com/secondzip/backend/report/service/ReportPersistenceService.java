@@ -4,11 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
 import com.secondzip.backend.report.dto.CheckResult;
 import com.secondzip.backend.report.dto.FraudTypeResult;
 import com.secondzip.backend.report.dto.RiskEvaluationResult;
 import com.secondzip.backend.report.dto.VerifiedChecklistItem;
 import com.secondzip.backend.report.dto.response.*;
+import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.mapper.ReportMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -18,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -74,29 +77,33 @@ public class ReportPersistenceService {
                               String roadAddress, String detailAddress,
                               Long deposit, RiskEvaluationResult evalResult,
                               String housingCategory, boolean trustProperty) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("accountId", accountId);
-        params.put("requestId", requestId);
-        params.put("roadAddress", roadAddress);
-        params.put("detailAddress", detailAddress);
-        params.put("deposit", deposit);
-        params.put("result", evalResult.getOverallRiskLevel());
-        params.put("housingCategory", housingCategory);
-        params.put("trustProperty", trustProperty);
-        reportMapper.insertReportMap(params);
-        return Long.valueOf(params.get("reportId").toString());
+        AnalysisReport report = AnalysisReport.builder()
+                .accountId(accountId)
+                .requestId(requestId)
+                .roadAddress(roadAddress)
+                .detailAddress(detailAddress)
+                .deposit(deposit)
+                .riskLevel(evalResult.getOverallRiskLevel())
+                .housingCategory(housingCategory)
+                .trustProperty(trustProperty)
+                .build();
+
+        // useGeneratedKeys 가 report.analysisReportId 를 채운다.
+        reportMapper.insertReport(report);
+        return report.getAnalysisReportId();
     }
 
     private List<CheckResultView> insertCheckResults(Long reportId, List<CheckResult> results) {
         return results.stream().map(c -> {
-            Map<String, Object> params = new HashMap<>();
-            params.put("reportId", reportId);
-            params.put("checkType", c.getCheckType());
-            params.put("riskLevel", c.getRiskLevel());
-            params.put("dataStatus", c.getDataStatus());
-            params.put("evidenceJson", toJson(c.getEvidence()));
-
-            reportMapper.insertCheckResult(params);
+            reportMapper.insertCheckResult(
+                    ReportCheckResult.builder()
+                            .analysisReportId(reportId)
+                            .checkType(c.getCheckType())
+                            .riskLevel(c.getRiskLevel())
+                            .dataStatus(nameOf(c.getDataStatus()))
+                            .evidence(toJson(c.getEvidence()))
+                            .build()
+            );
 
             return new CheckResultView(
                     c.getCheckType(),
@@ -109,12 +116,15 @@ public class ReportPersistenceService {
 
     private List<FraudTypeView> insertFraudTypes(Long reportId, List<FraudTypeResult> fraudResults) {
         return fraudResults.stream().map(f -> {
-            Map<String, Object> params = new HashMap<>();
-            params.put("reportId", reportId);
-            params.put("fraudType", f.getFraudType());
-            params.put("riskLevel", f.getRiskLevel());
-            reportMapper.insertFraudTypeMap(params);
-            Long fraudTypeId = Long.valueOf(params.get("fraudTypeId").toString());
+            ReportFraudType fraudTypeRow = ReportFraudType.builder()
+                    .analysisReportId(reportId)
+                    .fraudType(f.getFraudType())
+                    .riskLevel(f.getRiskLevel())
+                    .build();
+
+            // useGeneratedKeys 가 fraudTypeRow.reportFraudTypeId 를 채운다.
+            reportMapper.insertFraudType(fraudTypeRow);
+            Long fraudTypeId = fraudTypeRow.getReportFraudTypeId();
 
             List<DetailResultView> details = f.getDetails().stream().map(d -> {
                 reportMapper.insertDetailResult(
@@ -151,6 +161,14 @@ public class ReportPersistenceService {
 
         reportMapper.insertChecklistVerifications(reportId, verified);
         log.debug("리포트 {} - 체크리스트 자동 체크 {}건", reportId, verified.size());
+    }
+
+    /**
+     * data_status 컬럼에 넣을 문자열.
+     * ReportCheckResult.dataStatus 가 String 인 이유는 그 클래스 주석 참고.
+     */
+    private String nameOf(DataStatus dataStatus) {
+        return dataStatus != null ? dataStatus.name() : null;
     }
 
     // 필수 점검 판단 데이터 JSON으로 변경

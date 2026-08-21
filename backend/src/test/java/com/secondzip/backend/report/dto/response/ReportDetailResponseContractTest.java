@@ -18,13 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 프론트와 합의한 응답 계약을 고정한다.
+ * 프론트와 합의한 응답 계약을 고정.
  *
- * <p>외부 API를 부르지 않고 직렬화 결과만 검사하므로 <b>비용이 들지 않는다.</b>
- * 프론트에 스펙을 넘기기 전에 이 테스트로 실제 JSON 모양을 확인할 수 있다.
- *
- * <p>여기가 깨지면 프론트 화면도 같이 깨진다는 뜻이다.
- * 문서(프론트-전달-백엔드-변경사항.md)와 함께 수정해야 한다.
+ * 외부 API를 부르지 않고 직렬화 결과만 검사하므로 비용이 들지 않음.
+ * 프론트에 스펙을 넘기기 전에 이 테스트로 실제 JSON 모양을 확인.
  */
 class ReportDetailResponseContractTest {
 
