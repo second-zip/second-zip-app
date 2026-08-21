@@ -1,4 +1,4 @@
-package com.secondzip.backend.report.account.controller;
+package com.secondzip.backend.report.checklist.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
