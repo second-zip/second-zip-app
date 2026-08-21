@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,7 +33,7 @@ public class RedisAddressSearchStore implements AddressSearchStore {
     private long ttlSeconds;
 
     @Override
-    public String save(AnalysisTarget target) {
+    public String save(AnalysisTargetDTO target) {
         String addressId = UUID.randomUUID().toString();
         try {
             redisTemplate.opsForValue().set(
@@ -51,7 +51,7 @@ public class RedisAddressSearchStore implements AddressSearchStore {
     }
 
     @Override
-    public AnalysisTarget find(String addressId) {
+    public AnalysisTargetDTO find(String addressId) {
         if (addressId == null || addressId.isBlank()) {
             throw expired();
         }
@@ -62,7 +62,7 @@ public class RedisAddressSearchStore implements AddressSearchStore {
         }
 
         try {
-            return objectMapper.readValue(json, AnalysisTarget.class);
+            return objectMapper.readValue(json, AnalysisTargetDTO.class);
         } catch (JsonProcessingException e) {
             redisTemplate.delete(KEY_PREFIX + addressId);
             throw new BusinessException(

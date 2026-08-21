@@ -5,19 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.report.domain.AnalysisReport;
 import com.secondzip.backend.report.domain.ReportCheckResult;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.response.ReportListItem;
+import com.secondzip.backend.report.dto.CheckResultDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
-import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
-import com.secondzip.backend.report.mapper.ReportMapper;
 import com.secondzip.backend.report.mapper.StubReportMapper;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -41,9 +36,9 @@ class ReportPersistenceServiceTest {
                 failingObjectMapper,
                 null
         );
-        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+        RiskEvaluationResultDTO evaluation = new RiskEvaluationResultDTO(
                 RiskLevel.CAUTION,
-                List.of(new CheckResult(
+                List.of(new CheckResultDTO(
                         CheckType.MORTGAGE_EXISTENCE,
                         RiskLevel.CAUTION,
                         DataStatus.VERIFIED,
@@ -76,7 +71,7 @@ class ReportPersistenceServiceTest {
                 new ObjectMapper(),
                 null
         );
-        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+        RiskEvaluationResultDTO evaluation = new RiskEvaluationResultDTO(
                 RiskLevel.SAFE,
                 List.of(),
                 List.of()

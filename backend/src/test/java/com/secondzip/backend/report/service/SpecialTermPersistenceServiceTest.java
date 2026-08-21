@@ -2,7 +2,7 @@ package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.SpecialTermResult;
+import com.secondzip.backend.report.dto.SpecialTermResultDTO;
 import com.secondzip.backend.report.dto.response.SpecialTermView;
 import com.secondzip.backend.report.mapper.StubReportMapper;
 import org.junit.jupiter.api.Test;
@@ -21,16 +21,16 @@ class SpecialTermPersistenceServiceTest {
         SpecialTermPersistenceService service =
                 new SpecialTermPersistenceService(mapper);
 
-        List<SpecialTermResult> terms = List.of(
-                new SpecialTermResult(
+        List<SpecialTermResultDTO> terms = List.of(
+                new SpecialTermResultDTO(
                         "추가 담보권 설정 금지",
                         "임대인은 잔금 지급 전까지 새로운 담보권을 설정하지 않는다."
                 ),
-                new SpecialTermResult(
+                new SpecialTermResultDTO(
                         "잔금 전 등기사항 재확인",
                         "임대인은 잔금 지급 전 최신 등기사항을 제공하여야 한다."
                 ),
-                new SpecialTermResult(
+                new SpecialTermResultDTO(
                         "보증보험 가입 조건",
                         "보증보험 가입이 불가능한 경우 임차인은 계약을 해제할 수 있다."
                 )
@@ -70,10 +70,10 @@ class SpecialTermPersistenceServiceTest {
         SpecialTermPersistenceService service =
                 new SpecialTermPersistenceService(mapper);
 
-        List<SpecialTermResult> terms = List.of(
-                new SpecialTermResult("특약1", "내용1"),
-                new SpecialTermResult("특약2", "내용2"),
-                new SpecialTermResult("특약3", "내용3")
+        List<SpecialTermResultDTO> terms = List.of(
+                new SpecialTermResultDTO("특약1", "내용1"),
+                new SpecialTermResultDTO("특약2", "내용2"),
+                new SpecialTermResultDTO("특약3", "내용3")
         );
 
         BusinessException exception = assertThrows(
@@ -107,7 +107,7 @@ class SpecialTermPersistenceServiceTest {
         private final List<String> events =
                 new ArrayList<>();
 
-        private final List<SpecialTermResult> insertedTerms =
+        private final List<SpecialTermResultDTO> insertedTerms =
                 new ArrayList<>();
 
         private CapturingMapper(Long lockResult) {
@@ -134,7 +134,7 @@ class SpecialTermPersistenceServiceTest {
             events.add("insert");
 
             insertedTerms.add(
-                    new SpecialTermResult(title, content)
+                    new SpecialTermResultDTO(title, content)
             );
         }
     }

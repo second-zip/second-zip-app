@@ -1,11 +1,7 @@
 package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.checklist.enums.Category;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.FraudTypeResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.dto.*;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -29,40 +25,40 @@ class ChecklistAutoCheckResolverTest {
 
     // ---------- 헬퍼 ----------
 
-    private static CheckResult check(CheckType type, RiskLevel risk, DataStatus status) {
-        return new CheckResult(type, risk, status, Map.of());
+    private static CheckResultDTO check(CheckType type, RiskLevel risk, DataStatus status) {
+        return new CheckResultDTO(type, risk, status, Map.of());
     }
 
-    private static RiskEvaluationResult evaluation(
-            List<CheckResult> checks,
-            List<DetailResult> details
+    private static RiskEvaluationResultDTO evaluation(
+            List<CheckResultDTO> checks,
+            List<DetailResultDTO> details
     ) {
-        List<FraudTypeResult> fraudTypes = new ArrayList<>();
+        List<FraudTypeResultDTO> fraudTypes = new ArrayList<>();
         for (FraudType fraudType : FraudType.values()) {
-            List<DetailResult> owned = details.stream()
+            List<DetailResultDTO> owned = details.stream()
                     .filter(d -> d.getDetailType().getParentType() == fraudType)
                     .collect(Collectors.toList());
             if (!owned.isEmpty()) {
-                fraudTypes.add(new FraudTypeResult(fraudType, RiskLevel.SAFE, owned));
+                fraudTypes.add(new FraudTypeResultDTO(fraudType, RiskLevel.SAFE, owned));
             }
         }
-        return new RiskEvaluationResult(RiskLevel.SAFE, checks, fraudTypes);
+        return new RiskEvaluationResultDTO(RiskLevel.SAFE, checks, fraudTypes);
     }
 
     /** 필수점검 5개 전부 + 세부 9개 전부를 SAFE + 주어진 데이터 상태로 채운 판정 결과 */
-    private static RiskEvaluationResult allWith(DataStatus status) {
-        List<CheckResult> checks = Arrays.stream(CheckType.values())
+    private static RiskEvaluationResultDTO allWith(DataStatus status) {
+        List<CheckResultDTO> checks = Arrays.stream(CheckType.values())
                 .map(t -> check(t, RiskLevel.SAFE, status))
                 .collect(Collectors.toList());
-        List<DetailResult> details = Arrays.stream(DetailType.values())
-                .map(t -> new DetailResult(t, RiskLevel.SAFE, status))
+        List<DetailResultDTO> details = Arrays.stream(DetailType.values())
+                .map(t -> new DetailResultDTO(t, RiskLevel.SAFE, status))
                 .collect(Collectors.toList());
         return evaluation(checks, details);
     }
 
-    private static Set<String> contentsOf(List<VerifiedChecklistItem> items) {
+    private static Set<String> contentsOf(List<VerifiedChecklistItemDTO> items) {
         return items.stream()
-                .map(VerifiedChecklistItem::getContents)
+                .map(VerifiedChecklistItemDTO::getContents)
                 .collect(Collectors.toSet());
     }
 
@@ -71,16 +67,16 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("전부 VERIFIED + SAFE면 규칙에 정의된 항목이 모두 확인 완료로 나온다")
     void resolvesAllRulesWhenEveryJudgementIsVerifiedAndSafe() {
-        List<VerifiedChecklistItem> result =
+        List<VerifiedChecklistItemDTO> result =
                 ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
 
-        assertEquals(10, result.size());
+        assertEquals(9, result.size());
         assertTrue(contentsOf(result).containsAll(Set.of(
                 "등기부등본 확인",
                 "건축물대장 확인",
-                "전세가율 확인",
-                "HUG/HF/SGI 보증보험 가능 여부 확인"
+                "전세가율 확인"
         )));
+        assertFalse(contentsOf(result).contains("HUG/HF/SGI 보증보험 가능 여부 확인"));
     }
 
     @Test
@@ -102,7 +98,7 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("DANGER로 판정되면 데이터를 확인했더라도 체크하지 않는다 - 위험한 항목은 사용자가 직접 확인해야 한다")
     void doesNotCheckItemWhenJudgementIsDangerous() {
-        RiskEvaluationResult evaluation = evaluation(
+        RiskEvaluationResultDTO evaluation = evaluation(
                 List.of(
                         check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.DANGER, DataStatus.VERIFIED),
                         check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.DANGER, DataStatus.VERIFIED)
@@ -117,7 +113,7 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("CAUTION도 체크하지 않는다 - 자동 체크 기준은 SAFE 하나뿐이다")
     void doesNotCheckItemWhenJudgementIsCaution() {
-        RiskEvaluationResult evaluation = evaluation(
+        RiskEvaluationResultDTO evaluation = evaluation(
                 List.of(
                         check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.CAUTION, DataStatus.VERIFIED),
                         check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.SAFE, DataStatus.VERIFIED)
@@ -134,7 +130,7 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("근거가 여러 개인 항목은 하나만 SAFE가 아니어도 체크하지 않는다")
     void requiresEveryUnderlyingJudgementToBeSafe() {
-        RiskEvaluationResult evaluation = evaluation(
+        RiskEvaluationResultDTO evaluation = evaluation(
                 List.of(
                         check(CheckType.ILLEGAL_BUILDING, RiskLevel.SAFE, DataStatus.VERIFIED),
                         // 업무용 오피스텔 등 - 확인은 했지만 추가 확인이 필요한 상태
@@ -152,17 +148,17 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("세부 판정(DetailResult)도 SAFE일 때만 체크한다")
     void checksDetailBasedItemOnlyWhenSafe() {
-        RiskEvaluationResult dangerous = evaluation(
+        RiskEvaluationResultDTO dangerous = evaluation(
                 List.of(),
-                List.of(new DetailResult(
+                List.of(new DetailResultDTO(
                         DetailType.HIGH_JEONSE_RATIO, RiskLevel.DANGER, DataStatus.VERIFIED))
         );
         assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(dangerous))
                 .contains("전세가율 확인"));
 
-        RiskEvaluationResult safe = evaluation(
+        RiskEvaluationResultDTO safe = evaluation(
                 List.of(),
-                List.of(new DetailResult(
+                List.of(new DetailResultDTO(
                         DetailType.HIGH_JEONSE_RATIO, RiskLevel.SAFE, DataStatus.VERIFIED))
         );
         assertTrue(contentsOf(ChecklistAutoCheckResolver.resolve(safe))
@@ -172,7 +168,7 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("아파트는 유형별 고유 규칙이 없다 - COMMON과 중복이라 V8에서 제거됨")
     void hasNoAutoCheckRuleForApartment() {
-        List<VerifiedChecklistItem> result =
+        List<VerifiedChecklistItemDTO> result =
                 ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
 
         assertTrue(result.stream()
@@ -182,16 +178,16 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("유형별 규칙이 COMMON 규칙과 같은 개념을 덮지 않는다 - 같은 항목이 두 줄로 뜨는 것을 막는다")
     void hasNoTypeRuleDuplicatingCommonRule() {
-        List<VerifiedChecklistItem> all =
+        List<VerifiedChecklistItemDTO> all =
                 ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
 
         Set<String> common = all.stream()
                 .filter(item -> item.getCategory() == Category.COMMON)
-                .map(VerifiedChecklistItem::getContents)
+                .map(VerifiedChecklistItemDTO::getContents)
                 .collect(Collectors.toSet());
         Set<String> byType = all.stream()
                 .filter(item -> item.getCategory() != Category.COMMON)
-                .map(VerifiedChecklistItem::getContents)
+                .map(VerifiedChecklistItemDTO::getContents)
                 .collect(Collectors.toSet());
 
         assertTrue(common.contains("전세가율 확인"));
@@ -203,7 +199,7 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("근거가 여러 개인 항목은 하나라도 UNVERIFIED면 체크하지 않는다")
     void requiresEveryUnderlyingJudgementToBeVerified() {
-        RiskEvaluationResult evaluation = evaluation(
+        RiskEvaluationResultDTO evaluation = evaluation(
                 List.of(
                         check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.SAFE, DataStatus.VERIFIED),
                         // 등기부 권리침해만 확인 실패
@@ -221,9 +217,54 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("판정 항목이 아예 누락돼도 체크하지 않는다")
     void doesNotCheckWhenJudgementIsMissingEntirely() {
-        RiskEvaluationResult evaluation = evaluation(
+        RiskEvaluationResultDTO evaluation = evaluation(
                 List.of(check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.SAFE, DataStatus.VERIFIED)),
                 List.of()
+        );
+
+        assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
+                .contains("등기부등본 확인"));
+    }
+
+    @Test
+    @DisplayName("신탁등기까지 SAFE로 확인해야 등기부등본 항목을 자동 체크한다")
+    void registryChecklistAlsoRequiresNoTrustRegistration() {
+        RiskEvaluationResultDTO evaluation = evaluation(
+                List.of(
+                        check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.SAFE, DataStatus.VERIFIED),
+                        check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.SAFE, DataStatus.VERIFIED)
+                ),
+                List.of(new DetailResultDTO(
+                        DetailType.TRUST_REGISTRATION_EXISTENCE,
+                        RiskLevel.DANGER,
+                        DataStatus.VERIFIED
+                ))
+        );
+
+        assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
+                .contains("등기부등본 확인"));
+    }
+
+    @Test
+    @DisplayName("등기상 소유자가 누락되거나 미확인이면 등기부등본을 자동 확인하지 않는다")
+    void registryChecklistAlsoRequiresVerifiedRegisteredOwner() {
+        RiskEvaluationResultDTO evaluation = evaluation(
+                List.of(
+                        check(CheckType.MORTGAGE_EXISTENCE, RiskLevel.SAFE, DataStatus.VERIFIED),
+                        check(CheckType.RIGHTS_INFRINGEMENT, RiskLevel.SAFE, DataStatus.VERIFIED)
+                ),
+                List.of(
+                        new DetailResultDTO(
+                                DetailType.TRUST_REGISTRATION_EXISTENCE,
+                                RiskLevel.SAFE,
+                                DataStatus.VERIFIED
+                        ),
+                        new DetailResultDTO(
+                                DetailType.REGISTERED_OWNER_VERIFICATION,
+                                RiskLevel.CAUTION,
+                                DataStatus.UNVERIFIED
+                        )
+                )
         );
 
         assertFalse(contentsOf(ChecklistAutoCheckResolver.resolve(evaluation))
@@ -248,6 +289,7 @@ class ChecklistAutoCheckResolverTest {
         assertFalse(contents.contains("전입세대확인서"));
         assertFalse(contents.contains("확정일자 부여현황"));
         assertFalse(contents.contains("선순위 임차인 보증금"));
+        assertFalse(contents.contains("HUG/HF/SGI 보증보험 가능 여부 확인"));
     }
 
     @Test
@@ -267,7 +309,7 @@ class ChecklistAutoCheckResolverTest {
     @Test
     @DisplayName("다가구는 자동 체크 대상이 없다")
     void hasNoAutoCheckRuleForMultiFamily() {
-        List<VerifiedChecklistItem> result =
+        List<VerifiedChecklistItemDTO> result =
                 ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
 
         assertTrue(result.stream()
@@ -281,17 +323,17 @@ class ChecklistAutoCheckResolverTest {
     void toleratesNullAndEmptyInput() {
         assertTrue(ChecklistAutoCheckResolver.resolve(null).isEmpty());
         assertTrue(ChecklistAutoCheckResolver
-                .resolve(new RiskEvaluationResult(RiskLevel.SAFE, null, null))
+                .resolve(new RiskEvaluationResultDTO(RiskLevel.SAFE, null, null))
                 .isEmpty());
         assertTrue(ChecklistAutoCheckResolver
-                .resolve(new RiskEvaluationResult(RiskLevel.SAFE, List.of(), List.of()))
+                .resolve(new RiskEvaluationResultDTO(RiskLevel.SAFE, List.of(), List.of()))
                 .isEmpty());
     }
 
     @Test
     @DisplayName("같은 (category, contents) 조합이 중복 생성되지 않는다")
     void producesNoDuplicateItems() {
-        List<VerifiedChecklistItem> result =
+        List<VerifiedChecklistItemDTO> result =
                 ChecklistAutoCheckResolver.resolve(allWith(DataStatus.VERIFIED));
 
         assertEquals(result.size(), Set.copyOf(result).size());

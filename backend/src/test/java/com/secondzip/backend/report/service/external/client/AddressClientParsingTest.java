@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service.external.client;
 
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -22,7 +22,7 @@ class AddressClientParsingTest {
         AddressClient client = new AddressClient(restTemplate);
         ReflectionTestUtils.setField(client, "kakaoApiKey", "test-key");
 
-        AnalysisTarget target = client.search("서울특별시 강남구 테헤란로 152")
+        AnalysisTargetDTO target = client.search("서울특별시 강남구 테헤란로 152")
                 .get(0)
                 .target();
 
@@ -31,6 +31,7 @@ class AddressClientParsingTest {
         assertEquals("", target.subNo());
         assertEquals("152", target.roadBuildingMainNo());
         assertEquals("", target.roadBuildingSubNo());
+        assertEquals("1", target.platGbCd());
     }
 
     private static class KakaoAddressRestTemplate extends RestTemplate {
@@ -45,7 +46,8 @@ class AddressClientParsingTest {
             Map<String, Object> address = Map.of(
                     "b_code", "1168010100",
                     "main_address_no", "737",
-                    "sub_address_no", ""
+                    "sub_address_no", "",
+                    "mountain_yn", "Y"
             );
             Map<String, Object> roadAddress = Map.of(
                     "address_name", "서울 강남구 테헤란로 152",

@@ -1,8 +1,9 @@
 package com.secondzip.backend.report.service.external.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.dto.external.RegistryData;
+import com.secondzip.backend.report.enums.RegistryDocumentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
@@ -25,6 +26,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RegistryClientTest {
@@ -102,7 +104,7 @@ class RegistryClientTest {
 
     @Test
     void sendsRoadBuildingNumberAndRequiredRegistryOptions() {
-        AnalysisTarget target = target();
+        AnalysisTargetDTO target = target();
 
         RegistryData result = client.getRegistryData(target, "101동 1203호");
 
@@ -122,7 +124,7 @@ class RegistryClientTest {
 
     @Test
     void cachesSuccessfulPaidLookup() {
-        AnalysisTarget target = target();
+        AnalysisTargetDTO target = target();
 
         client.getRegistryData(target, "101동 1203호");
         client.getRegistryData(target, "101동 1203호");
@@ -169,8 +171,155 @@ class RegistryClientTest {
         assertEquals("737", restTemplate.requestBodies.get(1).get("addr_lotNumber"));
     }
 
-    private AnalysisTarget target() {
-        return new AnalysisTarget(
+    @Test
+    void generalHousingMergesLandMortgageAndInfringement() throws Exception {
+        restTemplate.respondWith(
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동"
+                )),
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 300,000,000원\n처분금지가처분"
+                ))
+        );
+
+        RegistryData result = client.getRegistryDataForAnalysis(
+                targetWithLotAddress(), null, "MULTI_FAMILY"
+        );
+
+        assertNotNull(result);
+        assertEquals(300_000_000L, result.getMortgageAmount());
+        assertTrue(result.getHasSeizure());
+        assertEquals("홍길동", result.getLandOwnerName());
+    }
+
+    @Test
+    void generalHousingKeepsBothPositiveDocumentMortgagesUnknown() throws Exception {
+        restTemplate.respondWith(
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 100,000,000원"
+                )),
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 300,000,000원"
+                ))
+        );
+
+        RegistryData result = client.getRegistryDataForAnalysis(
+                targetWithLotAddress(), null, "SINGLE_FAMILY"
+        );
+
+        assertNotNull(result);
+        assertNull(
+                result.getMortgageAmount(),
+                "건물·토지의 서로 다른 금액을 합치면 중복 계상할 수 있다"
+        );
+    }
+
+    @Test
+    void generalHousingTreatsIdenticalBuildingAndLandAmountAsJointCollateral() throws Exception {
+        restTemplate.respondWith(
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 300,000,000원"
+                )),
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 300,000,000원"
+                ))
+        );
+
+        RegistryData result = client.getRegistryDataForAnalysis(
+                targetWithLotAddress(), null, "SINGLE_FAMILY"
+        );
+
+        assertNotNull(result);
+        assertEquals(
+                300_000_000L,
+                result.getMortgageAmount(),
+                "단독·다가구의 근저당은 대부분 건물·토지 공동담보라 양쪽에 같은 금액이 "
+                        + "적힌다. 이것까지 미확인으로 보내면 근저당 금액이 거의 항상 사라진다"
+        );
+    }
+
+    @Test
+    void generalHousingKeepsPartialMortgageAsUnknown() throws Exception {
+        restTemplate.respondWith(
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 (판독불가) 원"
+                )),
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 300,000,000원"
+                ))
+        );
+
+        RegistryData result = client.getRegistryDataForAnalysis(
+                targetWithLotAddress(), null, "SINGLE_FAMILY"
+        );
+
+        assertNotNull(result);
+        assertNull(result.getMortgageAmount());
+    }
+
+    @Test
+    void generalHousingRejectsOneSidedOrHeaderOnlyResponse() throws Exception {
+        restTemplate.respondWith(
+                objectMapper.writeValueAsString(successBody(
+                        "소유자 홍길동\n채권최고액 금 100,000,000원"
+                )),
+                objectMapper.writeValueAsString(successBody(
+                        "등기사항전부증명서(열람용)"
+                ))
+        );
+
+        RegistryData result = client.getRegistryDataForAnalysis(
+                targetWithLotAddress(), null, "SINGLE_FAMILY"
+        );
+
+        assertNull(result);
+    }
+
+    @Test
+    void buildingFailureShortCircuitsPaidLandLookup() throws Exception {
+        restTemplate.respondWith(objectMapper.writeValueAsString(successBody(
+                "등기사항전부증명서(열람용)"
+        )));
+
+        RegistryData result = client.getRegistryDataForAnalysis(
+                targetWithLotAddress(), null, "SINGLE_FAMILY"
+        );
+
+        assertNull(result);
+        assertEquals(1, restTemplate.callCount);
+        assertEquals(1, restTemplate.requestBodies.size());
+        assertEquals("3", restTemplate.requestBodies.get(0).get("realtyType"));
+    }
+
+    @Test
+    void landCacheKeySeparatesOrdinaryAndMountainParcels() {
+        client.getRegistryData(
+                targetWithLotAddress("0"),
+                null,
+                RegistryDocumentType.LAND
+        );
+        client.getRegistryData(
+                targetWithLotAddress("1"),
+                null,
+                RegistryDocumentType.LAND
+        );
+
+        assertEquals(2, restTemplate.callCount);
+        assertEquals("737", restTemplate.requestBodies.get(0).get("addr_lotNumber"));
+        assertEquals("산737", restTemplate.requestBodies.get(1).get("addr_lotNumber"));
+    }
+
+    @Test
+    void headerOnlySuccessfulResponseIsRejected() throws Exception {
+        restTemplate.respondWith(objectMapper.writeValueAsString(successBody(
+                "등기사항전부증명서(열람용)"
+        )));
+
+        assertNull(client.getRegistryData(target(), "101동 1203호"));
+    }
+
+    private AnalysisTargetDTO target() {
+        return new AnalysisTargetDTO(
                 "서울 강남구 테헤란로 152-1",
                 "서울 강남구 테헤란로 152-1",
                 "1168010100",
@@ -184,9 +333,13 @@ class RegistryClientTest {
         );
     }
 
-    private AnalysisTarget targetWithLotAddress() {
-        AnalysisTarget target = target();
-        return new AnalysisTarget(
+    private AnalysisTargetDTO targetWithLotAddress() {
+        return targetWithLotAddress("0");
+    }
+
+    private AnalysisTargetDTO targetWithLotAddress(String platGbCd) {
+        AnalysisTargetDTO target = target();
+        return new AnalysisTargetDTO(
                 target.originalAddress(),
                 target.roadAddress(),
                 target.legalDongCode(),
@@ -198,14 +351,21 @@ class RegistryClientTest {
                 target.roadBuildingSubNo(),
                 target.buildingManagementNo(),
                 "대치동",
-                "서울 강남구 대치동 737"
+                "서울 강남구 대치동 737",
+                platGbCd
         );
     }
 
     private Map<String, Object> successBody() {
+        return successBody(
+                "소유자 홍길동 채권최고액 금 100,000,000원 가압류"
+        );
+    }
+
+    private Map<String, Object> successBody(String registryText) {
         Map<String, Object> detail = Map.of(
                 "resContents",
-                "소유자 홍길동 채권최고액 금 100,000,000원 가압류"
+                registryText
         );
         Map<String, Object> content = Map.of("resDetailList", List.of(detail));
         Map<String, Object> summary = Map.of("resContentsList", List.of(content));
@@ -229,15 +389,21 @@ class RegistryClientTest {
     }
 
     private static class CapturingRestTemplate extends RestTemplate {
-        private final String responseBody;
+        private List<String> responseBodies;
         private Map<String, Object> requestBody;
         private final List<Map<String, Object>> requestBodies =
                 new ArrayList<>();
         private int callCount;
+        private int successfulCallCount;
         private boolean unauthorizedFirst;
 
         private CapturingRestTemplate(String responseBody) {
-            this.responseBody = responseBody;
+            this.responseBodies = List.of(responseBody);
+        }
+
+        private void respondWith(String... bodies) {
+            this.responseBodies = List.of(bodies);
+            this.successfulCallCount = 0;
         }
 
         @Override
@@ -260,6 +426,10 @@ class RegistryClientTest {
             }
             requestBody = (Map<String, Object>) ((HttpEntity<?>) request).getBody();
             requestBodies.add(requestBody);
+            String responseBody = responseBodies.get(Math.min(
+                    successfulCallCount++,
+                    responseBodies.size() - 1
+            ));
             return ResponseEntity.ok((T) responseBody);
         }
     }

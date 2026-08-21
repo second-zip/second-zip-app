@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.SpecialTermGenerationContext;
-import com.secondzip.backend.report.dto.SpecialTermGenerationResult;
-import com.secondzip.backend.report.dto.SpecialTermResult;
+import com.secondzip.backend.report.dto.SpecialTermGenerationContextDTO;
+import com.secondzip.backend.report.dto.SpecialTermGenerationResultDTO;
+import com.secondzip.backend.report.dto.SpecialTermResultDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -205,7 +205,7 @@ public class GptSpecialTermGenerator {
         this.objectMapper = objectMapper;
     }
 
-    public List<SpecialTermResult> generate(SpecialTermGenerationContext context) {
+    public List<SpecialTermResultDTO> generate(SpecialTermGenerationContextDTO context) {
         validateConfiguration();
 
         try {
@@ -240,9 +240,9 @@ public class GptSpecialTermGenerator {
 
             String outputText = extractOutputText(responseBody);
 
-            SpecialTermGenerationResult generationResult = objectMapper.readValue(
+            SpecialTermGenerationResultDTO generationResult = objectMapper.readValue(
                             outputText,
-                            SpecialTermGenerationResult.class
+                            SpecialTermGenerationResultDTO.class
                     );
 
             if (generationResult == null || generationResult.getSpecialTerms() == null) {
@@ -318,7 +318,7 @@ public class GptSpecialTermGenerator {
     }
 
     private Map<String, Object> buildRequestBody(
-            SpecialTermGenerationContext context
+            SpecialTermGenerationContextDTO context
     ) {
         Map<String, Object> requestBody =
                 new LinkedHashMap<>();
@@ -363,7 +363,7 @@ public class GptSpecialTermGenerator {
     }
 
     private String buildUserPrompt(
-            SpecialTermGenerationContext context
+            SpecialTermGenerationContextDTO context
     ) {
         Map<String, Object> analysisData = new LinkedHashMap<>();
 

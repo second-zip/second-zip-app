@@ -2,7 +2,7 @@ package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.response.AnalysisAuthResponse;
@@ -28,7 +28,7 @@ public class AnalysisAuthenticationService {
     ) {
         String lockToken = acquireLock(requestId);
         try {
-            AnalysisWorkflowState state = workflowStore.findOwned(requestId, accountId);
+            AnalysisWorkflowStateDTO state = workflowStore.findOwned(requestId, accountId);
             if (state.getStatus() != AnalysisRequestStatus.AUTH_REQUIRED) {
                 throw new BusinessException(
                         ErrorCode.RESOURCE_CONFLICT,
@@ -56,7 +56,7 @@ public class AnalysisAuthenticationService {
     ) {
         String lockToken = acquireLock(requestId);
         try {
-            AnalysisWorkflowState state = workflowStore.findOwned(requestId, accountId);
+            AnalysisWorkflowStateDTO state = workflowStore.findOwned(requestId, accountId);
             if (state.getStatus() != AnalysisRequestStatus.AUTH_PENDING
                     && state.getStatus() != AnalysisRequestStatus.SELECTION_REQUIRED) {
                 throw new BusinessException(
@@ -77,7 +77,7 @@ public class AnalysisAuthenticationService {
     }
 
     private void applyResult(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             BuildingRegisterDocumentType documentType,
             BuildingRegisterGatewayResult result
     ) {
@@ -109,7 +109,7 @@ public class AnalysisAuthenticationService {
         );
     }
 
-    private BuildingRegisterDocumentType nextDocument(AnalysisWorkflowState state) {
+    private BuildingRegisterDocumentType nextDocument(AnalysisWorkflowStateDTO state) {
         return state.getRequiredDocuments().stream()
                 .filter(type -> !state.getCompletedDocuments().contains(type))
                 .findFirst()
@@ -119,13 +119,13 @@ public class AnalysisAuthenticationService {
                 ));
     }
 
-    private boolean hasRemainingDocument(AnalysisWorkflowState state) {
+    private boolean hasRemainingDocument(AnalysisWorkflowStateDTO state) {
         return state.getRequiredDocuments().stream()
                 .anyMatch(type -> !state.getCompletedDocuments().contains(type));
     }
 
     private AnalysisAuthResponse toResponse(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             String captchaImage
     ) {
         return new AnalysisAuthResponse(

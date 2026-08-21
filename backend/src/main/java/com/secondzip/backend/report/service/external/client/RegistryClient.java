@@ -1,7 +1,7 @@
 package com.secondzip.backend.report.service.external.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.dto.external.RegistryData;
 import com.secondzip.backend.report.enums.RegistryDocumentType;
 import lombok.extern.slf4j.Slf4j;
@@ -17,13 +17,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * CODEF 부동산등기부등본 열람 API 클라이언트.
@@ -92,7 +89,7 @@ public class RegistryClient implements RegistryDataProvider {
 
     /** 기존 호출부 호환용 집합건물 등기부 조회 */
     public RegistryData getRegistryData(
-            AnalysisTarget target,
+            AnalysisTargetDTO target,
             String detailAddress
     ) {
         return getRegistryData(
@@ -103,7 +100,7 @@ public class RegistryClient implements RegistryDataProvider {
     }
 
     public RegistryData getRegistryDataForAnalysis(
-            AnalysisTarget target,
+            AnalysisTargetDTO target,
             String detailAddress,
             String buildingType
     ) {
@@ -114,20 +111,28 @@ public class RegistryClient implements RegistryDataProvider {
                     null,
                     RegistryDocumentType.BUILDING
             );
+            if (building == null) {
+                // 건물 등기부 없이는 어차피 완성된 분석을 만들 수 없다. 유료 토지
+                // 조회까지 이어가 불필요한 과금을 만들지 않는다.
+                log.warn("건물 등기부 조회 실패로 토지 등기부 조회를 생략합니다.");
+                return null;
+            }
             RegistryData land = getRegistryData(
                     target,
                     null,
                     RegistryDocumentType.LAND
             );
-            if (building == null && land == null) {
+            // 두 문서는 한 물건의 권리관계를 함께 이룬다. 한쪽만 성공한 값을
+            // 완성된 분석처럼 반환하면 누락된 담보/압류를 0 또는 false로 확정한다.
+            if (land == null) {
+                log.warn(
+                        "단독·다가구 등기부가 부분 조회되어 분석을 중단합니다: building={}, land={}",
+                        true,
+                        false
+                );
                 return null;
             }
-            RegistryData combined =
-                    building == null ? new RegistryData() : building;
-            if (land != null) {
-                combined.setLandOwnerName(land.getOwnerName());
-            }
-            return combined;
+            return combineBuildingAndLand(building, land);
         }
         return getRegistryData(
                 target,
@@ -136,9 +141,80 @@ public class RegistryClient implements RegistryDataProvider {
         );
     }
 
+    private RegistryData combineBuildingAndLand(
+            RegistryData building,
+            RegistryData land
+    ) {
+        RegistryData combined = new RegistryData();
+        combined.setMortgageAmount(mergeVerifiedAmounts(
+                building.getMortgageAmount(),
+                land.getMortgageAmount()
+        ));
+        combined.setHasSeizure(orUnknown(
+                building.getHasSeizure(),
+                land.getHasSeizure()
+        ));
+        combined.setHasTrustRegistration(orUnknown(
+                building.getHasTrustRegistration(),
+                land.getHasTrustRegistration()
+        ));
+        combined.setHasPostTrustInfringement(orUnknown(
+                building.getHasPostTrustInfringement(),
+                land.getHasPostTrustInfringement()
+        ));
+
+        combined.setOwnerName(building.getOwnerName());
+        combined.setOwnerNames(copyList(building.getOwnerNames()));
+        combined.setOwnerType(building.getOwnerType());
+        combined.setLandOwnerName(land.getOwnerName());
+        combined.setLandOwnerNames(copyList(land.getOwnerNames()));
+        combined.setLandOwnerType(land.getOwnerType());
+        return combined;
+    }
+
+    private Long mergeVerifiedAmounts(Long buildingAmount, Long landAmount) {
+        if (buildingAmount == null || landAmount == null) {
+            return null;
+        }
+        if (buildingAmount < 0L || landAmount < 0L) {
+            return null;
+        }
+        if (buildingAmount == 0L) {
+            return landAmount;
+        }
+        if (landAmount == 0L) {
+            return buildingAmount;
+        }
+        // 단독·다가구의 근저당은 거의 예외 없이 건물·토지 공동담보로 잡히고,
+        // 그때 양쪽 등기에 같은 채권최고액이 기재된다. 이 경우까지 미확인으로
+        // 보내면 근저당이 있는 단독·다가구 대부분에서 핵심 금액이 사라진다.
+        if (buildingAmount.equals(landAmount)) {
+            log.info("건물·토지 채권최고액이 같아 공동담보로 보고 한 건으로 집계합니다.");
+            return buildingAmount;
+        }
+        // 금액이 다르면 일부만 공동담보인지 각각 별도 근저당인지 구분할 근거가
+        // 없다. 합산해 과대평가하지도, 큰 쪽만 골라 과소평가하지도 않는다.
+        log.warn("건물·토지 채권최고액이 달라 근저당 금액을 확정하지 않습니다.");
+        return null;
+    }
+
+    private Boolean orUnknown(Boolean first, Boolean second) {
+        if (Boolean.TRUE.equals(first) || Boolean.TRUE.equals(second)) {
+            return true;
+        }
+        if (Boolean.FALSE.equals(first) && Boolean.FALSE.equals(second)) {
+            return false;
+        }
+        return null;
+    }
+
+    private List<String> copyList(List<String> values) {
+        return values == null ? null : List.copyOf(values);
+    }
+
     /** 문서 종류를 명시한 등기부등본 데이터 조회 */
     public synchronized RegistryData getRegistryData(
-            AnalysisTarget target,
+            AnalysisTargetDTO target,
             String detailAddress,
             RegistryDocumentType documentType
     ) {
@@ -161,9 +237,13 @@ public class RegistryClient implements RegistryDataProvider {
 
         // 문서 종류가 키에 포함된다. 단독·다가구는 BUILDING과 LAND가 서로 다른 문서라
         // 각각 별도로 캐시된다.
-        String cacheKey = documentType + "|" + target.roadAddress() + "|"
-                + target.mainNo() + "|" + target.subNo() + "|"
-                + (detailAddress == null ? "" : detailAddress);
+        String cacheKey = documentType + "|" + cachePart(target.roadAddress()) + "|"
+                + cachePart(target.legalDongName()) + "|"
+                + cachePart(target.platGbCd()) + "|"
+                + cachePart(target.mainNo()) + "|"
+                + cachePart(target.subNo()) + "|"
+                + cachePart(target.lotAddress()) + "|"
+                + cachePart(detailAddress);
         RegistryData cached = findCached(cacheKey);
         if (cached != null) {
             return cached;
@@ -239,7 +319,12 @@ public class RegistryClient implements RegistryDataProvider {
                     return null;
                 }
 
-                RegistryData registryData = registryDataParser.parse(data);
+                RegistryData registryData = registryDataParser.parse(
+                        data,
+                        documentType == RegistryDocumentType.COLLECTIVE
+                                ? detailAddress
+                                : null
+                );
                 if (registryData == null) {
                     log.warn("CODEF 등기부 응답 구조를 해석하지 못했습니다: shape={}", describeShape(data, 0));
                     return null;
@@ -278,6 +363,10 @@ public class RegistryClient implements RegistryDataProvider {
             log.warn("등기부등본 캐시 조회를 건너뜁니다: type={}", e.getClass().getSimpleName());
             return null;
         }
+    }
+
+    private String cachePart(String value) {
+        return value == null ? "" : value.trim();
     }
 
     /**

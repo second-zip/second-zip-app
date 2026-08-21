@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service.external.mock;
 
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.dto.external.RegistryData;
 import com.secondzip.backend.report.service.external.MockApiCondition;
 import com.secondzip.backend.report.service.external.client.RegistryDataProvider;
@@ -15,7 +15,7 @@ public class MockRegistryDataProvider implements RegistryDataProvider {
 
     @Override
     public RegistryData getRegistryDataForAnalysis(
-            AnalysisTarget target,
+            AnalysisTargetDTO target,
             String detailAddress,
             String buildingType
     ) {

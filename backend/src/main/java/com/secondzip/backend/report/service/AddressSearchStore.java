@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service;
 
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 
 /**
  * 주소 검색 후보의 식별값을 보관한다.
@@ -11,10 +11,10 @@ import com.secondzip.backend.report.dto.AnalysisTarget;
 public interface AddressSearchStore {
 
     /** 후보를 보관하고 식별자를 발급한다. */
-    String save(AnalysisTarget target);
+    String save(AnalysisTargetDTO target);
 
     /**
      * 보관된 후보를 조회한다.
      */
-    AnalysisTarget find(String addressId);
+    AnalysisTargetDTO find(String addressId);
 }

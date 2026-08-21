@@ -6,7 +6,7 @@ import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import com.secondzip.backend.report.dto.AnalysisSelectionOption;
+import com.secondzip.backend.report.dto.AnalysisSelectionOptionDTO;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public class AnalysisAuthResponse {
     private final AnalysisRequestStatus status;
     private final BuildingRegisterDocumentType pendingDocument;
     private final AnalysisNextAction nextAction;
-    private final List<AnalysisSelectionOption> selectionOptions;
+    private final List<AnalysisSelectionOptionDTO> selectionOptions;
     private final String captchaImage;
     private final long expiresAtEpochMillis;
 }

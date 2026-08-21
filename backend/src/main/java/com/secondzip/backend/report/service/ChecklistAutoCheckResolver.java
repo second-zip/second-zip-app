@@ -1,11 +1,7 @@
 package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.checklist.enums.Category;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.FraudTypeResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.dto.*;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -107,22 +103,27 @@ public final class ChecklistAutoCheckResolver {
         );
     }
 
-    /**
-     * contents 문자열은 checklist_items 시드 데이터(V1)와 정확히 일치해야 한다.
-     * 하나라도 어긋나면 조용히 매칭 0건이 되므로, 시드를 수정하면 여기도 함께 고친다.
-     */
     private static final List<Rule> RULES = List.of(
 
             // ---- 공통 ----
             // 근저당이 하나라도 잡혀 있으면 MORTGAGE_EXISTENCE 가 CAUTION 이상이라
             // 이 항목은 체크되지 않는다. (근저당 없는 매물만 자동 체크)
-            byChecks(Category.COMMON, "등기부등본 확인",
-                    CheckType.MORTGAGE_EXISTENCE, CheckType.RIGHTS_INFRINGEMENT),
-            // 업무용 오피스텔은 BUILDING_USE 가 CAUTION 이라 체크되지 않는다.
+            new Rule(
+                    Category.COMMON,
+                    "등기부등본 확인",
+                    EnumSet.of(
+                            CheckType.MORTGAGE_EXISTENCE,
+                            CheckType.RIGHTS_INFRINGEMENT
+                    ),
+                    EnumSet.of(
+                            DetailType.TRUST_REGISTRATION_EXISTENCE,
+                            DetailType.REGISTERED_OWNER_VERIFICATION
+                    )
+            ),
+            // 업무용 오피스텔은 BUILDING_USE 가 DANGER라 체크되지 않는다.
             byChecks(Category.COMMON, "건축물대장 확인",
                     CheckType.ILLEGAL_BUILDING, CheckType.BUILDING_USE),
-            byChecks(Category.COMMON, "HUG/HF/SGI 보증보험 가능 여부 확인",
-                    CheckType.HUG_GUARANTEE_ELIGIBILITY),
+            // HUG 사전점검 하나로 HF·SGI까지 확인했다고 볼 수 없어 자동 체크하지 않는다.
             byDetails(Category.COMMON, "전세가율 확인",
                     DetailType.HIGH_JEONSE_RATIO),
 
@@ -152,28 +153,28 @@ public final class ChecklistAutoCheckResolver {
      * 판정 결과에서 자동 체크할 체크리스트 항목을 뽑아낸다.
      * 확인 완료(VERIFIED + SAFE)로 표시할 항목들. 없으면 빈 리스트.
      */
-    public static List<VerifiedChecklistItem> resolve(RiskEvaluationResult evaluation) {
+    public static List<VerifiedChecklistItemDTO> resolve(RiskEvaluationResultDTO evaluation) {
 
         if (evaluation == null) {
             return List.of();
         }
 
         Map<CheckType, Verdict> checkVerdicts = new EnumMap<>(CheckType.class);
-        for (CheckResult checkResult : nullSafe(evaluation.getCheckResults())) {
-            if (checkResult != null && checkResult.getCheckType() != null) {
+        for (CheckResultDTO checkResultDTO : nullSafe(evaluation.getCheckResultDTOS())) {
+            if (checkResultDTO != null && checkResultDTO.getCheckType() != null) {
                 checkVerdicts.put(
-                        checkResult.getCheckType(),
-                        new Verdict(checkResult.getRiskLevel(), checkResult.getDataStatus())
+                        checkResultDTO.getCheckType(),
+                        new Verdict(checkResultDTO.getRiskLevel(), checkResultDTO.getDataStatus())
                 );
             }
         }
 
         Map<DetailType, Verdict> detailVerdicts = new EnumMap<>(DetailType.class);
-        for (FraudTypeResult fraudType : nullSafe(evaluation.getFraudTypeResults())) {
+        for (FraudTypeResultDTO fraudType : nullSafe(evaluation.getFraudTypeResultDTOS())) {
             if (fraudType == null) {
                 continue;
             }
-            for (DetailResult detail : nullSafe(fraudType.getDetails())) {
+            for (DetailResultDTO detail : nullSafe(fraudType.getDetails())) {
                 if (detail != null && detail.getDetailType() != null) {
                     detailVerdicts.put(
                             detail.getDetailType(),
@@ -183,10 +184,10 @@ public final class ChecklistAutoCheckResolver {
             }
         }
 
-        List<VerifiedChecklistItem> verified = new ArrayList<>();
+        List<VerifiedChecklistItemDTO> verified = new ArrayList<>();
         for (Rule rule : RULES) {
             if (rule.isClearedBy(checkVerdicts, detailVerdicts)) {
-                verified.add(new VerifiedChecklistItem(rule.category, rule.contents));
+                verified.add(new VerifiedChecklistItemDTO(rule.category, rule.contents));
             }
         }
         return List.copyOf(verified);

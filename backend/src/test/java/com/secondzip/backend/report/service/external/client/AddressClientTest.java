@@ -1,6 +1,7 @@
 package com.secondzip.backend.report.service.external.client;
 
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AddressCandidateDTO;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,9 +36,9 @@ class AddressClientTest {
         String inputAddress = "서울특별시 강남구 테헤란로 152";
 
         // API 호출 및 데이터 파싱
-        AnalysisTarget target = addressClient.search(inputAddress).stream()
+        AnalysisTargetDTO target = addressClient.search(inputAddress).stream()
                 .findFirst()
-                .map(com.secondzip.backend.report.dto.AddressCandidate::target)
+                .map(AddressCandidateDTO::target)
                 .orElse(null);
 
         // 결과 출력 및 검증

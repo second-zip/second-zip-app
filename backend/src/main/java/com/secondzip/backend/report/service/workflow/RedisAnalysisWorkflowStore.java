@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -52,7 +52,7 @@ public class RedisAnalysisWorkflowStore implements AnalysisWorkflowStore {
     private long lockTtlSeconds;
 
     @Override
-    public void save(AnalysisWorkflowState state) {
+    public void save(AnalysisWorkflowStateDTO state) {
         long remainingMillis = state.getExpiresAtEpochMillis()
                 - System.currentTimeMillis();
         if (remainingMillis <= 0L) {
@@ -74,7 +74,7 @@ public class RedisAnalysisWorkflowStore implements AnalysisWorkflowStore {
     }
 
     @Override
-    public AnalysisWorkflowState findOwned(String requestId, Long accountId) {
+    public AnalysisWorkflowStateDTO findOwned(String requestId, Long accountId) {
         String json = redisTemplate.opsForValue().get(KEY_PREFIX + requestId);
         if (json == null) {
             throw new BusinessException(
@@ -84,8 +84,8 @@ public class RedisAnalysisWorkflowStore implements AnalysisWorkflowStore {
         }
 
         try {
-            AnalysisWorkflowState state =
-                    objectMapper.readValue(json, AnalysisWorkflowState.class);
+            AnalysisWorkflowStateDTO state =
+                    objectMapper.readValue(json, AnalysisWorkflowStateDTO.class);
             if (state.getExpiresAtEpochMillis() <= System.currentTimeMillis()) {
                 delete(requestId);
                 throw workflowNotFound();

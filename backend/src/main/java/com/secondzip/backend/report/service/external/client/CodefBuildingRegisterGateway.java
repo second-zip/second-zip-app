@@ -3,10 +3,10 @@ package com.secondzip.backend.report.service.external.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisSelectionOption;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.CodefTwoWayState;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisSelectionOptionDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.CodefTwoWayStateDTO;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.enums.AnalysisNextAction;
@@ -68,7 +68,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
 
     @Override
     public BuildingRegisterGatewayResult start(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             BuildingRegisterDocumentType documentType,
             StartAnalysisAuthRequest authRequest
     ) {
@@ -113,7 +113,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
 
     @Override
     public BuildingRegisterGatewayResult continueRequest(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             ContinueAnalysisAuthRequest request
     ) {
         if (!enabled) {
@@ -176,11 +176,11 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
     }
 
     private Map<String, Object> buildStartRequest(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             BuildingRegisterDocumentType documentType,
             StartAnalysisAuthRequest auth
     ) {
-        AnalysisTarget target = state.getTarget();
+        AnalysisTargetDTO target = state.getTarget();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("organization", "0001");
         body.put("loginType", "5");
@@ -201,7 +201,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
 
     private void applyTwoWayInput(
             Map<String, Object> body,
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             ContinueAnalysisAuthRequest request
     ) {
         switch (state.getNextAction()) {
@@ -227,7 +227,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
                     "처리할 추가인증 단계가 없습니다."
             );
         }
-        CodefTwoWayState twoWay = state.getTwoWayState();
+        CodefTwoWayStateDTO twoWay = state.getTwoWayState();
         if (twoWay == null
                 || twoWay.getJobIndex() == null
                 || twoWay.getThreadIndex() == null
@@ -260,7 +260,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
         return request.getSelectionValue();
     }
 
-    private String buildCodefRoadAddress(AnalysisTarget target) {
+    private String buildCodefRoadAddress(AnalysisTargetDTO target) {
         String roadAddress = target.roadAddress();
         String[] tokens = roadAddress == null
                 ? new String[0]
@@ -286,9 +286,15 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
         if (detailAddress == null || detailAddress.isBlank()) {
             return "";
         }
-        Matcher matcher = Pattern.compile("([^\\s]+)\\s*" + suffix)
+        Matcher matcher = Pattern.compile(
+                        "([^\\s,()]+?)\\s*" + Pattern.quote(suffix)
+                )
                 .matcher(detailAddress);
-        return matcher.find() ? matcher.group(1) : "";
+        String result = "";
+        while (matcher.find()) {
+            result = matcher.group(1);
+        }
+        return result;
     }
 
     @SuppressWarnings("unchecked")
@@ -321,7 +327,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
             return new BuildingRegisterGatewayResult(
                     false,
                     resolveNextAction(extraInfo),
-                    new CodefTwoWayState(
+                    new CodefTwoWayStateDTO(
                             asInteger(data.get("jobIndex")),
                             asInteger(data.get("threadIndex")),
                             asString(data.get("jti")),
@@ -357,11 +363,11 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
         return AnalysisNextAction.SIMPLE_AUTH;
     }
 
-    private List<AnalysisSelectionOption> extractSelectionOptions(
+    private List<AnalysisSelectionOptionDTO> extractSelectionOptions(
             Map<String, Object> extraInfo
     ) {
         if (extraInfo == null) return List.of();
-        List<AnalysisSelectionOption> options = new ArrayList<>();
+        List<AnalysisSelectionOptionDTO> options = new ArrayList<>();
         addOptions(options, extraInfo.get("reqAddrList"), "reqAddress", "reqAddress");
         addOptions(options, extraInfo.get("reqDongNumList"), "commDongNum", "reqDong");
         addOptions(options, extraInfo.get("reqHoNumList"), "commHoNum", "reqHo");
@@ -374,7 +380,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
     }
 
     private void addOptions(
-            List<AnalysisSelectionOption> destination,
+            List<AnalysisSelectionOptionDTO> destination,
             Object source,
             String valueKey,
             String labelKey
@@ -386,7 +392,7 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
             String value = asString(map.get(valueKey));
             String label = asString(map.get(labelKey));
             if (value != null && !value.isBlank()) {
-                destination.add(new AnalysisSelectionOption(
+                destination.add(new AnalysisSelectionOptionDTO(
                         value,
                         label != null && !label.isBlank() ? label : value
                 ));

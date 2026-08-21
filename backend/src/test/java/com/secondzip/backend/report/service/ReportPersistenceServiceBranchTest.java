@@ -4,11 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.report.domain.AnalysisReport;
 import com.secondzip.backend.report.domain.ReportCheckResult;
 import com.secondzip.backend.report.domain.ReportFraudType;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.FraudTypeResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.dto.*;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
@@ -56,23 +52,23 @@ class ReportPersistenceServiceBranchTest {
                 queryService
         );
 
-        CheckResult hugCheck = new CheckResult(
+        CheckResultDTO hugCheck = new CheckResultDTO(
                 CheckType.HUG_GUARANTEE_ELIGIBILITY,
                 RiskLevel.SAFE,
                 DataStatus.VERIFIED,
                 Map.of("deposit", 100_000_000L)
         );
-        DetailResult ratioDetail = new DetailResult(
+        DetailResultDTO ratioDetail = new DetailResultDTO(
                 DetailType.HIGH_JEONSE_RATIO,
-                RiskLevel.CAUTION,
+                RiskLevel.SAFE,
                 DataStatus.VERIFIED
         );
-        FraudTypeResult fraud = new FraudTypeResult(
+        FraudTypeResultDTO fraud = new FraudTypeResultDTO(
                 FraudType.UNDERWATER_JEONSE,
                 RiskLevel.CAUTION,
                 List.of(ratioDetail)
         );
-        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+        RiskEvaluationResultDTO evaluation = new RiskEvaluationResultDTO(
                 RiskLevel.CAUTION,
                 List.of(hugCheck),
                 List.of(fraud)
@@ -108,21 +104,22 @@ class ReportPersistenceServiceBranchTest {
         verify(mapper).insertDetailResult(
                 200L,
                 DetailType.HIGH_JEONSE_RATIO,
-                RiskLevel.CAUTION,
+                RiskLevel.SAFE,
                 DataStatus.VERIFIED
         );
 
-        ArgumentCaptor<List<VerifiedChecklistItem>> verifiedCaptor =
+        ArgumentCaptor<List<VerifiedChecklistItemDTO>> verifiedCaptor =
                 ArgumentCaptor.forClass(List.class);
         verify(mapper).insertChecklistVerifications(
                 eq(99L),
                 verifiedCaptor.capture()
         );
-        List<VerifiedChecklistItem> verified = verifiedCaptor.getValue();
-        // HUG는 SAFE라 통과하고, 전세가율은 확인은 했지만 CAUTION이라 제외된다
+        List<VerifiedChecklistItemDTO> verified = verifiedCaptor.getValue();
+        // HUG/HF/SGI는 각 보증기관 요건을 모두 확인할 수 없어 자동 체크하지 않고,
+        // 가격 근거로 안전하게 확인된 전세가율만 자동 체크한다.
         assertEquals(1, verified.size());
         assertEquals(
-                "HUG/HF/SGI 보증보험 가능 여부 확인",
+                "전세가율 확인",
                 verified.get(0).getContents()
         );
     }
@@ -147,7 +144,7 @@ class ReportPersistenceServiceBranchTest {
                 "서울특별시 강남구 테헤란로 1",
                 null,
                 100_000_000L,
-                new RiskEvaluationResult(RiskLevel.SAFE, List.of(), List.of()),
+                new RiskEvaluationResultDTO(RiskLevel.SAFE, List.of(), List.of()),
                 "APARTMENT",
                 false
         );
