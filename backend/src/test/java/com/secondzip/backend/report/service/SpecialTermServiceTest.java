@@ -3,8 +3,8 @@ package com.secondzip.backend.report.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.SpecialTermGenerationContext;
-import com.secondzip.backend.report.dto.SpecialTermResult;
+import com.secondzip.backend.report.dto.SpecialTermGenerationContextDTO;
+import com.secondzip.backend.report.dto.SpecialTermResultDTO;
 import com.secondzip.backend.report.dto.response.CheckResultView;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.dto.response.SpecialTermView;
@@ -36,15 +36,15 @@ class SpecialTermServiceTest {
         CapturingGenerator generator =
                 new CapturingGenerator(
                         List.of(
-                                new SpecialTermResult(
+                                new SpecialTermResultDTO(
                                         "  추가 담보권 설정 금지  ",
                                         "  임대인은 잔금 지급 전까지 새로운 담보권을 설정하지 않는다.  "
                                 ),
-                                new SpecialTermResult(
+                                new SpecialTermResultDTO(
                                         "잔금 전 등기사항 재확인",
                                         "임대인은 잔금 지급 전 최신 등기사항을 제공하여야 한다."
                                 ),
-                                new SpecialTermResult(
+                                new SpecialTermResultDTO(
                                         "보증보험 가입 조건",
                                         "보증보험 가입이 불가능한 경우 임차인은 계약을 해제할 수 있다."
                                 )
@@ -82,9 +82,9 @@ class SpecialTermServiceTest {
                 generator.context.getOverallRiskLevel()
         );
 
-        // BUILDING_USE evidence를 통해 오피스텔로 판별되는지
+        // 저장된 확정 유형이 충돌하는 BUILDING_USE 재판별보다 우선하는지
         assertEquals(
-                "OFFICETEL",
+                "MULTI_FAMILY",
                 generator.context.getHousingType()
         );
 
@@ -123,8 +123,8 @@ class SpecialTermServiceTest {
         CapturingGenerator generator =
                 new CapturingGenerator(
                         List.of(
-                                new SpecialTermResult("특약1", "내용1"),
-                                new SpecialTermResult("특약2", "내용2")
+                                new SpecialTermResultDTO("특약1", "내용1"),
+                                new SpecialTermResultDTO("특약2", "내용2")
                         )
                 );
 
@@ -203,7 +203,7 @@ class SpecialTermServiceTest {
                 500_000_000L,
                 RiskLevel.DANGER,
                 false,
-                "OFFICETEL",
+                "MULTI_FAMILY",
                 false,
                 List.of(buildingUse),
                 List.of(),
@@ -235,12 +235,12 @@ class SpecialTermServiceTest {
     private static class CapturingGenerator
             extends GptSpecialTermGenerator {
 
-        private final List<SpecialTermResult> result;
+        private final List<SpecialTermResultDTO> result;
 
-        private SpecialTermGenerationContext context;
+        private SpecialTermGenerationContextDTO context;
 
         private CapturingGenerator(
-                List<SpecialTermResult> result
+                List<SpecialTermResultDTO> result
         ) {
             super(
                     new RestTemplate(),
@@ -251,8 +251,8 @@ class SpecialTermServiceTest {
         }
 
         @Override
-        public List<SpecialTermResult> generate(
-                SpecialTermGenerationContext context
+        public List<SpecialTermResultDTO> generate(
+                SpecialTermGenerationContextDTO context
         ) {
             this.context = context;
             return result;
@@ -270,8 +270,8 @@ class SpecialTermServiceTest {
         }
 
         @Override
-        public List<SpecialTermResult> generate(
-                SpecialTermGenerationContext context
+        public List<SpecialTermResultDTO> generate(
+                SpecialTermGenerationContextDTO context
         ) {
             throw new BusinessException(
                     ErrorCode.EXTERNAL_API_ERROR,
@@ -287,7 +287,7 @@ class SpecialTermServiceTest {
 
         private Long reportId;
 
-        private List<SpecialTermResult> terms =
+        private List<SpecialTermResultDTO> terms =
                 List.of();
 
         private CapturingPersistenceService() {
@@ -297,7 +297,7 @@ class SpecialTermServiceTest {
         @Override
         public List<SpecialTermView> replace(
                 Long reportId,
-                List<SpecialTermResult> terms
+                List<SpecialTermResultDTO> terms
         ) {
             this.called = true;
             this.reportId = reportId;
@@ -307,7 +307,7 @@ class SpecialTermServiceTest {
                     new ArrayList<>();
 
             for (int i = 0; i < terms.size(); i++) {
-                SpecialTermResult term = terms.get(i);
+                SpecialTermResultDTO term = terms.get(i);
 
                 result.add(
                         new SpecialTermView(

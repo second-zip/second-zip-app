@@ -30,6 +30,12 @@ class BuildingHubClientTest {
         assertEquals("SINGLE_FAMILY", BuildingHubClient.inferBuildingType("단독주택", null, null));
         assertEquals("OFFICETEL", BuildingHubClient.inferBuildingType("업무시설", "오피스텔", null));
         assertNull(BuildingHubClient.inferBuildingType("업무시설", "근린생활시설", null));
+        assertEquals("MULTI_FAMILY", BuildingHubClient.inferBuildingType(
+                "단독주택", "다가구주택", "행복빌라"));
+        assertEquals("MULTI_HOUSEHOLD", BuildingHubClient.inferBuildingType(
+                "공동주택", "다세대주택", "샹떼빌아파트"));
+        assertNull(BuildingHubClient.inferBuildingType(
+                "공동주택", "오피스텔, 다세대주택", "행복아파트"));
     }
 
     @Test

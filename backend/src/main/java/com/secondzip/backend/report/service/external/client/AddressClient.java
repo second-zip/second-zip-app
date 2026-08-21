@@ -2,8 +2,8 @@ package com.secondzip.backend.report.service.external.client;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AddressCandidate;
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AddressCandidateDTO;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,7 +54,7 @@ public class AddressClient {
      * 검색 결과가 없는 것은 오류가 아니므로 빈 목록을 반환.
      * 호출 자체가 실패한 경우에만 예외를 던짐.
      */
-    public List<AddressCandidate> search(String query) {
+    public List<AddressCandidateDTO> search(String query) {
         if (query == null || query.isBlank()) {
             return List.of();
         }
@@ -66,7 +66,7 @@ public class AddressClient {
             );
         }
 
-        List<AddressCandidate> candidates = searchByAddress(query);
+        List<AddressCandidateDTO> candidates = searchByAddress(query);
 
         // 주소 검색은 완전한 주소("판교역로 235")만 찾는다.
         // 도로명만("판교역로")이나 건물명("헬리오시티")은 0건이므로 그때만 장소 검색으로 재시도한다.
@@ -80,11 +80,11 @@ public class AddressClient {
     }
 
     // 주소 검색. 응답에 법정동코드가 있어 그대로 후보가 된다.
-    private List<AddressCandidate> searchByAddress(String query) {
-        List<AddressCandidate> candidates = new ArrayList<>();
+    private List<AddressCandidateDTO> searchByAddress(String query) {
+        List<AddressCandidateDTO> candidates = new ArrayList<>();
         for (Map<String, Object> document
                 : requestDocuments(ADDRESS_SEARCH_URL, query, SEARCH_SIZE)) {
-            AddressCandidate candidate = toCandidate(document, query);
+            AddressCandidateDTO candidate = toCandidate(document, query);
             if (candidate != null) {
                 candidates.add(candidate);
             }
@@ -95,8 +95,8 @@ public class AddressClient {
     // 장소 검색 폴백.
     // 장소 검색 응답에는 법정동코드가 없어, 각 결과의 지번주소로 주소 검색을 다시 호출해 채운다.
     // 지번주소는 건물을 유일하게 특정하므로 이 재조회는 어긋날 여지가 없다.
-    private List<AddressCandidate> searchByKeyword(String query) {
-        List<AddressCandidate> candidates = new ArrayList<>();
+    private List<AddressCandidateDTO> searchByKeyword(String query) {
+        List<AddressCandidateDTO> candidates = new ArrayList<>();
         Set<String> seenLotAddresses = new LinkedHashSet<>();
 
         for (Map<String, Object> document
@@ -113,7 +113,7 @@ public class AddressClient {
             String placeName = asText(document.get("place_name"));
             for (Map<String, Object> resolved
                     : requestDocuments(ADDRESS_SEARCH_URL, lotAddress, 1)) {
-                AddressCandidate candidate = toCandidate(resolved, query);
+                AddressCandidateDTO candidate = toCandidate(resolved, query);
                 if (candidate != null) {
                     candidates.add(candidate.withPlaceName(placeName));
                     break;
@@ -173,7 +173,7 @@ public class AddressClient {
 
     /** 카카오 응답 1건을 후보로 변환한다. 지번 정보가 없으면 분석에 쓸 수 없으므로 버린다. */
     @SuppressWarnings("unchecked")
-    private AddressCandidate toCandidate(Map<String, Object> document, String originalAddress) {
+    private AddressCandidateDTO toCandidate(Map<String, Object> document, String originalAddress) {
         Map<String, Object> addressInfo = (Map<String, Object>) document.get("address");
         Map<String, Object> roadAddressInfo = (Map<String, Object>) document.get("road_address");
 
@@ -190,6 +190,10 @@ public class AddressClient {
         String subNo = (String) addressInfo.get("sub_address_no");
         String legalDongName = (String) addressInfo.get("region_3depth_name");
         String lotAddress = (String) addressInfo.get("address_name");
+        String mountainYn = (String) addressInfo.get("mountain_yn");
+        String platGbCd = "Y".equalsIgnoreCase(mountainYn)
+                ? "1"
+                : ("N".equalsIgnoreCase(mountainYn) ? "0" : null);
         String roadBuildingMainNo = roadAddressInfo != null
                 ? (String) roadAddressInfo.get("main_building_no")
                 : "";
@@ -204,7 +208,7 @@ public class AddressClient {
         String sigunguCode = bCode != null && bCode.length() >= 5 ? bCode.substring(0, 5) : "";
         String bjdongCode = bCode != null && bCode.length() >= 10 ? bCode.substring(5, 10) : "";
 
-        AnalysisTarget target = new AnalysisTarget(
+        AnalysisTargetDTO target = new AnalysisTargetDTO(
                 originalAddress,
                 roadAddress,
                 bCode,
@@ -216,9 +220,10 @@ public class AddressClient {
                 roadBuildingSubNo,
                 "", // 건물관리번호는 비워둠 (건축HUB는 bCode + mainNo + subNo 조합으로 우회)
                 legalDongName,
-                lotAddress
+                lotAddress,
+                platGbCd
         );
 
-        return new AddressCandidate(target, zoneNo);
+        return new AddressCandidateDTO(target, zoneNo);
     }
 }

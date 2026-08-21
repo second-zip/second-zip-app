@@ -2,9 +2,9 @@ package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.dto.external.BuildingRegisterAnalysisData;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
@@ -54,7 +54,7 @@ public class AnalysisExecutionService {
     ) {
         String lockToken = acquireLock(requestId);
         try {
-            AnalysisWorkflowState state =
+            AnalysisWorkflowStateDTO state =
                     workflowStore.findOwned(requestId, accountId);
             if (state.getStatus() != AnalysisRequestStatus.FAILED) {
                 throw new BusinessException(
@@ -85,7 +85,7 @@ public class AnalysisExecutionService {
             Long accountId,
             String requestId
     ) {
-        AnalysisWorkflowState state =
+        AnalysisWorkflowStateDTO state =
                 workflowStore.findOwned(requestId, accountId);
         Long existingReportId = reportQueryService.findReportIdByRequestId(
                 accountId,
@@ -124,13 +124,31 @@ public class AnalysisExecutionService {
                             state.getRequiredDocuments(),
                             state.getBuildingRegisterData(),
                             state.getBuildingType(),
-                            state.getBuildingUse()
+                            state.getBuildingUse(),
+                            state.getDetailAddress(),
+                            state.getTransactionAreaSqm()
                     );
+            PriceData transactionPrice;
+            try {
+                transactionPrice = priceDataProvider.getPriceData(
+                        state.getTarget(),
+                        state.getBuildingType(),
+                        buildingRegister.getTransactionAreaSqm(),
+                        buildingRegister.getTransactionFloor()
+                );
+            } catch (RuntimeException e) {
+                // 실거래가 API의 간헐적 오류로 리포트 전체를 실패시키지 않는다.
+                // 공시가격을 확보했다면 그것을 기준가로 분석을 이어갈 수 있고,
+                // 둘 다 없으면 바로 아래 관문이 유료 조회 전에 걸러낸다.
+                log.warn(
+                        "실거래가 조회 실패. 공시가격 기준으로 계속 진행합니다. requestId={}",
+                        requestId,
+                        e
+                );
+                transactionPrice = null;
+            }
             PriceData price = mergeOfficialPrice(
-                    priceDataProvider.getPriceData(
-                            state.getTarget(),
-                            state.getBuildingType()
-                    ),
+                    transactionPrice,
                     buildingRegister.getOfficialPrice()
             );
 
@@ -153,7 +171,7 @@ public class AnalysisExecutionService {
             }
 
             // ===== 4단계. 위험도 평가 및 저장 =====
-            RiskEvaluationResult evaluation =
+            RiskEvaluationResultDTO evaluation =
                     riskEvaluationService.evaluate(
                             registry,
                             buildingRegister.getBuildingData(),
@@ -237,7 +255,7 @@ public class AnalysisExecutionService {
      * 성공 경로에서는 이미 확보한 리포트를 잃지 않기 위해,
      * 실패 경로에서는 원래 예외가 저장 실패 예외로 바뀌지 않게 하기 위해 필요.
      */
-    private void saveStateQuietly(AnalysisWorkflowState state, String what) {
+    private void saveStateQuietly(AnalysisWorkflowStateDTO state, String what) {
         try {
             workflowStore.save(state);
         } catch (RuntimeException e) {
@@ -283,8 +301,8 @@ public class AnalysisExecutionService {
      *
      * 반드시 표준화된 도로명주소를 쓴다.
      */
-    private String regionAddress(AnalysisWorkflowState state) {
-        AnalysisTarget target = state.getTarget();
+    private String regionAddress(AnalysisWorkflowStateDTO state) {
+        AnalysisTargetDTO target = state.getTarget();
         if (target != null
                 && target.roadAddress() != null
                 && !target.roadAddress().isBlank()) {

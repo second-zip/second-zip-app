@@ -2,9 +2,9 @@ package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.external.BuildingRegisterAnalysisData;
 import com.secondzip.backend.report.dto.external.PriceData;
@@ -118,7 +118,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void executeRejectsPrematureStatusAndReleasesLock() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         state.setStatus(AnalysisRequestStatus.AUTH_REQUIRED);
         stubLockAndState(state);
 
@@ -134,7 +134,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void completedWorkflowReturnsStoredReportWithoutRepeatingPaidWork() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         state.setStatus(AnalysisRequestStatus.COMPLETED);
         state.setReportId(40L);
         ReportDetailResponse existing = report(40L);
@@ -156,7 +156,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void databaseRequestIdWinsWhenRedisStateWasNotMarkedCompleted() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         state.setFailureMessage("old failure");
         ReportDetailResponse existing = report(41L);
         stubLockAndState(state);
@@ -182,7 +182,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void retryRejectsStateThatHasNotFailed() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         stubLockAndState(state);
 
         BusinessException thrown = catchThrowableOfType(
@@ -198,7 +198,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void retryRejectsMissingRequiredDocumentMetadata() {
-        AnalysisWorkflowState state = failedState();
+        AnalysisWorkflowStateDTO state = failedState();
         state.setRequiredDocuments(null);
         stubLockAndState(state);
 
@@ -207,7 +207,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void retryRejectsMissingCompletedDocumentMetadata() {
-        AnalysisWorkflowState state = failedState();
+        AnalysisWorkflowStateDTO state = failedState();
         state.setCompletedDocuments(null);
         stubLockAndState(state);
 
@@ -216,7 +216,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void retryRejectsPartialDocumentCompletion() {
-        AnalysisWorkflowState state = failedState();
+        AnalysisWorkflowStateDTO state = failedState();
         state.setRequiredDocuments(List.of(
                 BuildingRegisterDocumentType.COLLECTIVE_TITLE,
                 BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE
@@ -231,7 +231,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void retryReleasesLockWhenPreparingRetryStateCannotBeSaved() {
-        AnalysisWorkflowState state = failedState();
+        AnalysisWorkflowStateDTO state = failedState();
         RuntimeException redisFailure = new RuntimeException("redis write failed");
         stubLockAndState(state);
         doThrow(redisFailure).when(workflowStore).save(state);
@@ -247,7 +247,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void retryTransitionsThroughProcessingAndReusesExistingDatabaseReport() {
-        AnalysisWorkflowState state = failedState();
+        AnalysisWorkflowStateDTO state = failedState();
         List<AnalysisRequestStatus> savedStatuses = new ArrayList<>();
         ReportDetailResponse existing = report(42L);
         stubLockAndState(state);
@@ -275,13 +275,15 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void failureStateSaveCannotMaskOriginalBusinessFailure() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         BusinessException original = new BusinessException(
                 ErrorCode.EXTERNAL_API_ERROR,
                 "건축물대장 원본이 손상되었습니다."
         );
         stubLockAndState(state);
-        when(buildingParser.parse(anyList(), anyMap(), anyString(), anyString()))
+        when(buildingParser.parse(
+                anyList(), anyMap(), anyString(), anyString(), anyString(), any()
+        ))
                 .thenThrow(original);
         doThrow(new IllegalStateException("redis unavailable"))
                 .when(workflowStore).save(state);
@@ -297,10 +299,12 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void unexpectedFailureUsesSafeGenericFailureMessage() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         IllegalStateException original = new IllegalStateException("secret upstream detail");
         stubLockAndState(state);
-        when(buildingParser.parse(anyList(), anyMap(), anyString(), anyString()))
+        when(buildingParser.parse(
+                anyList(), anyMap(), anyString(), anyString(), anyString(), any()
+        ))
                 .thenThrow(original);
 
         assertThatThrownBy(() -> service.execute(ACCOUNT_ID, REQUEST_ID))
@@ -315,7 +319,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void completionStateSaveFailureDoesNotDiscardPersistedReport() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         ReportDetailResponse persisted = report(43L);
         ReportDetailResponse enriched = report(43L);
         stubLockAndState(state);
@@ -336,7 +340,7 @@ class AnalysisExecutionServiceBranchTest {
 
     @Test
     void specialTermFailureIsIsolatedFromSuccessfulAnalysis() {
-        AnalysisWorkflowState state = processingState();
+        AnalysisWorkflowStateDTO state = processingState();
         ReportDetailResponse persisted = report(44L);
         stubLockAndState(state);
         stubSuccessfulPaidAnalysis(persisted);
@@ -365,7 +369,7 @@ class AnalysisExecutionServiceBranchTest {
         verify(workflowStore).releaseExecutionLock(REQUEST_ID, LOCK_TOKEN);
     }
 
-    private void stubLockAndState(AnalysisWorkflowState state) {
+    private void stubLockAndState(AnalysisWorkflowStateDTO state) {
         when(workflowStore.tryAcquireExecutionLock(REQUEST_ID)).thenReturn(LOCK_TOKEN);
         when(workflowStore.findOwned(REQUEST_ID, ACCOUNT_ID)).thenReturn(state);
         when(queryService.findReportIdByRequestId(ACCOUNT_ID, REQUEST_ID))
@@ -376,19 +380,27 @@ class AnalysisExecutionServiceBranchTest {
         BuildingData building = new BuildingData();
         building.setIllegalBuildingVerified(true);
         BuildingRegisterAnalysisData parsed =
-                new BuildingRegisterAnalysisData(building, null, new LinkedHashMap<>());
+                new BuildingRegisterAnalysisData(
+                        building,
+                        null,
+                        new LinkedHashMap<>(),
+                        new java.math.BigDecimal("84.0"),
+                        3
+                );
         PriceData price = new PriceData();
         price.setRecentSalePrice(800_000_000L);
         RegistryData registry = new RegistryData();
         registry.setMortgageAmount(0L);
         registry.setHasSeizure(false);
         registry.setHasTrustRegistration(false);
-        RiskEvaluationResult evaluation =
-                new RiskEvaluationResult(RiskLevel.SAFE, List.of(), List.of());
+        RiskEvaluationResultDTO evaluation =
+                new RiskEvaluationResultDTO(RiskLevel.SAFE, List.of(), List.of());
 
-        when(buildingParser.parse(anyList(), anyMap(), anyString(), anyString()))
+        when(buildingParser.parse(
+                anyList(), anyMap(), anyString(), anyString(), anyString(), any()
+        ))
                 .thenReturn(parsed);
-        when(priceProvider.getPriceData(any(), anyString())).thenReturn(price);
+        when(priceProvider.getPriceData(any(), anyString(), any(), any())).thenReturn(price);
         when(registryProvider.getRegistryDataForAnalysis(any(), anyString(), anyString()))
                 .thenReturn(registry);
         when(riskService.evaluate(
@@ -401,16 +413,16 @@ class AnalysisExecutionServiceBranchTest {
         )).thenReturn(persisted);
     }
 
-    private AnalysisWorkflowState failedState() {
-        AnalysisWorkflowState state = processingState();
+    private AnalysisWorkflowStateDTO failedState() {
+        AnalysisWorkflowStateDTO state = processingState();
         state.setStatus(AnalysisRequestStatus.FAILED);
         state.setFailureMessage("temporary external failure");
         state.setCompletedDocuments(new ArrayList<>(state.getRequiredDocuments()));
         return state;
     }
 
-    private AnalysisWorkflowState processingState() {
-        AnalysisTarget target = new AnalysisTarget(
+    private AnalysisWorkflowStateDTO processingState() {
+        AnalysisTargetDTO target = new AnalysisTargetDTO(
                 "서울 강남구 테헤란로 152",
                 "서울 강남구 테헤란로 152",
                 "1168010100",
@@ -422,7 +434,7 @@ class AnalysisExecutionServiceBranchTest {
                 "",
                 ""
         );
-        AnalysisWorkflowState state = new AnalysisWorkflowState();
+        AnalysisWorkflowStateDTO state = new AnalysisWorkflowStateDTO();
         state.setRequestId(REQUEST_ID);
         state.setAccountId(ACCOUNT_ID);
         state.setRoadAddress(target.roadAddress());

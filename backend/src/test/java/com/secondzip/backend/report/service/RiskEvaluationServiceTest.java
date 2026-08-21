@@ -1,9 +1,6 @@
 package com.secondzip.backend.report.service;
 
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.FraudTypeResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.*;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
@@ -16,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,7 +25,7 @@ class RiskEvaluationServiceTest {
     @Test
     @DisplayName("위반건축물로 확인되면 위험으로 판정한다")
     void illegalBuildingIsDanger() {
-        CheckResult result = evaluateIllegalBuilding(true);
+        CheckResultDTO result = evaluateIllegalBuilding(true);
 
         assertEquals(RiskLevel.DANGER, result.getRiskLevel());
         assertEquals(true, result.getEvidence().get("isIllegalBuildingVerified"));
@@ -36,7 +34,7 @@ class RiskEvaluationServiceTest {
     @Test
     @DisplayName("위반건축물이 아닌 것으로 확인되면 안전으로 판정한다")
     void verifiedLegalBuildingIsSafe() {
-        CheckResult result = evaluateIllegalBuilding(false);
+        CheckResultDTO result = evaluateIllegalBuilding(false);
 
         assertEquals(RiskLevel.SAFE, result.getRiskLevel());
         assertEquals(true, result.getEvidence().get("isIllegalBuildingVerified"));
@@ -45,11 +43,31 @@ class RiskEvaluationServiceTest {
     @Test
     @DisplayName("위반건축물 정보를 제공받지 못하면 주의로 판정한다")
     void unknownIllegalBuildingStatusIsCaution() {
-        CheckResult result = evaluateIllegalBuilding(null);
+        CheckResultDTO result = evaluateIllegalBuilding(null);
 
         assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
         assertEquals(false, result.getEvidence().get("isIllegalBuildingVerified"));
         assertEquals(null, result.getEvidence().get("isIllegalBuilding"));
+    }
+
+    @Test
+    void explicitUnverifiedFlagPreventsSafeIllegalBuildingResult() {
+        BuildingData building = new BuildingData();
+        building.setIsIllegalBuilding(false);
+        building.setIllegalBuildingVerified(false);
+        building.setBuildingUse("공동주택");
+        building.setBuildingType("APARTMENT");
+
+        CheckResultDTO result = service.evaluate(
+                        null, building, null, 100_000_000L, "서울특별시 강남구"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.ILLEGAL_BUILDING)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
+        assertEquals(DataStatus.UNVERIFIED, result.getDataStatus());
+        assertEquals(false, result.getEvidence().get("isIllegalBuildingVerified"));
     }
 
     @Test
@@ -63,14 +81,14 @@ class RiskEvaluationServiceTest {
         byDocument.put("COLLECTIVE_EXCLUSIVE", false);
         building.setViolationByDocument(byDocument);
 
-        RiskEvaluationResult evaluation = service.evaluate(
+        RiskEvaluationResultDTO evaluation = service.evaluate(
                 null,
                 building,
                 null,
                 100_000_000L,
                 "서울특별시 강남구"
         );
-        CheckResult result = evaluation.getCheckResults().stream()
+        CheckResultDTO result = evaluation.getCheckResultDTOS().stream()
                 .filter(item ->
                         item.getCheckType() == CheckType.ILLEGAL_BUILDING
                 )
@@ -93,7 +111,7 @@ class RiskEvaluationServiceTest {
         RegistryData registry = new RegistryData();
         registry.setMortgageAmount(null); // 확인 불가
 
-        CheckResult result = evaluateMortgage(registry, price(1_000_000_000L));
+        CheckResultDTO result = evaluateMortgage(registry, price(1_000_000_000L));
 
         assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
         assertNull(
@@ -108,7 +126,7 @@ class RiskEvaluationServiceTest {
         RegistryData registry = new RegistryData();
         registry.setMortgageAmount(0L);
 
-        CheckResult result = evaluateMortgage(registry, price(1_000_000_000L));
+        CheckResultDTO result = evaluateMortgage(registry, price(1_000_000_000L));
 
         assertEquals(RiskLevel.SAFE, result.getRiskLevel());
         assertEquals(0L, result.getEvidence().get("mortgageAmount"));
@@ -120,7 +138,7 @@ class RiskEvaluationServiceTest {
         RegistryData registry = new RegistryData();
         registry.setMortgageAmount(100_000_000L);
 
-        CheckResult result = evaluateMortgage(registry, price(0L));
+        CheckResultDTO result = evaluateMortgage(registry, price(0L));
 
         assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
     }
@@ -128,14 +146,14 @@ class RiskEvaluationServiceTest {
     @Test
     @DisplayName("확인 불가는 위험도가 아니라 데이터 상태로 구분된다")
     void unverifiedIsDistinguishableFromRealRisk() {
-        CheckResult unknown = evaluateMortgage(new RegistryData(), price(1_000_000_000L));
+        CheckResultDTO unknown = evaluateMortgage(new RegistryData(), price(1_000_000_000L));
 
         assertEquals(RiskLevel.CAUTION, unknown.getRiskLevel());
         assertEquals(DataStatus.UNVERIFIED, unknown.getDataStatus());
 
         RegistryData withMortgage = new RegistryData();
         withMortgage.setMortgageAmount(100_000_000L);
-        CheckResult real = evaluateMortgage(withMortgage, price(1_000_000_000L));
+        CheckResultDTO real = evaluateMortgage(withMortgage, price(1_000_000_000L));
 
         assertEquals(RiskLevel.CAUTION, real.getRiskLevel());
         assertEquals(
@@ -148,7 +166,7 @@ class RiskEvaluationServiceTest {
     @Test
     @DisplayName("집합건물은 토지 소유자 대조가 해당 없음으로 빠진다")
     void collectiveBuildingSkipsLandOwnerComparison() {
-        DetailResult ownership = ownershipMismatchOf("APARTMENT");
+        DetailResultDTO ownership = ownershipMismatchOf("APARTMENT");
 
         assertEquals(DataStatus.NOT_APPLICABLE, ownership.getDataStatus());
         assertEquals(
@@ -162,36 +180,219 @@ class RiskEvaluationServiceTest {
     @Test
     @DisplayName("단독주택은 토지 소유자 정보가 없으면 확인 불가로 남는다")
     void singleFamilyWithoutLandOwnerIsUnverified() {
-        DetailResult ownership = ownershipMismatchOf("SINGLE_FAMILY");
+        DetailResultDTO ownership = ownershipMismatchOf("SINGLE_FAMILY");
 
         assertEquals(DataStatus.UNVERIFIED, ownership.getDataStatus());
         assertEquals(RiskLevel.CAUTION, ownership.getRiskLevel());
     }
 
     @Test
-    @DisplayName("해당 없는 항목은 유형 집계에서 제외된다")
-    void notApplicableDetailIsExcludedFromAggregation() {
-        // 아파트 + 등기 정보 없음 → 유형2의 3개 중 1개는 NOT_APPLICABLE,
-        // 나머지 2개는 CAUTION(용도 확인 불가, 권리침해 확인 불가)
+    @DisplayName("미확인 CAUTION은 위험 개수에 세어 DANGER로 승격하지 않는다")
+    void unverifiedDetailsDoNotEscalateToDanger() {
+        // 아파트 + 등기 정보 없음 → 유형1의 세부 3개가 모두 확인 불가지만
+        // 그 CAUTION이 개수로 세어져 DANGER로 올라가지는 않는다.
         BuildingData building = new BuildingData();
         building.setBuildingType("APARTMENT");
 
-        FraudTypeResult type2 = service.evaluate(
+        FraudTypeResultDTO type1 = service.evaluate(
                         null, building, price(1_000_000_000L), 100_000_000L, "서울특별시 강남구"
-                ).getFraudTypeResults().stream()
+                ).getFraudTypeResultDTOS().stream()
+                .filter(f -> f.getFraudType() == FraudType.UNDERWATER_JEONSE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(
+                RiskLevel.CAUTION,
+                type1.getRiskLevel(),
+                "등기를 확인하지 못한 것은 위험 확정이 아니다."
+        );
+    }
+
+    @Test
+    @DisplayName("고지·광고 입력이 없는 은폐 항목은 집계에서 제외된다")
+    void concealmentWithoutAdvertisedFactsIsNotApplicable() {
+        BuildingData building = new BuildingData();
+        building.setBuildingType("APARTMENT");
+        building.setBuildingUse("아파트");
+        RegistryData registry = new RegistryData();
+        registry.setHasSeizure(true);
+
+        FraudTypeResultDTO result = service.evaluate(
+                        registry, building, price(1_000_000_000L), 100_000_000L,
+                        "서울특별시 강남구 테헤란로 11"
+                ).getFraudTypeResultDTOS().stream()
                 .filter(f -> f.getFraudType() == FraudType.FALSE_INFORMATION_RIGHTS_CONCEALMENT)
+                .findFirst()
+                .orElseThrow();
+
+        DetailResultDTO buildingUseConcealment = result.getDetails().stream()
+                .filter(d -> d.getDetailType() == DetailType.FALSE_BUILDING_USE_INFORMATION)
+                .findFirst()
+                .orElseThrow();
+        DetailResultDTO rightsConcealment = result.getDetails().stream()
+                .filter(d -> d.getDetailType() == DetailType.RIGHTS_INFRINGEMENT_CONCEALMENT)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(
+                DataStatus.NOT_APPLICABLE,
+                buildingUseConcealment.getDataStatus(),
+                "비교할 광고·고지 원문이 없는 것은 확인 실패가 아니라 해당 없음이다"
+        );
+        assertEquals(DataStatus.NOT_APPLICABLE, rightsConcealment.getDataStatus());
+        assertEquals(
+                RiskLevel.SAFE,
+                result.getRiskLevel(),
+                "해당 없는 항목만 남으면 유형 대표값을 CAUTION으로 붙잡아두지 않는다"
+        );
+    }
+
+    @Test
+    @DisplayName("모든 데이터가 확보되고 위험 신호가 없으면 리포트 전체 결과가 SAFE다")
+    void cleanApartmentIsSafeOverall() {
+        RiskEvaluationResultDTO evaluation = service.evaluate(
+                cleanRegistry(),
+                cleanApartment(),
+                cleanPrice(),
+                300_000_000L,
+                "서울특별시 강남구 테헤란로 152"
+        );
+
+        assertEquals(
+                RiskLevel.SAFE,
+                evaluation.getOverallRiskLevel(),
+                "항상 CAUTION 이상으로 고정되는 항목이 하나라도 생기면 "
+                        + "어떤 매물도 안전으로 안내할 수 없게 된다"
+        );
+    }
+
+    @Test
+    @DisplayName("1층이 근린생활시설인 정상 다세대는 위험이 아니라 주의로 남긴다")
+    void residentialUnitInMixedUseBuildingIsCautionNotDanger() {
+        BuildingData building = cleanApartment();
+        building.setBuildingType("MULTI_HOUSEHOLD");
+        building.setBuildingUse("다세대주택");
+        building.setBuildingLevelNonResidentialUses("제2종근린생활시설");
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), building, cleanPrice(), 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.BUILDING_USE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
+        assertEquals(DataStatus.VERIFIED, result.getDataStatus());
+        assertEquals("다세대주택", result.getEvidence().get("buildingUse"));
+        assertEquals(
+                "제2종근린생활시설",
+                result.getEvidence().get("buildingLevelNonResidentialUses")
+        );
+    }
+
+    @Test
+    @DisplayName("계약 대상 호 자체가 근린생활시설이면 위험으로 판정한다")
+    void nonResidentialUnitIsDanger() {
+        BuildingData building = cleanApartment();
+        building.setBuildingType("MULTI_HOUSEHOLD");
+        building.setBuildingUse("제2종근린생활시설");
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), building, cleanPrice(), 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.BUILDING_USE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.DANGER, result.getRiskLevel());
+        assertEquals(DataStatus.VERIFIED, result.getDataStatus());
+    }
+
+    @Test
+    @DisplayName("HUG 보증금 한도 초과만으로 깡통전세를 확정하지 않는다")
+    void hugDepositLimitAloneDoesNotMakeUnderwaterJeonseDanger() {
+        RiskEvaluationResultDTO evaluation = service.evaluate(
+                cleanRegistry(),
+                cleanApartment(),
+                cleanPrice(),
+                // 수도권 HUG 한도 7억은 넘지만 전세가율은 71%에 그친다.
+                1_000_000_000L,
+                "서울특별시 강남구 테헤란로 152"
+        );
+
+        CheckResultDTO eligibility = evaluation.getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.HUG_GUARANTEE_ELIGIBILITY)
+                .findFirst()
+                .orElseThrow();
+        DetailResultDTO precheck = evaluation.getFraudTypeResultDTOS().stream()
+                .flatMap(type -> type.getDetails().stream())
+                .filter(detail -> detail.getDetailType() == DetailType.HUG_GUARANTEE_PRECHECK)
                 .findFirst()
                 .orElseThrow();
 
         assertEquals(
                 RiskLevel.DANGER,
-                type2.getRiskLevel(),
-                "해당되는 2개가 모두 CAUTION이면 DANGER. "
-                        + "임계값을 3으로 고정하면 아파트는 이 조건에 영원히 도달하지 못한다."
+                eligibility.getRiskLevel(),
+                "필수점검 4번은 지역별 보증금 한도까지 본다"
+        );
+        assertEquals(
+                RiskLevel.SAFE,
+                precheck.getRiskLevel(),
+                "깡통전세 1-C는 가격과 채무의 관계만 본다"
         );
     }
 
-    private DetailResult ownershipMismatchOf(String buildingType) {
+    @Test
+    @DisplayName("실거래가가 없으면 공시가격을 140% 환산해 기준가로 쓴다")
+    void officialPriceFallbackIsConverted() {
+        PriceData officialOnly = new PriceData();
+        officialOnly.setOfficialPrice(1_000_000_000L);
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), cleanApartment(), officialOnly, 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.HUG_GUARANTEE_ELIGIBILITY)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(1_400_000_000L, result.getEvidence().get("basePrice"));
+        assertEquals(
+                "OFFICIAL_PRICE_CONVERTED",
+                result.getEvidence().get("basePriceSource")
+        );
+    }
+
+    private RegistryData cleanRegistry() {
+        RegistryData registry = new RegistryData();
+        registry.setMortgageAmount(0L);
+        registry.setHasSeizure(false);
+        registry.setHasTrustRegistration(false);
+        registry.setHasPostTrustInfringement(false);
+        registry.setOwnerNames(List.of("홍길동"));
+        registry.setOwnerName("홍길동");
+        registry.setOwnerType("INDIVIDUAL");
+        return registry;
+    }
+
+    private BuildingData cleanApartment() {
+        BuildingData building = new BuildingData();
+        building.setBuildingType("APARTMENT");
+        building.setBuildingUse("아파트");
+        building.setIsIllegalBuilding(false);
+        building.setIllegalBuildingVerified(true);
+        return building;
+    }
+
+    private PriceData cleanPrice() {
+        PriceData price = new PriceData();
+        price.setRecentSalePrice(1_400_000_000L);
+        return price;
+    }
+
+    private DetailResultDTO ownershipMismatchOf(String buildingType) {
         BuildingData building = new BuildingData();
         building.setBuildingType(buildingType);
         building.setBuildingUse("공동주택");
@@ -199,7 +400,7 @@ class RiskEvaluationServiceTest {
         return service.evaluate(
                         new RegistryData(), building, price(1_000_000_000L),
                         100_000_000L, "서울특별시 강남구"
-                ).getFraudTypeResults().stream()
+                ).getFraudTypeResultDTOS().stream()
                 .filter(f -> f.getFraudType() == FraudType.FALSE_INFORMATION_RIGHTS_CONCEALMENT)
                 .flatMap(f -> f.getDetails().stream())
                 .filter(d -> d.getDetailType() == DetailType.LAND_BUILDING_OWNERSHIP_MISMATCH)
@@ -213,33 +414,33 @@ class RiskEvaluationServiceTest {
         return price;
     }
 
-    private CheckResult evaluateMortgage(RegistryData registry, PriceData price) {
+    private CheckResultDTO evaluateMortgage(RegistryData registry, PriceData price) {
         BuildingData building = new BuildingData();
         building.setBuildingUse("공동주택");
         building.setBuildingType("APARTMENT");
         building.setIsIllegalBuilding(false);
 
-        RiskEvaluationResult evaluation = service.evaluate(
+        RiskEvaluationResultDTO evaluation = service.evaluate(
                 registry, building, price, 100_000_000L, "서울특별시 강남구"
         );
 
-        return evaluation.getCheckResults().stream()
+        return evaluation.getCheckResultDTOS().stream()
                 .filter(result -> result.getCheckType() == CheckType.MORTGAGE_EXISTENCE)
                 .findFirst()
                 .orElseThrow();
     }
 
-    private CheckResult evaluateIllegalBuilding(Boolean illegal) {
+    private CheckResultDTO evaluateIllegalBuilding(Boolean illegal) {
         BuildingData building = new BuildingData();
         building.setIsIllegalBuilding(illegal);
         building.setBuildingUse("공동주택");
         building.setBuildingType("APARTMENT");
 
-        RiskEvaluationResult evaluation = service.evaluate(
+        RiskEvaluationResultDTO evaluation = service.evaluate(
                 null, building, null, 100_000_000L, "서울특별시 강남구"
         );
 
-        return evaluation.getCheckResults().stream()
+        return evaluation.getCheckResultDTOS().stream()
                 .filter(result -> result.getCheckType() == CheckType.ILLEGAL_BUILDING)
                 .findFirst()
                 .orElseThrow();

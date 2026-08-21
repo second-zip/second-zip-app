@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service.external.client;
 
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.enums.RegistryDocumentType;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ import java.util.Map;
 public class RegistryRequestFactory {
 
     public Map<String, Object> create(
-            AnalysisTarget target,
+            AnalysisTargetDTO target,
             RegistryDocumentType documentType,
             String detailAddress,
             String loginPhoneNo,
@@ -65,7 +65,7 @@ public class RegistryRequestFactory {
 
     private void applyRoadAddress(
             Map<String, Object> body,
-            AnalysisTarget target
+            AnalysisTargetDTO target
     ) {
         RegistryAddressParts parsed =
                 RegistryAddressParts.fromRoadAddress(target.roadAddress());
@@ -84,7 +84,7 @@ public class RegistryRequestFactory {
 
     private void applyLandAddress(
             Map<String, Object> body,
-            AnalysisTarget target
+            AnalysisTargetDTO target
     ) {
         RegistryAddressParts parsed =
                 RegistryAddressParts.fromRoadAddress(target.roadAddress());
@@ -92,14 +92,28 @@ public class RegistryRequestFactory {
         body.put("addr_dong", require(target.legalDongName(), "법정동명"));
         body.put(
                 "addr_lotNumber",
-                joinNumber(target.mainNo(), target.subNo(), "지번")
+                landLotNumber(target)
+        );
+    }
+
+    private String landLotNumber(AnalysisTargetDTO target) {
+        String lotNumber = joinNumber(target.mainNo(), target.subNo(), "지번");
+        String platGbCd = target.platGbCd();
+        if (platGbCd == null || platGbCd.isBlank() || "0".equals(platGbCd)) {
+            return lotNumber;
+        }
+        if ("1".equals(platGbCd)) {
+            return lotNumber.startsWith("산") ? lotNumber : "산" + lotNumber;
+        }
+        throw new IllegalArgumentException(
+                "지원하지 않는 대지구분코드입니다: " + platGbCd
         );
     }
 
     private void applyDongHo(Map<String, Object> body, String detailAddress) {
         DongHo dongHo = DongHo.parse(detailAddress);
-        if (dongHo.dong() == null && dongHo.ho() == null) {
-            throw new IllegalArgumentException("집합건물 등기부 조회에는 동 또는 호가 필요합니다.");
+        if (dongHo.ho() == null) {
+            throw new IllegalArgumentException("집합건물 등기부 조회에는 호수가 필요합니다.");
         }
         body.put("dong", dongHo.dong() == null ? "" : dongHo.dong());
         body.put("ho", dongHo.ho() == null ? "" : dongHo.ho());
@@ -152,35 +166,48 @@ public class RegistryRequestFactory {
                     break;
                 }
             }
-            if (roadIndex < 2 || roadIndex >= tokens.length - 1) {
+            if (roadIndex < 1 || roadIndex >= tokens.length - 1) {
                 throw new IllegalArgumentException(
                         "도로명주소에서 시도·시군구·도로명을 분리하지 못했습니다."
                 );
             }
             String sido = SIDO_FULL_NAME.getOrDefault(tokens[0], tokens[0]);
-            String sigungu = String.join(
-                    " ",
-                    java.util.Arrays.copyOfRange(tokens, 1, roadIndex)
-            );
+            if (roadIndex == 1 && !"세종특별자치시".equals(sido)) {
+                throw new IllegalArgumentException(
+                        "도로명주소에서 시도·시군구·도로명을 분리하지 못했습니다."
+                );
+            }
+            String sigungu = roadIndex == 1
+                    ? ""
+                    : String.join(
+                            " ",
+                            java.util.Arrays.copyOfRange(tokens, 1, roadIndex)
+                    );
             return new RegistryAddressParts(sido, sigungu, tokens[roadIndex]);
         }
     }
 
     record DongHo(String dong, String ho) {
+        private static final String TOKEN = "([^\\s,()]+?)\\s*";
+
         static DongHo parse(String detailAddress) {
             if (detailAddress == null || detailAddress.isBlank()) {
                 return new DongHo(null, null);
             }
             return new DongHo(
-                    firstGroup(detailAddress, "(\\d+)\\s*동"),
-                    firstGroup(detailAddress, "(\\d+)\\s*호")
+                    lastGroup(detailAddress, TOKEN + "동"),
+                    lastGroup(detailAddress, TOKEN + "호")
             );
         }
 
-        private static String firstGroup(String input, String regex) {
+        private static String lastGroup(String input, String regex) {
             java.util.regex.Matcher matcher =
                     java.util.regex.Pattern.compile(regex).matcher(input);
-            return matcher.find() ? matcher.group(1) : null;
+            String result = null;
+            while (matcher.find()) {
+                result = matcher.group(1);
+            }
+            return result;
         }
     }
 }

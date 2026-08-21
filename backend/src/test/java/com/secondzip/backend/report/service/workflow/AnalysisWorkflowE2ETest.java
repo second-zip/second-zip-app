@@ -1,11 +1,11 @@
 package com.secondzip.backend.report.service.workflow;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.secondzip.backend.report.dto.AnalysisSelectionOption;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.CodefTwoWayState;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.AnalysisSelectionOptionDTO;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.CodefTwoWayStateDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
@@ -40,7 +40,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -222,16 +221,16 @@ class AnalysisWorkflowE2ETest {
     }
 
     private static class InMemoryStore implements AnalysisWorkflowStore {
-        private AnalysisWorkflowState state;
+        private AnalysisWorkflowStateDTO state;
         private boolean locked;
 
         @Override
-        public void save(AnalysisWorkflowState state) {
+        public void save(AnalysisWorkflowStateDTO state) {
             this.state = state;
         }
 
         @Override
-        public AnalysisWorkflowState findOwned(
+        public AnalysisWorkflowStateDTO findOwned(
                 String requestId,
                 Long accountId
         ) {
@@ -269,13 +268,13 @@ class AnalysisWorkflowE2ETest {
     private static class FixedAddressSearchStore implements AddressSearchStore {
 
         @Override
-        public String save(AnalysisTarget target) {
+        public String save(AnalysisTargetDTO target) {
             return "test-address-id";
         }
 
         @Override
-        public AnalysisTarget find(String addressId) {
-            return new AnalysisTarget(
+        public AnalysisTargetDTO find(String addressId) {
+            return new AnalysisTargetDTO(
                     "서울특별시 송파구 송파대로 345",
                     "서울 송파구 송파대로 345",
                     "1171010700",
@@ -299,7 +298,10 @@ class AnalysisWorkflowE2ETest {
         }
 
         @Override
-        public BuildingData getBuildingData(AnalysisTarget target) {
+        public BuildingData getBuildingData(
+                AnalysisTargetDTO target,
+                String detailAddress
+        ) {
             BuildingData result = new BuildingData();
             result.setBuildingType("APARTMENT");
             result.setBuildingUse("공동주택");
@@ -313,7 +315,7 @@ class AnalysisWorkflowE2ETest {
 
         @Override
         public BuildingRegisterGatewayResult start(
-                AnalysisWorkflowState state,
+                AnalysisWorkflowStateDTO state,
                 BuildingRegisterDocumentType documentType,
                 StartAnalysisAuthRequest request
         ) {
@@ -329,7 +331,7 @@ class AnalysisWorkflowE2ETest {
 
         @Override
         public BuildingRegisterGatewayResult continueRequest(
-                AnalysisWorkflowState state,
+                AnalysisWorkflowStateDTO state,
                 ContinueAnalysisAuthRequest request
         ) {
             if (state.getPendingDocument()
@@ -345,7 +347,7 @@ class AnalysisWorkflowE2ETest {
             return switch (titleContinuationStep) {
                 case 1 -> pending(
                         AnalysisNextAction.ADDRESS_SELECTION,
-                        List.of(new AnalysisSelectionOption(
+                        List.of(new AnalysisSelectionOptionDTO(
                                 "ADDR-1",
                                 "서울 송파구 송파대로 345"
                         ))
@@ -354,7 +356,7 @@ class AnalysisWorkflowE2ETest {
                     assertEquals("ADDR-1", request.getSelectionValue());
                     yield pending(
                             AnalysisNextAction.DONG_SELECTION,
-                            List.of(new AnalysisSelectionOption(
+                            List.of(new AnalysisSelectionOptionDTO(
                                     "101",
                                     "101동"
                             ))
@@ -364,7 +366,7 @@ class AnalysisWorkflowE2ETest {
                     assertEquals("101", request.getSelectionValue());
                     yield pending(
                             AnalysisNextAction.HO_SELECTION,
-                            List.of(new AnalysisSelectionOption(
+                            List.of(new AnalysisSelectionOptionDTO(
                                     "1304",
                                     "1304호"
                             ))
@@ -374,6 +376,9 @@ class AnalysisWorkflowE2ETest {
                     assertEquals("1304", request.getSelectionValue());
                     yield completed(Map.of(
                             "resViolationStatus", "",
+                            "resDong", "101동",
+                            "resHo", "1304호",
+                            "resBaseDate", "2025-01-01",
                             "resBasePrice", "550,000,000",
                             "resUseType", "공동주택"
                     ));
@@ -386,12 +391,12 @@ class AnalysisWorkflowE2ETest {
 
         private BuildingRegisterGatewayResult pending(
                 AnalysisNextAction action,
-                List<AnalysisSelectionOption> options
+                List<AnalysisSelectionOptionDTO> options
         ) {
             return new BuildingRegisterGatewayResult(
                     false,
                     action,
-                    new CodefTwoWayState(
+                    new CodefTwoWayStateDTO(
                             1,
                             2,
                             "test-jti",
@@ -433,7 +438,7 @@ class AnalysisWorkflowE2ETest {
 
         @Override
         public RegistryData getRegistryDataForAnalysis(
-                AnalysisTarget target,
+                AnalysisTargetDTO target,
                 String detailAddress,
                 String buildingType
         ) {
@@ -450,13 +455,15 @@ class AnalysisWorkflowE2ETest {
 
     private static class FixedPriceClient extends PriceClient {
         private FixedPriceClient() {
-            super(new RestTemplate());
+            super(new RestTemplate(), null);
         }
 
         @Override
         public PriceData getPriceData(
-                AnalysisTarget target,
-                String buildingType
+                AnalysisTargetDTO target,
+                String buildingType,
+                java.math.BigDecimal transactionAreaSqm,
+                Integer transactionFloor
         ) {
             PriceData result = new PriceData();
             result.setRecentSalePrice(900_000_000L);
@@ -470,7 +477,7 @@ class AnalysisWorkflowE2ETest {
         private PriceData price;
 
         @Override
-        public RiskEvaluationResult evaluate(
+        public RiskEvaluationResultDTO evaluate(
                 RegistryData registry,
                 BuildingData building,
                 PriceData price,
@@ -479,7 +486,7 @@ class AnalysisWorkflowE2ETest {
         ) {
             this.building = building;
             this.price = price;
-            return new RiskEvaluationResult(
+            return new RiskEvaluationResultDTO(
                     RiskLevel.DANGER,
                     List.of(),
                     List.of()
@@ -505,7 +512,7 @@ class AnalysisWorkflowE2ETest {
                 String roadAddress,
                 String detailAddress,
                 Long deposit,
-                RiskEvaluationResult evalResult,
+                RiskEvaluationResultDTO evalResult,
                 String housingCategory,
                 boolean trustProperty
         ) {

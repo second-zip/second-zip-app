@@ -28,6 +28,7 @@ public class HousingTypeResolver {
                 .filter(Objects::nonNull)
                 .map(Object::toString)
                 .map(this::resolveFromBuildingUse)
+                .filter(result -> !UNKNOWN.equals(result))
                 .findFirst()
                 .orElse(UNKNOWN);
     }
@@ -43,8 +44,8 @@ public class HousingTypeResolver {
             return "OFFICETEL";
         }
 
-        if (normalized.contains("아파트")) {
-            return "APARTMENT";
+        if (normalized.contains("다가구")) {
+            return "MULTI_FAMILY";
         }
 
         if (normalized.contains("다세대")
@@ -53,8 +54,8 @@ public class HousingTypeResolver {
             return "MULTI_HOUSEHOLD";
         }
 
-        if (normalized.contains("다가구")) {
-            return "MULTI_FAMILY";
+        if (normalized.contains("아파트")) {
+            return "APARTMENT";
         }
 
         if (normalized.contains("단독주택")) {

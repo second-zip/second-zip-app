@@ -5,306 +5,672 @@ import com.secondzip.backend.report.dto.external.BuildingRegisterAnalysisData;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class BuildingRegisterDataParser {
-
+    private static final List<String> DATE_KEYS = List.of(
+            "resBaseDate", "resStdDay", "resDate", "resBaseYm", "resBaseYear"
+    );
+    private static final List<String> DONG_KEYS = List.of(
+            "resDong", "resDongNm", "resDongName", "commDongNum", "dong", "dongNm"
+    );
+    private static final List<String> HO_KEYS = List.of(
+            "resHo", "resHoNm", "resHoName", "commHoNum", "ho", "hoNm"
+    );
+    private static final List<String> EXCLUSIVE_AREA_KEYS = List.of(
+            "resExclusiveArea", "resExclusiveAreaM2", "resExclusiveUseArea",
+            "resExclusiveUseAr", "resExcluUseArea", "resExcluUseAr", "resExposArea"
+    );
+    private static final List<String> TOTAL_AREA_KEYS = List.of(
+            "resTotalFloorArea", "resTotalFloorAr", "resTotalArea", "resTotArea",
+            "resFloorAreaTotal", "totArea"
+    );
+    private static final List<String> FLOOR_KEYS = List.of(
+            "resFloor", "resFloorNo", "resFloorNm", "floor", "floorNo"
+    );
+    private static final List<String> NON_RESIDENTIAL_MARKERS = List.of(
+            "비주거", "업무용", "근린생활시설", "업무시설", "숙박시설",
+            "판매시설", "위락시설", "공장", "창고시설", "의료시설",
+            "교육연구시설", "노유자시설", "종교시설", "자동차관련시설", "상가"
+    );
+    private static final Pattern NUMBER = Pattern.compile(
+            "[-+]?[0-9][0-9,]*(?:\\.[0-9]+)?"
+    );
     public BuildingRegisterAnalysisData parse(
             List<BuildingRegisterDocumentType> requiredDocuments,
             Map<BuildingRegisterDocumentType, Map<String, Object>> documents,
             String buildingType,
             String fallbackBuildingUse
     ) {
-        if (requiredDocuments == null || requiredDocuments.isEmpty()) {
-            return unknown(buildingType, fallbackBuildingUse);
-        }
+        return parse(requiredDocuments, documents, buildingType,
+                fallbackBuildingUse, null, null);
+    }
 
-        Map<String, Boolean> violationByDocument = new LinkedHashMap<>();
-        boolean allDocumentsVerified = true;
+    public BuildingRegisterAnalysisData parse(
+            List<BuildingRegisterDocumentType> requiredDocuments,
+            Map<BuildingRegisterDocumentType, Map<String, Object>> documents,
+            String buildingType,
+            String fallbackBuildingUse,
+            String detailAddress
+    ) {
+        return parse(requiredDocuments, documents, buildingType,
+                fallbackBuildingUse, detailAddress, null);
+    }
+
+    public BuildingRegisterAnalysisData parse(
+            List<BuildingRegisterDocumentType> requiredDocuments,
+            Map<BuildingRegisterDocumentType, Map<String, Object>> documents,
+            String buildingType,
+            String fallbackBuildingUse,
+            String detailAddress,
+            BigDecimal fallbackTransactionAreaSqm
+    ) {
+        boolean collective = isCollective(buildingType);
+        TargetScope exclusiveScope = collective
+                ? selectTargetScope(
+                document(documents, BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE),
+                detailAddress
+        )
+                : new TargetScope(
+                document(documents, BuildingRegisterDocumentType.GENERAL),
+                false
+        );
+        Object targetScope = exclusiveScope.data();
+
+        Map<String, Boolean> violations = new LinkedHashMap<>();
+        boolean verified = requiredDocuments != null && !requiredDocuments.isEmpty();
         boolean anyViolation = false;
-        String buildingUse = null;
-        Long officialPrice = null;
-
-        for (BuildingRegisterDocumentType type : requiredDocuments) {
-            Map<String, Object> data = documents != null ? documents.get(type) : null;
-            if (data == null) {
-                allDocumentsVerified = false;
-                violationByDocument.put(type.name(), null);
-                continue;
-            }
-
-            List<String> violationStatuses =
-                    findFieldValues(data, "resViolationStatus");
-            if (violationStatuses.isEmpty()
-                    || violationStatuses.stream().allMatch(
-                    java.util.Objects::isNull
-            )) {
-                allDocumentsVerified = false;
-                violationByDocument.put(type.name(), null);
-                continue;
-            }
-
-            boolean violation = violationStatuses.stream()
-                    .filter(java.util.Objects::nonNull)
-                    .anyMatch(value -> value.contains("위반건축물"));
-            violationByDocument.put(type.name(), violation);
-            anyViolation |= violation;
-
-            if (buildingUse == null) {
-                buildingUse = firstNonBlank(
-                        findTextValues(data, "resUseType"),
-                        findTextValues(data, "resType1")
+        if (requiredDocuments != null) {
+            for (BuildingRegisterDocumentType type : requiredDocuments) {
+                Object source = collective
+                        && type == BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE
+                        ? targetScope
+                        : document(documents, type);
+                List<String> statuses = findValues(
+                        source,
+                        "resViolationStatus",
+                        true
                 );
-            }
-            if (officialPrice == null) {
-                officialPrice = findLatestBasePrice(data);
+                if (source == null || statuses.isEmpty()
+                        || statuses.stream().allMatch(Objects::isNull)) {
+                    verified = false;
+                    violations.put(type.name(), null);
+                    continue;
+                }
+                boolean violation = statuses.stream()
+                        .filter(Objects::nonNull)
+                        .anyMatch(value -> value.contains("위반건축물"));
+                violations.put(type.name(), violation);
+                anyViolation |= violation;
             }
         }
+
+        String use = combineTargetUses(targetScope);
+        Long officialPrice = findLatestPrice(targetScope);
+        if (collective && !containsKey(targetScope, "resBasePrice")) {
+            TargetScope titleScope = selectTargetScope(
+                    document(documents, BuildingRegisterDocumentType.COLLECTIVE_TITLE),
+                    detailAddress
+            );
+            if (titleScope.identityVerified()) {
+                officialPrice = findLatestPrice(titleScope.data());
+            }
+        }
+        DecimalSelection totalArea = collective
+                ? DecimalSelection.absent()
+                : selectDecimalByPriority(targetScope, TOTAL_AREA_KEYS);
+        BigDecimal transactionAreaSqm = collective
+                ? findExclusiveArea(targetScope)
+                : totalArea.value();
+        if (!collective && !totalArea.present()) {
+            transactionAreaSqm = positive(fallbackTransactionAreaSqm);
+        }
+        Integer transactionFloor = collective ? findFloor(targetScope) : null;
 
         BuildingData buildingData = new BuildingData();
         buildingData.setBuildingType(buildingType);
-        buildingData.setBuildingUse(
-                buildingUse != null ? buildingUse : fallbackBuildingUse
+        String targetUse = resolveTargetUse(use, fallbackBuildingUse, !collective);
+        buildingData.setBuildingUse(targetUse);
+        buildingData.setBuildingLevelNonResidentialUses(
+                buildingLevelNonResidentialUses(targetUse, use, fallbackBuildingUse)
         );
-        buildingData.setIsIllegalBuilding(
-                allDocumentsVerified ? anyViolation : null
-        );
-        buildingData.setIllegalBuildingVerified(allDocumentsVerified);
+        buildingData.setIsIllegalBuilding(verified ? anyViolation : null);
+        buildingData.setIllegalBuildingVerified(verified);
         buildingData.setIllegalBuildingSource("CODEF_BUILDING_REGISTER");
-        buildingData.setViolationByDocument(
-                new LinkedHashMap<>(violationByDocument)
-        );
+        buildingData.setViolationByDocument(new LinkedHashMap<>(violations));
+        buildingData.setTransactionAreaSqm(transactionAreaSqm);
         return new BuildingRegisterAnalysisData(
                 buildingData,
                 officialPrice,
-                violationByDocument
+                violations,
+                transactionAreaSqm,
+                transactionFloor
         );
     }
 
-    private BuildingRegisterAnalysisData unknown(
-            String buildingType,
-            String fallbackBuildingUse
+    private Map<String, Object> document(
+            Map<BuildingRegisterDocumentType, Map<String, Object>> documents,
+            BuildingRegisterDocumentType type
     ) {
-        BuildingData buildingData = new BuildingData();
-        buildingData.setBuildingType(buildingType);
-        buildingData.setBuildingUse(fallbackBuildingUse);
-        buildingData.setIsIllegalBuilding(null);
-        buildingData.setIllegalBuildingVerified(false);
-        buildingData.setIllegalBuildingSource("CODEF_BUILDING_REGISTER");
-        buildingData.setViolationByDocument(new LinkedHashMap<>());
-        return new BuildingRegisterAnalysisData(
-                buildingData,
-                null,
-                Map.of()
+        return documents != null ? documents.get(type) : null;
+    }
+
+    private boolean isCollective(String type) {
+        return "APARTMENT".equals(type)
+                || "MULTI_HOUSEHOLD".equals(type)
+                || "OFFICETEL".equals(type);
+    }
+
+    /** 응답에 동·호 식별자가 있으면 요청 상세주소와 일치하는 가장 구체적인 맵만 남긴다. */
+    private TargetScope selectTargetScope(Object root, String detailAddress) {
+        if (root == null || detailAddress == null || detailAddress.isBlank()) {
+            return new TargetScope(root, false);
+        }
+        String expectedDong = normalizeUnit(extractDetailPart(detailAddress, "동"));
+        String expectedHo = normalizeUnit(extractDetailPart(detailAddress, "호"));
+        List<IdentityCandidate> candidates = new ArrayList<>();
+        collectIdentityCandidates(root, null, null, candidates);
+        if (candidates.isEmpty()) return new TargetScope(root, false);
+
+        List<IdentityCandidate> selectedCandidates = candidates.stream()
+                .filter(candidate -> expectedDong == null
+                        || expectedDong.equals(candidate.dong()))
+                .filter(candidate -> expectedHo == null
+                        || expectedHo.equals(candidate.ho()))
+                .toList();
+        if (selectedCandidates.isEmpty()) return new TargetScope(null, false);
+
+        LinkedHashSet<UnitIdentity> identities = selectedCandidates.stream()
+                .map(candidate -> new UnitIdentity(candidate.dong(), candidate.ho()))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (identities.size() != 1
+                || expectedDong == null
+                && selectedCandidates.size() > 1
+                && selectedCandidates.stream().allMatch(candidate -> candidate.dong() == null)) {
+            return new TargetScope(null, false);
+        }
+        List<Map<String, Object>> selected = selectedCandidates.stream()
+                .map(IdentityCandidate::data)
+                .distinct()
+                .toList();
+        return new TargetScope(
+                selected.size() == 1 ? selected.get(0) : selected,
+                expectedHo != null
         );
     }
 
-    @SafeVarargs
-    private String firstNonBlank(List<String>... groups) {
-        for (List<String> group : groups) {
-            for (String value : group) {
-                if (value != null && !value.isBlank()) {
-                    return value.trim();
-                }
+    private void collectIdentityCandidates(
+            Object node,
+            String inheritedDong,
+            String inheritedHo,
+            List<IdentityCandidate> destination
+    ) {
+        if (node instanceof Map<?, ?> rawMap) {
+            Map<String, Object> map = castMap(rawMap);
+            String directDong = normalizeUnit(firstDirectValue(map, DONG_KEYS));
+            String directHo = normalizeUnit(firstDirectValue(map, HO_KEYS));
+            String currentDong = directDong != null ? directDong : inheritedDong;
+            String currentHo = directHo != null ? directHo : inheritedHo;
+            if (directDong != null || directHo != null) {
+                destination.add(new IdentityCandidate(map, currentDong, currentHo));
             }
+            map.values().forEach(value -> collectIdentityCandidates(
+                    value,
+                    currentDong,
+                    currentHo,
+                    destination
+            ));
+        } else if (node instanceof Collection<?> collection) {
+            collection.forEach(value -> collectIdentityCandidates(
+                    value,
+                    inheritedDong,
+                    inheritedHo,
+                    destination
+            ));
+        }
+    }
+
+    private String firstDirectValue(Map<String, Object> map, List<String> keys) {
+        for (String key : keys) {
+            Object value = map.get(key);
+            if (value != null && !value.toString().isBlank()) return value.toString();
         }
         return null;
     }
 
-    /**
-     * 공시가격(주택가격)을 고르고, 기준일이 가장 최근인 값을 씀.
-     *
-     * 건축물대장 주택가격은 연도별 이력으로 여러 건이 내려옴. 예전에는 그중
-     * 가장 큰 금액을 골랐는데, 공시가격이 하락한 해가 있으면 과거의 높은 값을 쓰게 됨.
-     * 기준가가 실제보다 높아지면 전세가율이 낮게 계산되어 위험을 과소평가하게 됨.
-     *
-     * CODEF 응답에서 기준일 필드명을 확정하지 못해, 날짜로 보이는 필드를
-     * 폭넓게 찾고, 끝내 날짜를 찾지 못하면 기존 동작(최대 금액)을 실행.
-     * 실제 응답을 확인해 필드명이 확정되면 #DATE_KEY_CANDIDATES 맨 앞에 두면 됨.
-     */
-    private Long findLatestBasePrice(Object data) {
-        List<Map<String, Object>> entries = new java.util.ArrayList<>();
-        collectMapsContainingKey(data, "resBasePrice", entries);
+    private String extractDetailPart(String detailAddress, String suffix) {
+        Matcher matcher = Pattern.compile(
+                "([^\\s,]+)\\s*" + Pattern.quote(suffix)
+        ).matcher(detailAddress);
+        String found = null;
+        while (matcher.find()) found = matcher.group(1);
+        return found;
+    }
 
+    private String normalizeUnit(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String normalized = raw.replaceAll("\\s+", "")
+                .replaceFirst("^제", "")
+                .replaceFirst("[동호]$", "")
+                .toUpperCase(Locale.ROOT);
+        if (normalized.matches("[0-9]+")) {
+            try {
+                return Long.toString(Long.parseLong(normalized));
+            } catch (NumberFormatException ignored) {
+                // 숫자가 지나치게 길면 원문 비교를 유지한다.
+            }
+        }
+        return normalized;
+    }
+
+    /** 날짜 없는 서로 다른 가격이 있으면 최신값을 증명할 수 없어 null이다. */
+    private Long findLatestPrice(Object root) {
+        List<Map<String, Object>> entries = new ArrayList<>();
+        collectMapsContainingKey(root, "resBasePrice", entries);
         Long latestPrice = null;
         String latestDate = null;
-
+        boolean undated = false;
+        Long soleAmount = null;
+        boolean amountConflict = false;
+        String latestUnreadableDate = null;
+        boolean hasUndatedUnreadablePrice = false;
         for (Map<String, Object> entry : entries) {
-            Long price = parseAmount(entry.get("resBasePrice"));
+            Object rawPrice = entry.get("resBasePrice");
+            Long price = parseAmount(rawPrice);
+            String date = findEntryDate(entry);
             if (price == null) {
+                if (rawPrice != null && !rawPrice.toString().isBlank()) {
+                    if (date == null) {
+                        hasUndatedUnreadablePrice = true;
+                    } else if (latestUnreadableDate == null
+                            || date.compareTo(latestUnreadableDate) > 0) {
+                        latestUnreadableDate = date;
+                    }
+                }
                 continue;
             }
-            String date = findEntryDate(entry);
+            if (soleAmount == null) {
+                soleAmount = price;
+            } else if (!soleAmount.equals(price)) {
+                amountConflict = true;
+            }
             if (date == null) {
+                undated = true;
                 continue;
             }
             if (latestDate == null || date.compareTo(latestDate) > 0) {
                 latestDate = date;
                 latestPrice = price;
+            } else if (date.equals(latestDate) && !price.equals(latestPrice)) {
+                return null;
             }
         }
-
-        if (latestPrice != null) {
-            return latestPrice;
+        if (hasUndatedUnreadablePrice
+                || latestUnreadableDate != null
+                && (latestDate == null
+                || latestUnreadableDate.compareTo(latestDate) >= 0)) {
+            return null;
         }
-        // 기준일을 찾지 못한 경우에만 기존 방식으로 폴백한다.
-        return findLargestAmount(findTextValues(data, "resBasePrice"));
+        if (undated) return amountConflict ? null : soleAmount;
+        return latestPrice;
     }
 
-    /** 실제 응답에서 필드명이 확인되면 맨 앞에 추가. */
-    private static final List<String> DATE_KEY_CANDIDATES = List.of(
-            "resBaseDate", "resStdDay", "resDate", "resBaseYm", "resBaseYear"
-    );
-
-    /** 가격 항목에 붙은 기준일을 yyyyMMdd 8자리로 정규화해 돌려줌. */
     private String findEntryDate(Map<String, Object> entry) {
-        for (String key : DATE_KEY_CANDIDATES) {
-            String normalized = normalizeDate(entry.get(key));
-            if (normalized != null) {
-                return normalized;
-            }
-        }
-        // 후보에 없으면 이름이 날짜처럼 보이는 필드를 찾아본다.
-        for (Map.Entry<String, Object> field : entry.entrySet()) {
-            String key = field.getKey() == null
-                    ? ""
-                    : field.getKey().toLowerCase();
-            if (key.contains("date") || key.contains("day")
-                    || key.contains("ym") || key.contains("year")) {
-                String normalized = normalizeDate(field.getValue());
-                if (normalized != null) {
-                    return normalized;
-                }
-            }
+        for (String key : DATE_KEYS) {
+            String date = normalizeDate(entry.get(key));
+            if (date != null) return date;
         }
         return null;
     }
 
-    /**
-     * "2024-01-01" / "20240101" / "202401" / "2024" 를 모두 8자리로 고정.
-     * 자릿수를 맞춰야 문자열 비교로 최신 여부를 판단할 수 있음.
-     */
     private String normalizeDate(Object raw) {
-        if (raw == null) {
-            return null;
-        }
+        if (raw == null) return null;
         String digits = raw.toString().replaceAll("[^0-9]", "");
-        if (digits.length() < 4 || digits.length() > 8) {
+        try {
+            if (digits.matches("(?:19|20)[0-9]{2}")) {
+                return digits + "0000";
+            }
+            if (digits.matches("(?:19|20)[0-9]{4}")) {
+                YearMonth.of(
+                        Integer.parseInt(digits.substring(0, 4)),
+                        Integer.parseInt(digits.substring(4, 6))
+                );
+                return digits + "00";
+            }
+            if (digits.matches("(?:19|20)[0-9]{6}")) {
+                LocalDate.parse(digits, DateTimeFormatter.BASIC_ISO_DATE);
+                return digits;
+            }
+        } catch (DateTimeException | NumberFormatException ignored) {
             return null;
         }
-        if (!digits.startsWith("19") && !digits.startsWith("20")) {
-            return null; // 연도로 보이지 않으면 날짜가 아니다
-        }
-        return (digits + "00000000").substring(0, 8);
+        return null;
     }
 
     private Long parseAmount(Object raw) {
-        if (raw == null) {
-            return null;
-        }
+        if (raw == null) return null;
         String digits = raw.toString().replaceAll("[^0-9]", "");
-        if (digits.isBlank()) {
-            return null;
-        }
+        if (digits.isBlank()) return null;
         try {
-            return Long.parseLong(digits);
-        } catch (NumberFormatException e) {
+            return Long.valueOf(digits);
+        } catch (NumberFormatException ignored) {
             return null;
         }
     }
 
-    /** 지정한 키를 직접 가지고 있는 맵들을 모음. 가격과 기준일을 같이 보기 위해 필요. */
-    @SuppressWarnings("unchecked")
     private void collectMapsContainingKey(
             Object node,
-            String targetKey,
+            String key,
             List<Map<String, Object>> destination
     ) {
-        if (node instanceof Map<?, ?> map) {
-            if (map.containsKey(targetKey)) {
-                destination.add((Map<String, Object>) map);
-            }
+        if (node instanceof Map<?, ?> rawMap) {
+            Map<String, Object> map = castMap(rawMap);
+            if (map.containsKey(key)) destination.add(map);
             map.values().forEach(value ->
-                    collectMapsContainingKey(value, targetKey, destination)
+                    collectMapsContainingKey(value, key, destination)
             );
         } else if (node instanceof Collection<?> collection) {
             collection.forEach(value ->
-                    collectMapsContainingKey(value, targetKey, destination)
+                    collectMapsContainingKey(value, key, destination)
             );
         }
     }
 
-    private Long findLargestAmount(List<String> values) {
-        Long largest = null;
-        for (String value : values) {
-            String digits = value != null ? value.replaceAll("[^0-9]", "") : "";
-            if (digits.isBlank()) continue;
-            try {
-                long amount = Long.parseLong(digits);
-                if (largest == null || amount > largest) {
-                    largest = amount;
-                }
-            } catch (NumberFormatException ignored) {
+    private boolean containsKey(Object root, String key) {
+        List<Map<String, Object>> matches = new ArrayList<>();
+        collectMapsContainingKey(root, key, matches);
+        return !matches.isEmpty();
+    }
+
+    private BigDecimal findExclusiveArea(Object root) {
+        DecimalSelection explicit = selectDecimalByPriority(root, EXCLUSIVE_AREA_KEYS);
+        if (explicit.present()) return explicit.value();
+
+        List<Map<String, Object>> candidates = new ArrayList<>();
+        collectMapsContainingKey(root, "resArea", candidates);
+        candidates.removeIf(this::isCommonArea);
+        LinkedHashSet<BigDecimal> values = new LinkedHashSet<>();
+        boolean eligible = false;
+        for (Map<String, Object> candidate : candidates) {
+            boolean boundToUnit = firstDirectValue(candidate, DONG_KEYS) != null
+                    || firstDirectValue(candidate, HO_KEYS) != null;
+            if (boundToUnit || isExclusiveArea(candidate) || candidates.size() == 1) {
+                eligible = true;
+                BigDecimal value = parseDecimal(candidate.get("resArea"));
+                if (value == null) return null;
+                values.add(value.stripTrailingZeros());
             }
         }
-        return largest;
+        return eligible && values.size() == 1 ? values.iterator().next() : null;
     }
 
-    private List<String> findTextValues(Object root, String targetKey) {
-        java.util.ArrayList<String> values = new java.util.ArrayList<>();
-        collectTextValues(root, targetKey, values);
+    private boolean isExclusiveArea(Map<String, Object> entry) {
+        String marker = areaMarker(entry);
+        return marker.contains("전유") || marker.contains("전용");
+    }
+
+    private boolean isCommonArea(Map<String, Object> entry) {
+        String marker = areaMarker(entry);
+        return marker.contains("공용") || marker.contains("계단실")
+                || marker.contains("복도") || marker.contains("승강기")
+                || marker.contains("주차장") || marker.contains("기계실")
+                || marker.contains("전기실") || marker.contains("관리실")
+                || marker.contains("경비실");
+    }
+
+    private String areaMarker(Map<String, Object> entry) {
+        StringBuilder marker = new StringBuilder();
+        for (String key : List.of(
+                "resUseType", "resType1", "resType2", "resAreaType",
+                "resExposPubuseGbCdNm"
+        )) {
+            Object value = entry.get(key);
+            if (value != null) marker.append(value);
+        }
+        return marker.toString().replaceAll("\\s+", "");
+    }
+
+    private DecimalSelection selectDecimalByPriority(Object root, List<String> keys) {
+        for (String key : keys) {
+            List<String> rawValues = findValues(root, key, false);
+            if (rawValues.isEmpty()) continue;
+            LinkedHashSet<BigDecimal> values = new LinkedHashSet<>();
+            for (String value : rawValues) {
+                BigDecimal parsed = parseDecimal(value);
+                if (parsed == null) return new DecimalSelection(true, null);
+                values.add(parsed.stripTrailingZeros());
+            }
+            return new DecimalSelection(
+                    true,
+                    values.size() == 1 ? values.iterator().next() : null
+            );
+        }
+        return DecimalSelection.absent();
+    }
+
+    private BigDecimal parseDecimal(Object raw) {
+        if (raw == null) return null;
+        Matcher matcher = NUMBER.matcher(raw.toString());
+        if (!matcher.find()) return null;
+        try {
+            return positive(new BigDecimal(matcher.group().replace(",", "")));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private BigDecimal positive(BigDecimal value) {
+        return value != null && value.signum() > 0 ? value : null;
+    }
+
+    private Integer findFloor(Object root) {
+        for (String key : FLOOR_KEYS) {
+            FloorSelection direct = selectFloorValues(directValues(root, key));
+            if (direct.present()) return direct.value();
+        }
+        for (String key : FLOOR_KEYS) {
+            FloorSelection recursive = selectFloorValues(findValues(root, key, false));
+            if (recursive.present()) return recursive.value();
+        }
+        return null;
+    }
+
+    private List<String> directValues(Object root, String key) {
+        List<String> values = new ArrayList<>();
+        if (root instanceof Map<?, ?> map) {
+            Object value = map.get(key);
+            if (value != null && !value.toString().isBlank()) {
+                values.add(value.toString());
+            }
+        } else if (root instanceof Collection<?> collection) {
+            for (Object item : collection) {
+                if (item instanceof Map<?, ?> map) {
+                    Object value = map.get(key);
+                    if (value != null && !value.toString().isBlank()) {
+                        values.add(value.toString());
+                    }
+                }
+            }
+        }
         return values;
     }
 
-    private List<String> findFieldValues(Object root, String targetKey) {
-        java.util.ArrayList<String> values = new java.util.ArrayList<>();
-        collectFieldValues(root, targetKey, values);
+    private FloorSelection selectFloorValues(List<String> rawValues) {
+        if (rawValues.isEmpty()) return FloorSelection.absent();
+        LinkedHashSet<Integer> floors = new LinkedHashSet<>();
+        for (String raw : rawValues) {
+            Integer floor = parseFloor(raw);
+            if (floor == null) return new FloorSelection(true, null);
+            floors.add(floor);
+        }
+        return new FloorSelection(
+                true,
+                floors.size() == 1 ? floors.iterator().next() : null
+        );
+    }
+
+    private Integer parseFloor(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = raw.trim();
+        if (value.contains("지상") && value.contains("지하")) return null;
+        try {
+            Matcher basement = Pattern.compile(
+                    "(?:B|지하\\s*)([0-9]+)",
+                    Pattern.CASE_INSENSITIVE
+            ).matcher(value);
+            if (basement.find()) return -Integer.parseInt(basement.group(1));
+            Matcher number = Pattern.compile("-?[0-9]+").matcher(value);
+            return number.find() ? Integer.valueOf(number.group()) : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private String combineTargetUses(Object targetScope) {
+        LinkedHashSet<String> uses = new LinkedHashSet<>();
+        for (String key : List.of("resUseType", "resType1")) {
+            for (String value : findValues(targetScope, key, false)) {
+                String trimmed = value.trim();
+                if (!trimmed.isEmpty()) uses.add(trimmed);
+            }
+        }
+        return uses.isEmpty() ? null : String.join(", ", uses);
+    }
+
+    /**
+     * 계약 대상 호의 용도.
+     *
+     * 전유부(집합건물) 또는 일반건축물 표제부에서 읽은 용도를 그대로 쓴다.
+     * 건축HUB 표제부 용도는 건물 전체의 주용도라서 이 값에 섞지 않는다.
+     * 단독·다가구는 표제부가 곧 계약 대상 건물이므로, 대장에서 용도를 읽지
+     * 못했을 때만 HUB 값으로 대체한다.
+     */
+    private String resolveTargetUse(
+            String targetUse,
+            String hubUse,
+            boolean allowFullHubFallback
+    ) {
+        LinkedHashSet<String> uses = new LinkedHashSet<>();
+        addUseParts(uses, targetUse);
+        if (uses.isEmpty() && allowFullHubFallback) {
+            addUseParts(uses, hubUse);
+        }
+        return uses.isEmpty() ? null : String.join(", ", uses);
+    }
+
+    /**
+     * 표제부에만 나타나는 비주거 용도.
+     *
+     * 계약 대상 호의 용도로 이미 채택된 값은 제외한다. 같은 문자열이 양쪽에
+     * 남으면 리포트에서 같은 사실이 두 번 위험으로 세어진다.
+     */
+    private String buildingLevelNonResidentialUses(
+            String targetUse,
+            String registerUse,
+            String hubUse
+    ) {
+        LinkedHashSet<String> adopted = new LinkedHashSet<>();
+        addUseParts(adopted, targetUse);
+
+        LinkedHashSet<String> uses = new LinkedHashSet<>();
+        addNonResidentialUseParts(uses, registerUse);
+        addNonResidentialUseParts(uses, hubUse);
+        uses.removeAll(adopted);
+        return uses.isEmpty() ? null : String.join(", ", uses);
+    }
+
+    private void addUseParts(LinkedHashSet<String> destination, String raw) {
+        if (raw == null) return;
+        for (String part : raw.split("[,;]")) {
+            String value = part.trim();
+            if (!value.isEmpty()) destination.add(value);
+        }
+    }
+
+    private void addNonResidentialUseParts(
+            LinkedHashSet<String> destination,
+            String raw
+    ) {
+        if (raw == null) return;
+        for (String part : raw.split("[,;]")) {
+            String value = part.trim();
+            if (NON_RESIDENTIAL_MARKERS.stream().anyMatch(value::contains)) {
+                destination.add(value);
+            }
+        }
+    }
+
+    private List<String> findValues(Object root, String key, boolean preserveNull) {
+        List<String> values = new ArrayList<>();
+        collectValues(root, key, preserveNull, values);
         return values;
     }
 
-    private void collectFieldValues(
+    private void collectValues(
             Object node,
-            String targetKey,
+            String key,
+            boolean preserveNull,
             List<String> destination
     ) {
         if (node instanceof Map<?, ?> map) {
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 Object value = entry.getValue();
-                if (targetKey.equals(String.valueOf(entry.getKey()))) {
+                if (key.equals(String.valueOf(entry.getKey()))
+                        && (preserveNull
+                        || value != null && !value.toString().isBlank())) {
                     destination.add(value != null ? value.toString() : null);
                 }
-                collectFieldValues(value, targetKey, destination);
+                collectValues(value, key, preserveNull, destination);
             }
         } else if (node instanceof Collection<?> collection) {
             collection.forEach(value ->
-                    collectFieldValues(value, targetKey, destination)
+                    collectValues(value, key, preserveNull, destination)
             );
         }
     }
 
-    private void collectTextValues(
-            Object node,
-            String targetKey,
-            List<String> destination
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castMap(Map<?, ?> map) {
+        return (Map<String, Object>) map;
+    }
+
+    private record TargetScope(Object data, boolean identityVerified) {
+    }
+
+    private record IdentityCandidate(
+            Map<String, Object> data,
+            String dong,
+            String ho
     ) {
-        if (node instanceof Map<?, ?> map) {
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
-                Object value = entry.getValue();
-                if (targetKey.equals(String.valueOf(entry.getKey()))
-                        && value != null
-                        && !value.toString().isBlank()) {
-                    destination.add(value.toString());
-                }
-                collectTextValues(value, targetKey, destination);
-            }
-        } else if (node instanceof Collection<?> collection) {
-            collection.forEach(value ->
-                    collectTextValues(value, targetKey, destination)
-            );
+    }
+
+    private record UnitIdentity(String dong, String ho) {
+    }
+
+    private record DecimalSelection(boolean present, BigDecimal value) {
+        static DecimalSelection absent() {
+            return new DecimalSelection(false, null);
+        }
+    }
+
+    private record FloorSelection(boolean present, Integer value) {
+        static FloorSelection absent() {
+            return new FloorSelection(false, null);
         }
     }
 }
