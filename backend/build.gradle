@@ -145,7 +145,7 @@ dependencies {
     // MockMvc(standaloneSetup) / MockRestServiceServer 는 위의 spring-test 에 포함되어 있다.
     testImplementation 'javax.servlet:javax.servlet-api:4.0.1'                   // MockMvc 실행에 필요
 
-    // Mockito(가짜 HTTP 요청)
+    // Mockito
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 
