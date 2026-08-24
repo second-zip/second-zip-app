@@ -92,15 +92,13 @@ class SecurityConfigTest {
     class AuthorizationTest {
 
         @Test
-        @DisplayName("현재 설정에서는 Access Token이 없어도 요청을 허용한다")
-        void requestWithoutToken_isPermitted()
-                throws Exception {
+        @DisplayName("Access Token이 없으면 인증이 필요한 요청을 거부한다")
+        void requestWithoutToken_isDenied() throws Exception {
 
             mockMvc.perform(
                             get("/test/security")
                     )
-                    .andExpect(status().isOk())
-                    .andExpect(content().string("OK"));
+                    .andExpect(status().isForbidden());
         }
 
 
