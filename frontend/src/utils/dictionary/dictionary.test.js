@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizeFraudTypes } from './fraud';
 import {
   normalizeDictionaryCharacter,
   resolveDictionaryCharacter,
 } from './characters';
-import { findLastContentRow, normalizeGuideConfig } from './guides';
+import {
+  findImageContentRatio,
+  findLastContentRow,
+  normalizeGuideConfig,
+} from './guides';
 import { normalizeDictionaryCards } from './main';
 import { normalizeWordItems } from './words';
 
@@ -74,6 +78,8 @@ describe('dictionary data normalization', () => {
 });
 
 describe('comic image trimming', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('returns the last row containing enough non-white pixels', () => {
     const width = 4;
     const height = 4;
@@ -95,5 +101,32 @@ describe('comic image trimming', () => {
     const pixels = new Uint8ClampedArray(width * height * 4).fill(255);
 
     expect(findLastContentRow(pixels, width, height)).toBe(height - 1);
+  });
+
+  it('캔버스 픽셀을 분석해 이미지 콘텐츠 비율을 캐시한다', () => {
+    const pixels = new Uint8ClampedArray(100 * 200 * 4).fill(255);
+    for (let x = 0; x < 10; x += 1) {
+      const offset = (120 * 100 + x) * 4;
+      pixels[offset] = 0;
+    }
+    const context = {
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => ({ data: pixels })),
+    };
+    const canvas = { getContext: vi.fn(() => context), height: 0, width: 0 };
+    vi.spyOn(document, 'createElement').mockReturnValue(canvas);
+    const image = {
+      naturalHeight: 200,
+      naturalWidth: 100,
+      src: '/comic-content-ratio.png',
+    };
+
+    const firstRatio = findImageContentRatio(image);
+    const cachedRatio = findImageContentRatio(image);
+
+    expect(firstRatio).toBeGreaterThan(0.5);
+    expect(firstRatio).toBeLessThan(1);
+    expect(cachedRatio).toBe(firstRatio);
+    expect(context.drawImage).toHaveBeenCalledOnce();
   });
 });

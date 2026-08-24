@@ -23,6 +23,7 @@ const menus = [
   {
     label: '도감',
     to: '/dictionary',
+    activePaths: ['/dictionary'],
     inactiveIcon: dictGray,
     activeIcon: dictBlue,
   },

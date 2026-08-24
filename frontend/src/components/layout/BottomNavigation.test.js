@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import ChecklistBlueIcon from '@/assets/icons/nav/checklist-blue-22.svg';
 import ChecklistGrayIcon from '@/assets/icons/nav/checklist-gray-22.svg';
+import DictionaryBlueIcon from '@/assets/icons/nav/dict-blue-22.svg';
 import MyPageBlueIcon from '@/assets/icons/nav/mypage-blue-22.svg';
 import MainLogo from '@/assets/images/main-logo.png';
 import BottomNavigation from './BottomNavigation.vue';
@@ -55,6 +56,24 @@ describe('BottomNavigation', () => {
         .toBe(ChecklistBlueIcon);
     },
   );
+
+  test.each([
+    '/dictionary/words',
+    '/dictionary/fraud',
+    '/dictionary/fraud/trust-property',
+    '/dictionary/register',
+    '/dictionary/move-in',
+  ])('%s에서 도감 메뉴를 활성화한다', (path) => {
+    route.path = path;
+    const wrapper = mount(BottomNavigation, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    const dictionary = findMenu(wrapper, '도감');
+
+    expect(dictionary.classes()).toContain('is-active');
+    expect(dictionary.attributes('aria-current')).toBe('page');
+    expect(dictionary.get('img').attributes('src')).toBe(DictionaryBlueIcon);
+  });
 
   test.each(['/mypage/profile', '/mypage/secretary'])(
     '%s activates the MY menu',

@@ -7,6 +7,7 @@ import { useLiveRecordingSession } from './useLiveRecordingSession';
 const mocks = vi.hoisted(() => ({
   connect: vi.fn(), close: vi.fn(), send: vi.fn(), waitUntilSent: vi.fn(),
   getStatus: vi.fn(), start: vi.fn(), stop: vi.fn(),
+  socketErrorHandler: null,
 }));
 
 vi.mock('@/api/recording', () => ({
@@ -15,10 +16,13 @@ vi.mock('@/api/recording', () => ({
   stopLiveRecording: mocks.stop,
 }));
 vi.mock('@/services/recordingSocket', () => ({
-  createRecordingSocket: () => ({
-    close: mocks.close, connect: mocks.connect, send: mocks.send,
-    waitUntilSent: mocks.waitUntilSent,
-  }),
+  createRecordingSocket: (onError) => {
+    mocks.socketErrorHandler = onError;
+    return {
+      close: mocks.close, connect: mocks.connect, send: mocks.send,
+      waitUntilSent: mocks.waitUntilSent,
+    };
+  },
 }));
 
 const setup = (onComplete = vi.fn()) => {
@@ -35,6 +39,7 @@ const setup = (onComplete = vi.fn()) => {
 describe('useLiveRecordingSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.socketErrorHandler = null;
     mocks.start.mockResolvedValue({ recordingSessionId: 4, status: 'RECORDING' });
     mocks.connect.mockResolvedValue(undefined);
     mocks.waitUntilSent.mockResolvedValue(undefined);
@@ -96,5 +101,66 @@ describe('useLiveRecordingSession', () => {
 
     expect(state.isProcessing.value).toBe(false);
     expect(state.errorMessage.value).toBe('음성 없음');
+  });
+
+  test('WebSocket의 비동기 오류를 사용자에게 표시한다', () => {
+    const { state } = setup();
+
+    mocks.socketErrorHandler(new Error('소켓 전송 오류'));
+
+    expect(state.errorMessage.value).toBe('소켓 전송 오류');
+  });
+
+  test('분석 상태 조회 실패를 표시하고 중단 시 타이머와 세션을 정리한다', async () => {
+    mocks.getStatus.mockRejectedValue({
+      response: { data: { message: '분석 상태를 확인할 수 없어요.' } },
+    });
+    const { state } = setup();
+    await state.start();
+
+    await state.finish(new Blob(['wav']));
+    await flushPromises();
+
+    expect(state.errorMessage.value).toBe('분석 상태를 확인할 수 없어요.');
+    expect(state.isProcessing.value).toBe(true);
+
+    await state.abort();
+    expect(state.recordingSessionId.value).toBeNull();
+    expect(state.isProcessing.value).toBe(false);
+  });
+
+  test('녹음 종료 요청 실패 시 연결을 닫고 오류를 다시 전달한다', async () => {
+    mocks.waitUntilSent.mockRejectedValue({
+      response: { data: { message: '녹음을 종료할 수 없어요.' } },
+    });
+    const { state } = setup();
+    await state.start();
+
+    await expect(state.finish(new Blob(['wav']))).rejects.toBeTruthy();
+
+    expect(mocks.close).toHaveBeenCalled();
+    expect(state.isProcessing.value).toBe(false);
+    expect(state.errorMessage.value).toBe('녹음을 종료할 수 없어요.');
+  });
+
+  test('녹음 중 중단하면 서버 세션도 종료한다', async () => {
+    const { state } = setup();
+    await state.start();
+
+    await state.abort();
+
+    expect(mocks.stop).toHaveBeenCalledWith(4);
+    expect(state.status.value).toBeNull();
+  });
+
+  test('컴포넌트 해제 시 진행 중인 녹음 리소스를 정리한다', async () => {
+    const { state, wrapper } = setup();
+    await state.start();
+
+    wrapper.unmount();
+    await flushPromises();
+
+    expect(mocks.close).toHaveBeenCalled();
+    expect(mocks.stop).toHaveBeenCalledWith(4);
   });
 });

@@ -49,6 +49,17 @@ const hasValue = (value) => value !== null && value !== undefined;
 const formatWon = (value) =>
   hasValue(value) ? formatKoreanDeposit(Number(value) || 0) : '-';
 
+// API의 소수 비율(0.5556)을 화면에 표시할 백분율(55.56%)로 변환합니다.
+export const formatRatioPercent = (ratio) => {
+  if (!hasValue(ratio) || ratio === '') return '-';
+
+  const numericRatio = Number(ratio);
+
+  if (!Number.isFinite(numericRatio) || numericRatio < 0) return '-';
+
+  return `${Number((numericRatio * 100).toFixed(2))}%`;
+};
+
 const makeCheckCopy = (checkType, evidence = {}, status) => {
   switch (checkType) {
     case 'MORTGAGE_EXISTENCE':
@@ -153,6 +164,7 @@ export const mapReportDetail = (report = {}) => ({
     [report.roadAddress, report.detailAddress].filter(Boolean).join(' ') || '-',
   deposit: hasValue(report.deposit) ? String(report.deposit) : '-',
   risk: toUiRisk(report.result),
+  ratio: formatRatioPercent(report.ratio),
   favorite: Boolean(report.favorite),
   secretary: mapSecretary(report.secretary ?? report.characterType),
   checks: mapCheckResults(report.checkResults),

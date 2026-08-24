@@ -185,4 +185,15 @@ describe('ReportCreateForm', () => {
     expect(wrapper.find('.address-search__result').exists()).toBe(false);
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
   });
+
+  it('공백 검색어는 API를 호출하지 않고 검색 상태를 초기화한다', async () => {
+    const wrapper = mountForm();
+
+    wrapper.getComponent({ name: 'ReportAddressSearch' }).vm.$emit('search', '   ');
+    await wrapper.vm.$nextTick();
+
+    expect(addressApi.searchAddresses).not.toHaveBeenCalled();
+    expect(wrapper.find('.address-search__result').exists()).toBe(false);
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
 });
