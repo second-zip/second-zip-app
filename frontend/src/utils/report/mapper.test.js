@@ -8,6 +8,7 @@ import {
   mapReportDetail,
   mapSecretary,
   mapSpecialTerms,
+  formatRatioPercent,
   toUiRisk,
 } from './mapper.js';
 import {
@@ -22,6 +23,13 @@ test('백엔드 위험도 enum을 화면 상태값으로 변환한다', () => {
   assert.equal(toUiRisk('DANGER'), 'danger');
   assert.equal(toUiRisk('UNKNOWN'), 'caution');
   assert.equal(toUiRisk(null), 'caution');
+});
+
+test('API 전세가율을 백분율 표시값으로 변환한다', () => {
+  assert.equal(formatRatioPercent(0.5556), '55.56%');
+  assert.equal(formatRatioPercent(0.7), '70%');
+  assert.equal(formatRatioPercent(0), '0%');
+  assert.equal(formatRatioPercent(null), '-');
 });
 
 test('필수 점검 응답을 화면 데이터로 변환한다', () => {
@@ -60,6 +68,7 @@ test('리포트 상세 응답의 기본 필드를 화면 상태로 묶는다', (
     detailAddress: '101동',
     deposit: 100_000_000,
     result: 'SAFE',
+    ratio: 0.5556,
     favorite: true,
     checkResults: [],
     fraudTypes: [],
@@ -68,6 +77,7 @@ test('리포트 상세 응답의 기본 필드를 화면 상태로 묶는다', (
   assert.equal(report.address, '서울시 마포구 101동');
   assert.equal(report.deposit, '100000000');
   assert.equal(report.risk, 'safe');
+  assert.equal(report.ratio, '55.56%');
   assert.equal(report.favorite, true);
 });
 
@@ -141,6 +151,7 @@ test('null 근거값은 하이픈으로, null 판정은 주의로 변환한다',
 
   assert.equal(report.address, '-');
   assert.equal(report.risk, 'caution');
+  assert.equal(report.ratio, '-');
   assert.equal(report.checks[0].status, 'caution');
   assert.equal(report.checks[0].amount, '-');
   assert.equal(report.checks[1].status, 'caution');

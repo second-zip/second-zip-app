@@ -70,6 +70,7 @@ const report = {
   detailAddress: '101호',
   deposit: 100_000_000,
   result: 'SAFE',
+  ratio: 0.5556,
   favorite: false,
   checkResults: [],
   fraudTypes: [],
@@ -102,7 +103,24 @@ describe('분석 결과 화면', () => {
     expect(mocks.getReport).toHaveBeenCalledWith('12');
     expect(wrapper.text()).toContain('서울시 마포구 101호');
     expect(wrapper.text()).toContain('1억 0만원');
+    expect(wrapper.get('.ratio-field strong').text()).toBe('55.56%');
     expect(wrapper.get('.address-icon').attributes('src')).toBe(ReportIcon);
+  });
+
+  test('위험도 요약은 세부 항목 집계가 아닌 상세 응답의 result를 표시한다', async () => {
+    mocks.getReport.mockResolvedValue({
+      ...report,
+      result: 'DANGER',
+      checkResults: [],
+      fraudTypes: [],
+    });
+
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    expect(wrapper.get('.risk-summary').classes()).toContain(
+      'risk-summary--danger',
+    );
   });
 
   test('상세 응답의 즐겨찾기 상태를 표시하고 해제 API를 호출한다', async () => {

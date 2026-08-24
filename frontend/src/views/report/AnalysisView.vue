@@ -22,7 +22,6 @@ import {
   DEFAULT_FRAUD_TYPES,
   DEFAULT_SECRETARY_IMAGES,
   DEFAULT_SPECIAL_TERMS,
-  MARKET_PRICE,
   RISK_ICONS,
   RISK_LABELS,
   SECRETARY_IMAGES,
@@ -36,7 +35,6 @@ import {
 import {
   aggregateRiskStatuses,
   formatKoreanDeposit,
-  getRentRatio,
   selectSecretaryValue,
   toNumericAmount,
 } from '@/utils/report/analysis';
@@ -73,6 +71,8 @@ const reportActionError = ref('');
 const checks = ref(DEFAULT_CHECKS);
 const fraudTypes = ref(DEFAULT_FRAUD_TYPES);
 const specialTerms = ref(DEFAULT_SPECIAL_TERMS);
+const overallRisk = ref('safe');
+const rentRatioDisplay = ref('-');
 let toastTimer;
 
 onMounted(async () => {
@@ -93,12 +93,6 @@ const fraudStatuses = computed(() =>
   fraudTypes.value.flatMap(({ items }) => items.map(({ status }) => status)),
 );
 const fraudRisk = computed(() => aggregateRiskStatuses(fraudStatuses.value));
-const overallRisk = computed(() =>
-  aggregateRiskStatuses([
-    ...checks.value.map(({ status }) => status),
-    ...fraudStatuses.value,
-  ]),
-);
 const secretaryImage = computed(() => {
   const images = selectSecretaryValue(SECRETARY_IMAGES, activeSecretary.value);
 
@@ -122,11 +116,6 @@ const numericDeposit = computed(() => toNumericAmount(deposit.value));
 const formattedDeposit = computed(() =>
   deposit.value === '-' ? '-' : formatKoreanDeposit(numericDeposit.value),
 );
-const rentRatioDisplay = computed(() =>
-  deposit.value === '-'
-    ? '-'
-    : `${getRentRatio(numericDeposit.value, MARKET_PRICE)}%`,
-);
 
 const applyReport = (report) => {
   const mapped = mapReportDetail(report);
@@ -134,6 +123,8 @@ const applyReport = (report) => {
   currentReportId.value = mapped.analysisReportId ?? null;
   address.value = mapped.address;
   deposit.value = mapped.deposit;
+  overallRisk.value = mapped.risk;
+  rentRatioDisplay.value = mapped.ratio;
   isFavorite.value = mapped.favorite;
   secretary.value = mapped.secretary ?? secretary.value;
   checks.value = mapped.checks;
