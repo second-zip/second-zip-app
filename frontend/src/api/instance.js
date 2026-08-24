@@ -24,11 +24,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 재발급 API가 없으므로 401 응답에서는 인증 정보를 정리하고 로그인으로 이동한다.
+// 재발급 API가 없으므로 인증이 필요한 응답에서는 인증 정보를 정리하고 로그인으로 이동한다.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if ([401, 403].includes(error.response?.status)) {
       removeAccessToken();
       window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
     }

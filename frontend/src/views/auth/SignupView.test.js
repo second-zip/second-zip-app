@@ -233,4 +233,29 @@ describe('SignupView 회원가입 화면', () => {
     expect(wrapper.get('.error-message').text()).toBe('이미 사용 중인 이메일입니다.');
     expect(mocks.replace).not.toHaveBeenCalled();
   });
+
+  it('약관 조회 실패 메시지를 표시한다', async () => {
+    mocks.getLatestTerms.mockRejectedValueOnce({
+      response: { data: { message: '약관을 불러올 수 없습니다.' } },
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.get('.error-message').text()).toBe('약관을 불러올 수 없습니다.');
+    expect(wrapper.findAll('.term-row')).toHaveLength(0);
+  });
+
+  it('입력값이 유효해도 필수 약관에 동의하지 않으면 제출하지 않는다', async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    await fillValidForm(wrapper);
+
+    await wrapper.get('form').trigger('submit');
+
+    expect(mocks.authStore.signup).not.toHaveBeenCalled();
+    expect(wrapper.get('.error-message').text()).toBe(
+      '필수 약관을 모두 확인하고 동의해 주세요.',
+    );
+  });
 });

@@ -98,4 +98,13 @@ describe('useChecklistRecorder', () => {
     expect(mocks.finish).toHaveBeenCalledWith(null);
     expect(mocks.save).not.toHaveBeenCalled();
   });
+
+  test('녹음 시작 실패 시 생성된 서버 세션을 중단한다', async () => {
+    mocks.startRecording.mockRejectedValueOnce(new Error('start failed'));
+    const state = useChecklistRecorder(vi.fn(), ref(9));
+
+    await state.beginRecording();
+
+    expect(mocks.abort).toHaveBeenCalledOnce();
+  });
 });

@@ -75,6 +75,25 @@ describe('fraud dictionary components', () => {
     );
   });
 
+  it('고해상도 썸네일 로딩 실패 시 기본 썸네일로 교체한다', async () => {
+    const wrapper = mount(CFraudTypeCard, {
+      props: {
+        type: {
+          ...fraudType,
+          thumbnailSrc: '/maxres.jpg',
+          thumbnailFallbackSrc: '/fallback.jpg',
+        },
+      },
+    });
+    const image = wrapper.get('button img');
+
+    await image.trigger('error');
+    expect(image.element.src).toContain('/fallback.jpg');
+
+    await image.trigger('error');
+    expect(image.element.dataset.fallbackApplied).toBe('true');
+  });
+
   it('keeps a 9:16 placeholder until a video source is provided', () => {
     const wrapper = mount(BFraudVideoPlayer, {
       props: { fraudType },
@@ -262,6 +281,40 @@ describe('comic guide components', () => {
     await wrapper.vm.$nextTick();
     expect(element.releasePointerCapture).toHaveBeenCalledWith(1);
     expect(wrapper.classes()).not.toContain('is-dragging');
+  });
+
+  it('이미지 로드 시 실제 콘텐츠 높이로 페이지 비율을 보정한다', async () => {
+    const wrapper = mount(CComicScroller, {
+      props: {
+        tab: {
+          id: 'registry',
+          images: [{ id: 'page-trim', src: '/trim-content.png', alt: 'comic' }],
+        },
+      },
+    });
+    const image = wrapper.get('img');
+    Object.defineProperties(image.element, {
+      naturalWidth: { configurable: true, value: 10 },
+      naturalHeight: { configurable: true, value: 20 },
+    });
+    const originalCreateElement = document.createElement.bind(document);
+    const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(
+      (tagName, options) => tagName === 'canvas'
+        ? {
+            getContext: () => ({
+              drawImage: vi.fn(),
+              getImageData: () => ({ data: new Uint8ClampedArray(10 * 20 * 4) }),
+            }),
+          }
+        : originalCreateElement(tagName, options),
+    );
+
+    await image.trigger('load');
+
+    expect(wrapper.get('.comic-scroller__page').attributes('style')).toContain(
+      'aspect-ratio: 10 / 20',
+    );
+    createElementSpy.mockRestore();
   });
 
   it('collapses the assistant message to the current zoom percentage', () => {

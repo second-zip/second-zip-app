@@ -155,4 +155,70 @@ describe('useSavedRecording', () => {
     expect(state.savedRecording.value).not.toBeNull();
     expect(state.deleteErrorMessage.value).toBe('삭제할 수 없어요.');
   });
+
+  test('기존 원격 녹음이 서버에서 사라지면 화면에서도 제거한다', async () => {
+    const { state } = setup(ref(7));
+    await flushPromises();
+    mocks.getFileUrl.mockRejectedValueOnce({ response: { status: 404 } });
+
+    await state.loadRemote(7);
+
+    expect(state.savedRecording.value).toBeNull();
+  });
+
+  test('원격 녹음 조회 실패 메시지를 표시한다', async () => {
+    mocks.getFileUrl.mockRejectedValue({
+      response: { data: { message: '녹음을 불러올 수 없어요.' } },
+    });
+    const { state } = setup(ref(7));
+
+    await flushPromises();
+
+    expect(state.errorMessage.value).toBe('녹음을 불러올 수 없어요.');
+    expect(state.isLoadingRecording.value).toBe(false);
+  });
+
+  test('URL 재발급 실패를 호출자와 화면에 전달한다', async () => {
+    const { state } = setup(ref(7));
+    await flushPromises();
+    state.savedRecording.value.expiresAt = 0;
+    mocks.getFileUrl.mockRejectedValueOnce({
+      response: { data: { message: 'URL을 갱신할 수 없어요.' } },
+    });
+
+    await expect(state.ensureFreshUrl()).rejects.toBeTruthy();
+
+    expect(state.errorMessage.value).toBe('URL을 갱신할 수 없어요.');
+  });
+
+  test('녹음 텍스트 조회 실패를 모달에 표시한다', async () => {
+    mocks.getTranscript.mockRejectedValueOnce(new Error('transcript failed'));
+    const { state } = setup();
+    state.save({ blob: new Blob(), duration: 1 }, { recordingSessionId: 7 });
+
+    await state.openTextModal();
+
+    expect(state.textErrorMessage.value).toBe('녹음 내용을 불러오지 못했어요.');
+    expect(state.isTextLoading.value).toBe(false);
+  });
+
+  test('체크리스트에서 세션 ID가 제거되면 원격 녹음을 비운다', async () => {
+    const recordingSessionId = ref(7);
+    const { state } = setup(recordingSessionId);
+    await flushPromises();
+
+    recordingSessionId.value = null;
+    await nextTick();
+
+    expect(state.savedRecording.value).toBeNull();
+  });
+
+  test('컴포넌트 해제 시 로컬 object URL을 폐기한다', () => {
+    const { state, wrapper } = setup();
+    state.save({ blob: new Blob(), duration: 1 }, { recordingSessionId: 7 });
+
+    wrapper.unmount();
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:recording');
+  });
 });

@@ -11,6 +11,7 @@ export const MOCK_REPORT_DETAIL = {
   detailAddress: '101동 101호',
   deposit: 100000000,
   result: 'SAFE',
+  ratio: 0.5533,
   favorite: true,
   checkResults: [
     // 필수 점검 1: 근저당 설정 금액
@@ -103,6 +104,7 @@ export const SCENARIO_B_REPORT_DETAIL = {
   detailAddress: '101호',
   deposit: 170_000_000,
   result: 'DANGER',
+  ratio: 0.85,
   checkResults: MOCK_REPORT_DETAIL.checkResults.map((check) =>
     check.checkType === 'HUG_GUARANTEE_ELIGIBILITY'
       ? {
@@ -140,6 +142,7 @@ export const SCENARIO_C_REPORT_DETAIL = {
   detailAddress: '101호',
   deposit: 100_000_000,
   result: 'DANGER',
+  ratio: 0.4,
   checkResults: MOCK_REPORT_DETAIL.checkResults.map((check) =>
     check.checkType === 'HUG_GUARANTEE_ELIGIBILITY'
       ? {
@@ -175,6 +178,7 @@ export const SCENARIO_D_REPORT_DETAIL = {
   detailAddress: '101호',
   deposit: 80_000_000,
   result: 'DANGER',
+  ratio: 0.32,
   checkResults: MOCK_REPORT_DETAIL.checkResults.map((check) => {
     if (check.checkType === 'MORTGAGE_EXISTENCE') {
       return {
@@ -226,6 +230,7 @@ export const SCENARIO_E_REPORT_DETAIL = {
   detailAddress: '101호',
   deposit: 100_000_000,
   result: 'DANGER',
+  ratio: null,
   checkResults: MOCK_REPORT_DETAIL.checkResults.map((check) => {
     if (check.checkType === 'BUILDING_USE') {
       return {
@@ -287,6 +292,7 @@ export const SCENARIO_F_REPORT_DETAIL = {
   detailAddress: '101호',
   deposit: 100_000_000,
   result: 'DANGER',
+  ratio: 0.5,
   // TODO: AI/ChatGPT API 연결 후 aiSpecialTerms를 실제 추천 특약 응답으로 교체합니다.
   aiSpecialTerms: [
     {
