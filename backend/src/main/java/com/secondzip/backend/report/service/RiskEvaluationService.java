@@ -271,7 +271,11 @@ public class RiskEvaluationService {
         // 프론트 화면에 표시할 정규화된 건축물 유형
         evidence.put(
                 "buildingUse",
-                buildingTypeLabel(buildingType, rawBuildingUse)
+                buildingTypeLabel(
+                        buildingType,
+                        rawBuildingUse,
+                        hasBuildingLevelNonResidentialUse(building)
+                )
         );
 
         // 건축물대장에서 받은 원래 용도
@@ -291,7 +295,8 @@ public class RiskEvaluationService {
 
     private String buildingTypeLabel(
             String buildingType,
-            String fallback
+            String fallback,
+            boolean hasBuildingLevelNonResidentialUse
     ) {
         if (buildingType == null) {
             return fallback;
@@ -299,7 +304,15 @@ public class RiskEvaluationService {
 
         return switch (buildingType) {
             case "APARTMENT" -> "아파트";
-            case "OFFICETEL" -> "오피스텔";
+            // 건물 전체가 업무시설로 분류됐다는 이유만으로 계약 대상 호까지
+            // 업무용이라고 단정하지 않는다. 해당 호 원문에 업무용/비주거가
+            // 명시된 경우에만 화면에도 "업무용 오피스텔"로 표시한다.
+            case "OFFICETEL" -> isExplicitlyNonResidential(fallback)
+                    ? "업무용 오피스텔"
+                    : classifyBuildingUse(fallback) == BuildingUseKind.UNKNOWN
+                            || hasBuildingLevelNonResidentialUse
+                            ? "오피스텔(용도 확인 필요)"
+                            : "오피스텔";
             case "MULTI_HOUSEHOLD" -> "연립·다세대주택";
             case "MULTI_FAMILY" -> "다가구주택";
             case "SINGLE_FAMILY" -> "단독주택";
@@ -318,8 +331,7 @@ public class RiskEvaluationService {
         // 오피스텔은 법정 주용도가 보통 '업무시설'이다. 따라서 명시적인
         // 주거/비주거 표기를 먼저 분리하지 않으면 실제 주거용 오피스텔도
         // 전부 비주거로 오판한다.
-        if (normalized.contains("비주거")
-                || normalized.contains("업무용")) {
+        if (isExplicitlyNonResidential(normalized)) {
             return BuildingUseKind.NON_RESIDENTIAL;
         }
 
@@ -340,9 +352,13 @@ public class RiskEvaluationService {
         if (normalized.contains("주거용오피스텔")) {
             return BuildingUseKind.RESIDENTIAL;
         }
-        // '오피스텔'만으로는 실제 주거용인지 업무용인지 확정할 수 없다.
+        // 업무용/비주거 표기가 없는 일반 오피스텔은 주거용으로 간주한다.
+        // 다만 '업무시설, 오피스텔'처럼 업무시설이 함께 적힌 경우에는
+        // 실제 전유부 용도를 확정할 수 없으므로 확인 필요로 남긴다.
         if (normalized.contains("오피스텔")) {
-            return BuildingUseKind.UNKNOWN;
+            return normalized.contains("업무시설")
+                    ? BuildingUseKind.UNKNOWN
+                    : BuildingUseKind.RESIDENTIAL;
         }
         if (normalized.contains("업무시설")) {
             return BuildingUseKind.NON_RESIDENTIAL;
@@ -355,6 +371,14 @@ public class RiskEvaluationService {
         return residentialUses.stream().anyMatch(normalized::contains)
                 ? BuildingUseKind.RESIDENTIAL
                 : BuildingUseKind.UNKNOWN;
+    }
+
+    private boolean isExplicitlyNonResidential(String use) {
+        if (use == null || use.isBlank()) {
+            return false;
+        }
+        String normalized = use.replaceAll("\\s+", "");
+        return normalized.contains("비주거") || normalized.contains("업무용");
     }
 
     private enum BuildingUseKind {

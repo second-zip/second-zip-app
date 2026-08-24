@@ -24,10 +24,10 @@ public class RegistryDataParser {
             Pattern.compile("채권최고액\\s*금?\\s*([0-9][0-9,]*)\\s*원?");
     private static final Pattern MORTGAGE_MARKER = Pattern.compile("채권최고액");
     private static final Pattern OWNER_PREFIX = Pattern.compile(
-            "(?<!\\S)(소유자|공유자|수탁자)\\s*[:：]?\\s*([^\\n|]+)"
+            "(?<!\\S)(소유자|공유자|수탁자|소유권자|명의인)\\s*[:：]?\\s*([^\\n|]+)"
     );
     private static final Pattern OWNER_SUFFIX_ROLE = Pattern.compile(
-            "(?m)^\\s*(.+?)\\s*\\((소유자|공유자|수탁자)\\)\\s*(?:$|[^\\n]*)"
+            "(?m)^\\s*(.+?)\\s*\\((소유자|공유자|수탁자|소유권자|명의인)\\)\\s*(?:$|[^\\n]*)"
     );
     private static final Pattern OWNER_TRAILING_FIELDS = Pattern.compile(
             "\\s+(?:주민등록번호|법인등록번호|주소|지분|순위번호|등기원인"
@@ -104,7 +104,10 @@ public class RegistryDataParser {
             return null;
         }
 
-        OwnerExtraction owners = extractOwners(currentText, usesHistory);
+        OwnerExtraction owners = mergeOwners(
+                extractOwners(currentText, usesHistory),
+                extractStructuredOwners(entries, "resRegistrationSumList")
+        );
         if (owners.names().isEmpty() && !historyText.isBlank() && !usesHistory) {
             owners = extractOwners(historyText, true);
         }
@@ -369,6 +372,152 @@ public class RegistryDataParser {
             accumulator.add(suffix.group(2), cleanOwnerName(suffix.group(1)));
         }
         return accumulator.result();
+    }
+
+    /**
+     * 주요 등기사항 요약에 소유자명이 별도 JSON 필드로 내려오는 응답을 보완한다.
+     *
+     * 기존 파서는 map의 값만 이어 붙인 뒤 "소유자 홍길동" 같은 문장을 찾기 때문에
+     * resOwnerName: "홍길동"처럼 역할이 key에만 있는 응답에서는 이름을
+     * 놓친다. 현재 유효한 권리만 담는 요약 노드 안에서만 구조화 필드를 읽어 과거
+     * 소유자를 현재 소유자로 잘못 합치는 일을 막는다.
+     */
+    private OwnerExtraction extractStructuredOwners(Object node, String targetKey) {
+        OwnerAccumulator accumulator = new OwnerAccumulator(false);
+        collectStructuredOwnersFromNamedNode(node, targetKey, accumulator);
+        return accumulator.result();
+    }
+
+    private void collectStructuredOwnersFromNamedNode(
+            Object node,
+            String targetKey,
+            OwnerAccumulator accumulator
+    ) {
+        if (node instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                Object value = entry.getValue();
+                if (targetKey.equals(String.valueOf(entry.getKey()))) {
+                    collectStructuredOwnerValues(value, null, accumulator);
+                } else {
+                    collectStructuredOwnersFromNamedNode(
+                            value,
+                            targetKey,
+                            accumulator
+                    );
+                }
+            }
+        } else if (node instanceof Collection<?> collection) {
+            collection.forEach(item -> collectStructuredOwnersFromNamedNode(
+                    item,
+                    targetKey,
+                    accumulator
+            ));
+        }
+    }
+
+    private void collectStructuredOwnerValues(
+            Object node,
+            String inheritedRole,
+            OwnerAccumulator accumulator
+    ) {
+        if (node instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                Object value = entry.getValue();
+                String explicitRole = ownerRoleFromKey(key);
+                String role = explicitRole != null ? explicitRole : inheritedRole;
+
+                if (value instanceof Map<?, ?> || value instanceof Collection<?>) {
+                    collectStructuredOwnerValues(value, role, accumulator);
+                    continue;
+                }
+                if (role == null || !isStructuredOwnerNameKey(key, explicitRole)) {
+                    continue;
+                }
+                String ownerName = cleanOwnerName(
+                        value instanceof CharSequence ? value.toString() : null
+                );
+                if (isPlausibleOwnerName(ownerName)) {
+                    accumulator.add(role, ownerName);
+                }
+            }
+        } else if (node instanceof Collection<?> collection) {
+            collection.forEach(item -> collectStructuredOwnerValues(
+                    item,
+                    inheritedRole,
+                    accumulator
+            ));
+        }
+    }
+
+    private String ownerRoleFromKey(String rawKey) {
+        String key = normalizeFieldKey(rawKey);
+        if (key.contains("수탁자") || key.contains("trustee")) {
+            return "수탁자";
+        }
+        if (key.contains("공유자") || key.contains("coowner")
+                || key.contains("jointowner") || key.contains("sharedowner")) {
+            return "공유자";
+        }
+        if (key.contains("소유자") || key.contains("소유권자")
+                || key.contains("owner")) {
+            return "소유자";
+        }
+        return null;
+    }
+
+    private boolean isStructuredOwnerNameKey(
+            String rawKey,
+            String explicitRole
+    ) {
+        String key = normalizeFieldKey(rawKey);
+        if (key.contains("type") || key.contains("code") || key.endsWith("no")
+                || key.contains("number") || key.contains("id")
+                || key.contains("address") || key.contains("addr")
+                || key.contains("ratio") || key.contains("share")
+                || key.contains("count") || key.endsWith("yn")) {
+            return false;
+        }
+        if (key.endsWith("name") || key.endsWith("nm")
+                || key.equals("name") || key.equals("nm")) {
+            return true;
+        }
+        // resOwner, 소유자 처럼 key 자체가 역할이자 이름인 경우.
+        return explicitRole != null
+                && (key.endsWith("owner") || key.endsWith("trustee")
+                || key.endsWith("소유자") || key.endsWith("소유권자")
+                || key.endsWith("공유자") || key.endsWith("수탁자"));
+    }
+
+    private String normalizeFieldKey(String rawKey) {
+        return rawKey == null
+                ? ""
+                : rawKey.replaceAll("[^A-Za-z가-힣]", "")
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isPlausibleOwnerName(String ownerName) {
+        if (ownerName == null || ownerName.length() < 2 || ownerName.length() > 100) {
+            return false;
+        }
+        String normalized = ownerName.replaceAll("\\s+", "");
+        return !normalized.matches("(?i)(?:true|false|yes|no|individual|corporation)")
+                && !normalized.matches("[0-9*\\-]+")
+                && !normalized.matches("[YN]");
+    }
+
+    private OwnerExtraction mergeOwners(
+            OwnerExtraction first,
+            OwnerExtraction second
+    ) {
+        Set<String> names = new TreeSet<>();
+        if (first != null) names.addAll(first.names());
+        if (second != null) names.addAll(second.names());
+        return new OwnerExtraction(
+                names,
+                first != null && first.hasTrusteeRole()
+                        || second != null && second.hasTrusteeRole()
+        );
     }
 
     private String cleanOwnerName(String source) {
@@ -737,7 +886,10 @@ public class RegistryDataParser {
             if (name == null) {
                 return;
             }
-            if (latestOnly && ("소유자".equals(role) || "수탁자".equals(role))) {
+            if (latestOnly && ("소유자".equals(role)
+                    || "소유권자".equals(role)
+                    || "명의인".equals(role)
+                    || "수탁자".equals(role))) {
                 names.clear();
                 hasTrusteeRole = false;
             }

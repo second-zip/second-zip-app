@@ -292,6 +292,86 @@ class RegistryDataParserTest {
         assertNull(parser.parse(differentUnit, "가동 B101호"));
     }
 
+    @Test
+    void parsesOwnerFromStructuredSummaryField() {
+        Map<String, Object> response = Map.of(
+                "resRegisterEntriesList",
+                List.of(Map.of(
+                        "resRegistrationSumList",
+                        List.of(Map.of(
+                                "resOwnerName", "홍길동",
+                                "resOwnerType", "INDIVIDUAL",
+                                "resContents", "갑구 현재 권리관계"
+                        )),
+                        "resRegistrationHisList", List.of()
+                ))
+        );
+
+        RegistryData result = parser.parse(response);
+
+        assertEquals(List.of("홍길동"), result.getOwnerNames());
+        assertEquals("홍길동", result.getOwnerName());
+        assertEquals("INDIVIDUAL", result.getOwnerType());
+    }
+
+    @Test
+    void parsesNestedStructuredOwnerAndMultipleCoOwners() {
+        Map<String, Object> response = Map.of(
+                "resRegisterEntriesList",
+                List.of(Map.of(
+                        "resRegistrationSumList",
+                        List.of(
+                                Map.of(
+                                        "resOwnerInfo",
+                                        Map.of("resName", "주식회사 세컨드집")
+                                ),
+                                Map.of("resCoOwnerName", "홍길동"),
+                                Map.of("resCoOwnerName", "김철수")
+                        ),
+                        "resRegistrationHisList", List.of()
+                ))
+        );
+
+        RegistryData result = parser.parse(response);
+
+        assertEquals(
+                List.of("김철수", "주식회사 세컨드집", "홍길동"),
+                result.getOwnerNames()
+        );
+        assertEquals("CORPORATION", result.getOwnerType());
+    }
+
+    @Test
+    void doesNotTreatStructuredOwnerMetadataAsAName() {
+        Map<String, Object> response = Map.of(
+                "resRegisterEntriesList",
+                List.of(Map.of(
+                        "resRegistrationSumList",
+                        List.of(Map.of(
+                                "resOwnerType", "INDIVIDUAL",
+                                "resOwnerCode", "01",
+                                "resContents", "채권최고액 금 100,000,000원"
+                        )),
+                        "resRegistrationHisList", List.of()
+                ))
+        );
+
+        RegistryData result = parser.parse(response);
+
+        assertTrue(result.getOwnerNames().isEmpty());
+        assertNull(result.getOwnerName());
+        assertNull(result.getOwnerType());
+    }
+
+    @Test
+    void parsesAdditionalCurrentOwnerRoleLabels() {
+        RegistryData owner = parser.parse(data("소유권자 홍길동", ""));
+        RegistryData nominee = parser.parse(data("김철수 (명의인)", ""));
+
+        assertEquals("홍길동", owner.getOwnerName());
+        assertEquals("김철수", nominee.getOwnerName());
+    }
+
     private Map<String, Object> data(
             String summaryText,
             String historyText
