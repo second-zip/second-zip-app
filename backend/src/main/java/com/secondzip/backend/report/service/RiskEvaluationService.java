@@ -223,7 +223,7 @@ public class RiskEvaluationService {
      *
      * 주의 — 이 판정은 "고지된 용도와 실제 용도가 다른가"를 보지 않는다.
      * 비교할 고지 정보가 없기 때문이다. 유형2-B에서 같은 결과를 재사용하지만
-     * 그 항목 이름({@code FALSE_BUILDING_USE_INFORMATION})이 뜻하는 '허위 안내'를
+     * 그 항목 이름(FALSE_BUILDING_USE_INFORMATION)이 뜻하는 '허위 안내'를
      * 실제로 검증하는 것은 아니다.
      *
      * [판정 로직]
@@ -232,7 +232,7 @@ public class RiskEvaluationService {
      * - 전유부가 업무용·비주거용 -> DANGER
      * - 주거/업무 구분이 없는 오피스텔·부속용도 -> CAUTION / UNVERIFIED
      *
-     * 근생빌라 사기의 판별 기준은 <b>계약 대상 호의 용도</b>이지 건물 전체의
+     * 근생빌라 사기의 판별 기준은 계약 대상 호의 용도이지 건물 전체의
      * 주용도가 아니다. 1층이 근린생활시설인 정상 다세대·연립은 국내에 흔하므로,
      * 표제부에만 나타나는 비주거 표기를 그대로 DANGER로 확정하면 정상 매물이
      * 대량으로 위험하다고 표시된다. 대신 CAUTION으로 남겨 사용자가 해당 호의
@@ -258,16 +258,53 @@ public class RiskEvaluationService {
         return uses != null && !uses.isBlank();
     }
 
+    // 건축물 용도
     private Map<String, Object> buildingUseEvidence(BuildingData building) {
         Map<String, Object> evidence = new LinkedHashMap<>();
-        evidence.put("buildingUse", building != null ? building.getBuildingUse() : null);
+
+        String rawBuildingUse =
+                building != null ? building.getBuildingUse() : null;
+
+        String buildingType =
+                building != null ? building.getBuildingType() : null;
+
+        // 프론트 화면에 표시할 정규화된 건축물 유형
+        evidence.put(
+                "buildingUse",
+                buildingTypeLabel(buildingType, rawBuildingUse)
+        );
+
+        // 건축물대장에서 받은 원래 용도
+        evidence.put("buildingUseRaw", rawBuildingUse);
+
         // 표제부에만 있는 비주거 용도. 전유부 용도와 섞어 적으면 계약 대상 호가
         // 비주거인 것처럼 읽히므로 반드시 분리해 남긴다.
         evidence.put(
                 "buildingLevelNonResidentialUses",
-                building != null ? building.getBuildingLevelNonResidentialUses() : null
+                building != null
+                        ? building.getBuildingLevelNonResidentialUses()
+                        : null
         );
+
         return evidence;
+    }
+
+    private String buildingTypeLabel(
+            String buildingType,
+            String fallback
+    ) {
+        if (buildingType == null) {
+            return fallback;
+        }
+
+        return switch (buildingType) {
+            case "APARTMENT" -> "아파트";
+            case "OFFICETEL" -> "오피스텔";
+            case "MULTI_HOUSEHOLD" -> "연립·다세대주택";
+            case "MULTI_FAMILY" -> "다가구주택";
+            case "SINGLE_FAMILY" -> "단독주택";
+            default -> fallback;
+        };
     }
 
     /** 비주거 표기가 주거 단어를 함께 포함하더라도 반드시 먼저 잡는다. */
@@ -424,9 +461,9 @@ public class RiskEvaluationService {
     /**
      * 실제로 보는 것: 등기 갑구의 압류·가압류·경매개시결정 등 권리제한 표시.
      *
-     * 유형2-C({@code RIGHTS_INFRINGEMENT_CONCEALMENT})가 같은 결과를 재사용한다.
+     * 유형2-C(RIGHTS_INFRINGEMENT_CONCEALMENT)가 같은 결과를 재사용한다.
      * 다만 그 항목 이름이 뜻하는 "은폐"(고지 내용과 실제가 다름)를 검증하는
-     * 것은 아니다 — 비교할 고지 원문이 없어 여기서는 등기부 자체의 권리제한
+     * 것은 아니다. 비교할 고지 원문이 없어 여기서는 등기부 자체의 권리제한
      * 유무만 본다.
      */
     private JudgementDTO judgeRightsInfringement(RegistryData registry) {
@@ -527,7 +564,7 @@ public class RiskEvaluationService {
     /**
      * 실제로 보는 것: 가격 조건 하나만 본다.
      *
-     * 필수점검 4번({@link #judgeHugEligibility})은 여기에 지역별 보증금 한도,
+     * 필수점검 4번(judgeHugEligibility)은 여기에 지역별 보증금 한도,
      * 용도·위반건축물·권리침해·신탁·소유관계까지 더해 더 엄격하게 본다.
      * 그 판정을 여기서 그대로 재사용하면 "보증금이 수도권 한도 7억을 넘는다"는
      * 이유만으로 전세가율 30%인 매물이 깡통전세 DANGER로 확정된다.
@@ -604,7 +641,7 @@ public class RiskEvaluationService {
      *
      * 집합건물(아파트·다세대·오피스텔 등)은 해당 없음이다.
      * 대지권이 전유부분에 포함되어 토지 등기를 따로 확인할 필요가 없고,
-     * 실제로 {@code landOwnerName}도 조회하지 않는다.
+     * 실제로 landOwnerName도 조회하지 않는다.
      * 예전에는 이 경우가 CAUTION으로 남아 아파트는 이 항목이 영원히
      * "확인 불가"로 표시됐다.
      *
