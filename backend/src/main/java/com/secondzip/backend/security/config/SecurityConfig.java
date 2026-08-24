@@ -69,7 +69,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // CORS 사전 요청
                 .antMatchers(HttpMethod.OPTIONS, "/**")
                 .permitAll()
-                /*.antMatchers(
+
+                // 인증 없이 접근 가능
+                .antMatchers(
                         "/api/auth/signup",
                         "/api/auth/login",
                         "/api/auth/reissue",
@@ -78,10 +80,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/v2/api-docs",
                         "/webjars/**"
                 ).permitAll()
-                .antMatchers(HttpMethod.GET, "/api/analysis-reports/shared/*")
-                .permitAll()
-                .anyRequest().authenticated()*/
-                .anyRequest().permitAll()
+
+                // 비회원 GET API
+                .antMatchers(
+                        HttpMethod.GET,
+                        "/api/terms/latest",
+                        "/api/maps/fraud-damage",
+                        "/api/maps/jeonse-price",
+                        "/api/analysis-reports/shared/*"
+                ).permitAll()
+
+                // 나머지는 로그인 필요
+                .anyRequest().authenticated()
                 .and()
                 //기본 로그인 필터보다 JWT 필터를 먼저 실행
                 .addFilterBefore(
