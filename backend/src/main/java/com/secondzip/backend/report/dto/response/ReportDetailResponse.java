@@ -6,6 +6,8 @@ import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.RiskLevel;
 import lombok.Getter;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,6 +56,38 @@ public class ReportDetailResponse {
      * 계산에 실제로 쓰였는지는 이 필드로 확인.
      */
     private final String basePriceSource;
+
+    /**
+     * 전세가율(전세보증금 / 위험도 판정 기준가).
+     * 예: 0.75는 75%를 뜻한다. 계산할 가격이 없으면 null이다.
+     */
+    public Double getRatio() {
+        Long basePrice = resolveBasePrice();
+        if (deposit == null || deposit < 0L || basePrice == null || basePrice <= 0L) {
+            return null;
+        }
+        return BigDecimal.valueOf(deposit)
+                .divide(BigDecimal.valueOf(basePrice), 4, RoundingMode.HALF_UP)
+                .doubleValue();
+    }
+
+    private Long resolveBasePrice() {
+        if ("RECENT_SALE_PRICE".equals(basePriceSource)) {
+            return recentSalePrice;
+        }
+        if ("OFFICIAL_PRICE_CONVERTED".equals(basePriceSource)
+                && officialPrice != null && officialPrice > 0L) {
+            try {
+                return BigDecimal.valueOf(officialPrice)
+                        .multiply(new BigDecimal("1.4"))
+                        .setScale(0, RoundingMode.DOWN)
+                        .longValueExact();
+            } catch (ArithmeticException e) {
+                return null;
+            }
+        }
+        return null;
+    }
 
     /**
      * 실거래가 필드가 추가되기 전 호출부(기존 테스트 등) 호환용 생성자.

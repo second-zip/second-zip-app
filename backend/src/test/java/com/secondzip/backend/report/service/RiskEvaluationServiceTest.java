@@ -300,6 +300,90 @@ class RiskEvaluationServiceTest {
     }
 
     @Test
+    @DisplayName("업무용이 해당 호 원문에 명시된 오피스텔만 업무용으로 표시하고 위험 판정한다")
+    void explicitlyBusinessOfficetelIsLabeledAndJudgedDanger() {
+        BuildingData building = cleanApartment();
+        building.setBuildingType("OFFICETEL");
+        building.setBuildingUse("업무용 오피스텔");
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), building, cleanPrice(), 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.BUILDING_USE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.DANGER, result.getRiskLevel());
+        assertEquals("업무용 오피스텔", result.getEvidence().get("buildingUse"));
+        assertEquals("업무용 오피스텔", result.getEvidence().get("buildingUseRaw"));
+    }
+
+    @Test
+    @DisplayName("건물 전체에 업무시설이 있어도 해당 호가 업무용으로 명시되지 않으면 오피스텔 주의로 남긴다")
+    void ambiguousOfficetelInMixedUseBuildingStaysCaution() {
+        BuildingData building = cleanApartment();
+        building.setBuildingType("OFFICETEL");
+        building.setBuildingUse("오피스텔, 기계실, 전기실, 통신실");
+        building.setBuildingLevelNonResidentialUses("업무시설, 오피스텔및근린생활시설");
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), building, cleanPrice(), 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.BUILDING_USE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
+        assertEquals(DataStatus.VERIFIED, result.getDataStatus());
+        assertEquals("오피스텔(용도 확인 필요)", result.getEvidence().get("buildingUse"));
+    }
+
+    @Test
+    @DisplayName("업무용 표기가 없는 일반 오피스텔은 주거용으로 간주한다")
+    void plainOfficetelIsSafe() {
+        BuildingData building = cleanApartment();
+        building.setBuildingType("OFFICETEL");
+        building.setBuildingUse("오피스텔");
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), building, cleanPrice(), 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.BUILDING_USE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.SAFE, result.getRiskLevel());
+        assertEquals(DataStatus.VERIFIED, result.getDataStatus());
+        assertEquals("오피스텔", result.getEvidence().get("buildingUse"));
+    }
+
+    @Test
+    @DisplayName("업무시설과 오피스텔이 함께 적힌 전유부는 용도 확인 필요로 표시한다")
+    void ambiguousBusinessFacilityOfficetelNeedsUseConfirmation() {
+        BuildingData building = cleanApartment();
+        building.setBuildingType("OFFICETEL");
+        building.setBuildingUse("업무시설, 오피스텔");
+
+        CheckResultDTO result = service.evaluate(
+                        cleanRegistry(), building, cleanPrice(), 300_000_000L,
+                        "서울특별시 강남구 테헤란로 152"
+                ).getCheckResultDTOS().stream()
+                .filter(item -> item.getCheckType() == CheckType.BUILDING_USE)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
+        assertEquals(DataStatus.UNVERIFIED, result.getDataStatus());
+        assertEquals(
+                "오피스텔(용도 확인 필요)",
+                result.getEvidence().get("buildingUse")
+        );
+    }
+
+    @Test
     @DisplayName("계약 대상 호 자체가 근린생활시설이면 위험으로 판정한다")
     void nonResidentialUnitIsDanger() {
         BuildingData building = cleanApartment();

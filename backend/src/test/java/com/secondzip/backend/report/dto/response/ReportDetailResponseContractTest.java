@@ -133,6 +133,8 @@ class ReportDetailResponseContractTest {
         assertTrue(json.get("officialPrice").isNull());
         assertTrue(json.has("basePriceSource"));
         assertTrue(json.get("basePriceSource").isNull());
+        assertTrue(json.has("ratio"));
+        assertTrue(json.get("ratio").isNull());
     }
 
     @Test
@@ -168,6 +170,36 @@ class ReportDetailResponseContractTest {
 
         assertTrue(json.has("basePriceSource"), "basePriceSource가 있어야 한다");
         assertEquals("RECENT_SALE_PRICE", json.get("basePriceSource").asText());
+
+        assertTrue(json.has("ratio"), "ratio가 있어야 한다");
+        assertEquals(0.5556, json.get("ratio").asDouble(), 0.00001);
+    }
+
+    @Test
+    @DisplayName("실거래가가 없으면 공시가격 140% 환산값으로 전세가율을 계산한다")
+    void calculatesRatioFromConvertedOfficialPrice() throws Exception {
+        ReportDetailResponse response = new ReportDetailResponse(
+                1L,
+                "서울 강남구 테헤란로 152",
+                null,
+                490_000_000L,
+                RiskLevel.CAUTION,
+                false,
+                "APARTMENT",
+                false,
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                500_000_000L,
+                "OFFICIAL_PRICE_CONVERTED"
+        );
+
+        JsonNode json = objectMapper.readTree(
+                objectMapper.writeValueAsString(response)
+        );
+
+        assertEquals(0.7, json.get("ratio").asDouble(), 0.00001);
     }
 
     @Test
