@@ -109,7 +109,7 @@ public class ReportQueryService {
 
     // data_status가 비어 있거나 파싱할 수 없는 값이면 "확인 완료(VERIFIED)"가 아니라
     // "확인 안 됨(UNVERIFIED)"으로 처리한다. "틀린 정보 > 정보 없음" 원칙: 알 수 없는
-    // 상태를 확인된 것처럼 보여주는 쪽이 더 위험.
+    // 상태를 확인된 것처럼 보여주는 쪽이 더 위험하다.
     private DataStatus parseDataStatus(String raw) {
         if (raw == null) {
             return DataStatus.UNVERIFIED;
@@ -129,7 +129,7 @@ public class ReportQueryService {
             List<DetailResultDTO> details =
                     reportMapper.findDetailResultsByFraudTypeId(row.getReportFraudTypeId());
 
-            // parseDataStatus와 동일한 이유로 null이면 UNVERIFIED로 처리.
+            // parseDataStatus와 동일한 이유로 null이면 UNVERIFIED로 처리한다.
             List<DetailResultView> detailViews = details.stream()
                     .map(d -> new DetailResultView(
                             d.getDetailType(),

@@ -44,8 +44,8 @@ public class AnalysisWorkflowStateDTO {
      *
      * executeLocked가 과금이 끝난 등기부 조회 결과를 평가·저장 이전에 이 필드에
      * 담아 둔다. 평가나 저장이 실패해 재시도로 넘어가도 이 값이 남아 있으면
-     * registryDataProvider를 다시 호출하지 않고 재사용해 중복 과금을 막음.
-     * 분석이 최종 성공하면 더 이상 필요 없으므로 null로 비.
+     * registryDataProvider를 다시 호출하지 않고 재사용해 중복 과금을 막는다.
+     * 분석이 최종 성공하면 더 이상 필요 없으므로 null로 비운다.
      */
     private RegistryData registryData;
 
