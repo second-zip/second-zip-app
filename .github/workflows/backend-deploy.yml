@@ -3,7 +3,7 @@ name: Backend CI/CD
 on:
   push:
     branches:
-      - develop
+      - main
     paths:
       - 'backend/**'
       - '.github/workflows/backend-deploy.yml'
@@ -39,6 +39,9 @@ jobs:
 
       - name: Grant execute permission for Gradle
         run: chmod +x backend/gradlew
+
+      - name: Run tests
+        run: ./backend/gradlew -p backend clean test --no-daemon
 
       - name: Build WAR
         run: ./backend/gradlew -p backend clean war --no-daemon
