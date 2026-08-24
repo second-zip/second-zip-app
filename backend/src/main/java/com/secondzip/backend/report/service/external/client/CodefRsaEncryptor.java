@@ -13,8 +13,8 @@ import javax.crypto.Cipher;
 public class CodefRsaEncryptor {
 
     /**
-     * @param plainText 평문 (예: 4자리 비밀번호)
-     * @param publicKeyBase64 CODEF 대시보드에서 발급받은 공개키 문자열
+     plainText 평문 (예: 4자리 비밀번호)
+     publicKeyBase64 CODEF 대시보드에서 발급받은 공개키 문자열
      */
     public static String encrypt(String plainText, String publicKeyBase64) {
         try {

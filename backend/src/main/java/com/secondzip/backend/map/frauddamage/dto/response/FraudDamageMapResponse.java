@@ -2,7 +2,7 @@ package com.secondzip.backend.map.frauddamage.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.secondzip.backend.map.common.enums.RegionLevel;
-import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegionVO;
+import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegion;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -39,10 +39,10 @@ public class FraudDamageMapResponse {
             String parentRegionName,
             LocalDate baseDate,
             Long scopeTotalDamageHouseCount,
-            List<FraudDamageRegionVO> fraudDamageRegionVOs
+            List<FraudDamageRegion> fraudDamageRegions
     ) {
         List<FraudDamageRegionResponse> regions =
-                fraudDamageRegionVOs.stream()
+                fraudDamageRegions.stream()
                         .map(FraudDamageRegionResponse::from)
                         .collect(Collectors.toList());
 

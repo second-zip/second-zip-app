@@ -1,6 +1,6 @@
 package com.secondzip.backend.account.dto.response;
 
-import com.secondzip.backend.account.domain.AccountVO;
+import com.secondzip.backend.account.domain.Account;
 import com.secondzip.backend.account.enums.CharacterType;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +14,7 @@ public class AccountResponseDTO {
     private String nickname;
     private CharacterType characterType;
 
-    public static AccountResponseDTO from(AccountVO account) {
+    public static AccountResponseDTO from(Account account) {
         return AccountResponseDTO.builder()
                 .accountId(account.getAccountId())
                 .email(account.getEmail())

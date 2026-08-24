@@ -4,6 +4,7 @@ import RecordingPlayer from './RecordingPlayer.vue';
 defineProps({
   recording: { type: Object, required: true },
   canDelete: { type: Boolean, default: false },
+  beforePlay: { type: Function, default: undefined },
 });
 defineEmits(['delete', 'show-text']);
 </script>
@@ -13,6 +14,7 @@ defineEmits(['delete', 'show-text']);
     <RecordingPlayer
       :src="recording.url"
       :fallback-duration="recording.duration"
+      :before-play="beforePlay"
     />
     <div class="recording-saved__actions d-flex gap-2">
       <button

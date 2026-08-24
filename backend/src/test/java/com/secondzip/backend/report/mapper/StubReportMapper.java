@@ -1,7 +1,12 @@
 package com.secondzip.backend.report.mapper;
 
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
+import com.secondzip.backend.report.domain.ReportShareInfo;
+import com.secondzip.backend.report.domain.ReportSpecialTerm;
+import com.secondzip.backend.report.dto.DetailResultDTO;
+import com.secondzip.backend.report.dto.VerifiedChecklistItemDTO;
 import com.secondzip.backend.report.dto.response.ReportListItem;
 import com.secondzip.backend.report.enums.DataStatus;
 import com.secondzip.backend.report.enums.DetailType;
@@ -9,7 +14,6 @@ import com.secondzip.backend.report.enums.RiskLevel;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 테스트용 ReportMapper 기본 구현.
@@ -19,11 +23,11 @@ import java.util.Map;
 public class StubReportMapper implements ReportMapper {
 
     @Override
-    public void insertCheckResult(Map<String, Object> params) {
+    public void insertCheckResult(ReportCheckResult checkResult) {
     }
 
     @Override
-    public void insertFraudTypeMap(Map<String, Object> params) {
+    public void insertFraudType(ReportFraudType fraudType) {
     }
 
     @Override
@@ -36,13 +40,13 @@ public class StubReportMapper implements ReportMapper {
     }
 
     @Override
-    public void insertReportMap(Map<String, Object> params) {
+    public void insertReport(AnalysisReport report) {
     }
 
     @Override
     public void insertChecklistVerifications(
             Long analysisReportId,
-            List<VerifiedChecklistItem> items
+            List<VerifiedChecklistItemDTO> items
     ) {
     }
 
@@ -67,22 +71,22 @@ public class StubReportMapper implements ReportMapper {
     }
 
     @Override
-    public Map<String, Object> findReportById(Long reportId) {
-        return Map.of();
+    public AnalysisReport findReportById(Long reportId) {
+        return new AnalysisReport();
     }
 
     @Override
-    public List<Map<String, Object>> findCheckResultsByReportId(Long reportId) {
+    public List<ReportCheckResult> findCheckResultsByReportId(Long reportId) {
         return List.of();
     }
 
     @Override
-    public List<Map<String, Object>> findFraudTypesByReportId(Long reportId) {
+    public List<ReportFraudType> findFraudTypesByReportId(Long reportId) {
         return List.of();
     }
 
     @Override
-    public List<DetailResult> findDetailResultsByFraudTypeId(Long fraudTypeId) {
+    public List<DetailResultDTO> findDetailResultsByFraudTypeId(Long fraudTypeId) {
         return List.of();
     }
 
@@ -92,7 +96,7 @@ public class StubReportMapper implements ReportMapper {
     }
 
     @Override
-    public List<Map<String, Object>> findSpecialTermsByReportId(Long reportId) {
+    public List<ReportSpecialTerm> findSpecialTermsByReportId(Long reportId) {
         return List.of();
     }
 
@@ -121,7 +125,7 @@ public class StubReportMapper implements ReportMapper {
     }
 
     @Override
-    public Map<String, Object> findShareInfoByReportId(Long reportId) {
+    public ReportShareInfo findShareInfoByReportId(Long reportId) {
         return null;
     }
 

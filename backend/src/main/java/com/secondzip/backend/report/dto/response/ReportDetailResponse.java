@@ -19,7 +19,7 @@ public class ReportDetailResponse {
     /**
      * 건축물 유형. SINGLE_FAMILY / MULTI_FAMILY / APARTMENT / MULTI_HOUSEHOLD / OFFICETEL.
      *
-     * <p>이 필드가 추가되기 전에 생성된 리포트는 null이다.
+     * 이 필드가 추가되기 전에 생성된 리포트는 null이다.
      */
     private String housingCategory;
 

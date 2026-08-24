@@ -36,7 +36,7 @@ public class RecordingWebSocketHandler
     }
 
     @Override
-    protected void handleBinaryMessage(
+    public void handleBinaryMessage(
             WebSocketSession session,
             BinaryMessage message
     ) {

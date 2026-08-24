@@ -1,7 +1,7 @@
 package com.secondzip.backend.record.service;
 
 import com.secondzip.backend.record.client.ChecklistAnalysisClient;
-import com.secondzip.backend.record.domain.RecordingSessionVO;
+import com.secondzip.backend.record.domain.RecordingSession;
 import com.secondzip.backend.record.dto.request.ChecklistItemInput;
 import com.secondzip.backend.record.dto.response.ChecklistAnalysisResult;
 import com.secondzip.backend.record.enums.ChecklistAnalysisStatus;
@@ -29,7 +29,7 @@ public class LiveChecklistAnalysisServiceImpl
             Long recordingSessionId,
             String transcript
     ) {
-        RecordingSessionVO recordingSession =
+        RecordingSession recordingSession =
                 recordingSessionMapper.findById(recordingSessionId);
 
         if (recordingSession == null || recordingSession.getReportChecklistId() == null) {

@@ -14,4 +14,6 @@ public class ChecklistDetailResponseDTO {
     private String detailAddress;
 
     private List<ChecklistResponseDTO> items;
+
+    private Long recordingSessionId;
 }

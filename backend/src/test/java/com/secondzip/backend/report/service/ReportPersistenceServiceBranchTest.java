@@ -1,11 +1,10 @@
 package com.secondzip.backend.report.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.FraudTypeResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.VerifiedChecklistItem;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.domain.ReportFraudType;
+import com.secondzip.backend.report.dto.*;
 import com.secondzip.backend.report.dto.response.ReportDetailResponse;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
@@ -25,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
@@ -41,38 +39,36 @@ class ReportPersistenceServiceBranchTest {
         ReportMapper mapper = mock(ReportMapper.class);
         ReportQueryService queryService = mock(ReportQueryService.class);
         doAnswer(invocation -> {
-            Map<String, Object> params = invocation.getArgument(0);
-            params.put("reportId", 99L);
+            invocation.getArgument(0, AnalysisReport.class).setAnalysisReportId(99L);
             return null;
-        }).when(mapper).insertReportMap(anyMap());
+        }).when(mapper).insertReport(any(AnalysisReport.class));
         doAnswer(invocation -> {
-            Map<String, Object> params = invocation.getArgument(0);
-            params.put("fraudTypeId", 200L);
+            invocation.getArgument(0, ReportFraudType.class).setReportFraudTypeId(200L);
             return null;
-        }).when(mapper).insertFraudTypeMap(anyMap());
+        }).when(mapper).insertFraudType(any(ReportFraudType.class));
         ReportPersistenceService service = new ReportPersistenceService(
                 mapper,
                 new ObjectMapper(),
                 queryService
         );
 
-        CheckResult hugCheck = new CheckResult(
+        CheckResultDTO hugCheck = new CheckResultDTO(
                 CheckType.HUG_GUARANTEE_ELIGIBILITY,
                 RiskLevel.SAFE,
                 DataStatus.VERIFIED,
                 Map.of("deposit", 100_000_000L)
         );
-        DetailResult ratioDetail = new DetailResult(
+        DetailResultDTO ratioDetail = new DetailResultDTO(
                 DetailType.HIGH_JEONSE_RATIO,
-                RiskLevel.CAUTION,
+                RiskLevel.SAFE,
                 DataStatus.VERIFIED
         );
-        FraudTypeResult fraud = new FraudTypeResult(
+        FraudTypeResultDTO fraud = new FraudTypeResultDTO(
                 FraudType.UNDERWATER_JEONSE,
                 RiskLevel.CAUTION,
                 List.of(ratioDetail)
         );
-        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+        RiskEvaluationResultDTO evaluation = new RiskEvaluationResultDTO(
                 RiskLevel.CAUTION,
                 List.of(hugCheck),
                 List.of(fraud)
@@ -94,28 +90,38 @@ class ReportPersistenceServiceBranchTest {
         assertEquals(1, result.getFraudTypes().size());
         assertFalse(result.getTrustProperty());
 
-        ArgumentCaptor<Map<String, Object>> checkCaptor =
-                ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<ReportCheckResult> checkCaptor =
+                ArgumentCaptor.forClass(ReportCheckResult.class);
         verify(mapper).insertCheckResult(checkCaptor.capture());
-        assertEquals(DataStatus.VERIFIED, checkCaptor.getValue().get("dataStatus"));
+        assertEquals(
+                DataStatus.VERIFIED.name(),
+                checkCaptor.getValue().getDataStatus()
+        );
         assertEquals(
                 "{\"deposit\":100000000}",
-                checkCaptor.getValue().get("evidenceJson")
+                checkCaptor.getValue().getEvidence()
         );
         verify(mapper).insertDetailResult(
                 200L,
                 DetailType.HIGH_JEONSE_RATIO,
-                RiskLevel.CAUTION,
+                RiskLevel.SAFE,
                 DataStatus.VERIFIED
         );
 
-        ArgumentCaptor<List<VerifiedChecklistItem>> verifiedCaptor =
+        ArgumentCaptor<List<VerifiedChecklistItemDTO>> verifiedCaptor =
                 ArgumentCaptor.forClass(List.class);
         verify(mapper).insertChecklistVerifications(
                 eq(99L),
                 verifiedCaptor.capture()
         );
-        assertEquals(2, verifiedCaptor.getValue().size());
+        List<VerifiedChecklistItemDTO> verified = verifiedCaptor.getValue();
+        // HUG/HF/SGI는 각 보증기관 요건을 모두 확인할 수 없어 자동 체크하지 않고,
+        // 가격 근거로 안전하게 확인된 전세가율만 자동 체크한다.
+        assertEquals(1, verified.size());
+        assertEquals(
+                "전세가율 확인",
+                verified.get(0).getContents()
+        );
     }
 
     @Test
@@ -123,10 +129,9 @@ class ReportPersistenceServiceBranchTest {
     void skipsChecklistVerificationInsertWhenNothingWasVerified() {
         ReportMapper mapper = mock(ReportMapper.class);
         doAnswer(invocation -> {
-            Map<String, Object> params = invocation.getArgument(0);
-            params.put("reportId", 1L);
+            invocation.getArgument(0, AnalysisReport.class).setAnalysisReportId(1L);
             return null;
-        }).when(mapper).insertReportMap(anyMap());
+        }).when(mapper).insertReport(any(AnalysisReport.class));
         ReportPersistenceService service = new ReportPersistenceService(
                 mapper,
                 new ObjectMapper(),
@@ -139,7 +144,7 @@ class ReportPersistenceServiceBranchTest {
                 "서울특별시 강남구 테헤란로 1",
                 null,
                 100_000_000L,
-                new RiskEvaluationResult(RiskLevel.SAFE, List.of(), List.of()),
+                new RiskEvaluationResultDTO(RiskLevel.SAFE, List.of(), List.of()),
                 "APARTMENT",
                 false
         );

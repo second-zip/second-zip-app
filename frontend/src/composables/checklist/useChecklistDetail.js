@@ -18,6 +18,7 @@ const normalizeItem = (item) => ({
 export const useChecklistDetail = (reportChecklistId) => {
   const address = ref('-');
   const items = ref([]);
+  const recordingSessionId = ref(null);
   const isLoading = ref(false);
   const isResetting = ref(false);
   const pendingItemIds = ref([]);
@@ -38,6 +39,7 @@ export const useChecklistDetail = (reportChecklistId) => {
     try {
       const data = await getChecklist(toValue(reportChecklistId));
       address.value = formatReportAddress(data);
+      recordingSessionId.value = data?.recordingSessionId ?? null;
       items.value = Array.isArray(data?.items)
         ? data.items.map(normalizeItem)
         : [];
@@ -88,6 +90,6 @@ export const useChecklistDetail = (reportChecklistId) => {
   return {
     actionErrorMessage, address, completedCount, fetchChecklist, isLoading,
     isResetting, items, loadErrorMessage, pendingItemIds, progress,
-    resetItems, toggleItem,
+    recordingSessionId, resetItems, toggleItem,
   };
 };

@@ -2,9 +2,9 @@ package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.dto.external.BuildingRegisterAnalysisData;
 import com.secondzip.backend.report.dto.external.PriceData;
 import com.secondzip.backend.report.dto.external.RegistryData;
@@ -54,7 +54,7 @@ public class AnalysisExecutionService {
     ) {
         String lockToken = acquireLock(requestId);
         try {
-            AnalysisWorkflowState state =
+            AnalysisWorkflowStateDTO state =
                     workflowStore.findOwned(requestId, accountId);
             if (state.getStatus() != AnalysisRequestStatus.FAILED) {
                 throw new BusinessException(
@@ -85,7 +85,7 @@ public class AnalysisExecutionService {
             Long accountId,
             String requestId
     ) {
-        AnalysisWorkflowState state =
+        AnalysisWorkflowStateDTO state =
                 workflowStore.findOwned(requestId, accountId);
         Long existingReportId = reportQueryService.findReportIdByRequestId(
                 accountId,
@@ -124,13 +124,31 @@ public class AnalysisExecutionService {
                             state.getRequiredDocuments(),
                             state.getBuildingRegisterData(),
                             state.getBuildingType(),
-                            state.getBuildingUse()
+                            state.getBuildingUse(),
+                            state.getDetailAddress(),
+                            state.getTransactionAreaSqm()
                     );
+            PriceData transactionPrice;
+            try {
+                transactionPrice = priceDataProvider.getPriceData(
+                        state.getTarget(),
+                        state.getBuildingType(),
+                        buildingRegister.getTransactionAreaSqm(),
+                        buildingRegister.getTransactionFloor()
+                );
+            } catch (RuntimeException e) {
+                // 실거래가 API의 간헐적 오류로 리포트 전체를 실패시키지 않는다.
+                // 공시가격을 확보했다면 그것을 기준가로 분석을 이어갈 수 있고,
+                // 둘 다 없으면 바로 아래 관문이 유료 조회 전에 걸러낸다.
+                log.warn(
+                        "실거래가 조회 실패. 공시가격 기준으로 계속 진행합니다. requestId={}",
+                        requestId,
+                        e
+                );
+                transactionPrice = null;
+            }
             PriceData price = mergeOfficialPrice(
-                    priceDataProvider.getPriceData(
-                            state.getTarget(),
-                            state.getBuildingType()
-                    ),
+                    transactionPrice,
                     buildingRegister.getOfficialPrice()
             );
 
@@ -153,7 +171,7 @@ public class AnalysisExecutionService {
             }
 
             // ===== 4단계. 위험도 평가 및 저장 =====
-            RiskEvaluationResult evaluation =
+            RiskEvaluationResultDTO evaluation =
                     riskEvaluationService.evaluate(
                             registry,
                             buildingRegister.getBuildingData(),
@@ -217,11 +235,11 @@ public class AnalysisExecutionService {
     }
 
     /**
-     * 실패 사유를 그대로 보존한다.
+     * 실패 사유를 그대로 보존.
      *
-     * <p>예전에는 모든 실패를 한 문장으로 덮어써서, 등기부등본 실패인지 실거래가 실패인지
-     * 위반건축물 실패인지 사용자도 로그도 구분할 수 없었다.
-     * {@link BusinessException}은 이미 구체적인 메시지를 담고 있으므로 그것을 쓴다.
+     * 예전에는 모든 실패를 한 문장으로 덮어써서, 등기부등본 실패인지 실거래가 실패인지
+     * 위반건축물 실패인지 사용자도 로그도 구분할 수 없음.
+     * BusinessException은 이미 구체적인 메시지를 담고 있으므로 그것을 씀.
      */
     private String failureMessageOf(RuntimeException e) {
         if (e instanceof BusinessException && e.getMessage() != null
@@ -232,12 +250,12 @@ public class AnalysisExecutionService {
     }
 
     /**
-     * 워크플로 상태 저장 실패가 본래 흐름을 덮어쓰지 않게 한다.
+     * 워크플로 상태 저장 실패가 본래 흐름을 덮어쓰지 않게 함.
      *
-     * <p>성공 경로에서는 이미 확보한 리포트를 잃지 않기 위해,
-     * 실패 경로에서는 원래 예외가 저장 실패 예외로 바뀌지 않게 하기 위해 필요하다.
+     * 성공 경로에서는 이미 확보한 리포트를 잃지 않기 위해,
+     * 실패 경로에서는 원래 예외가 저장 실패 예외로 바뀌지 않게 하기 위해 필요.
      */
-    private void saveStateQuietly(AnalysisWorkflowState state, String what) {
+    private void saveStateQuietly(AnalysisWorkflowStateDTO state, String what) {
         try {
             workflowStore.save(state);
         } catch (RuntimeException e) {
@@ -254,12 +272,8 @@ public class AnalysisExecutionService {
     /**
      * 유료 조회(등기부등본) 직전 관문.
      *
-     * <p>무료 데이터만으로 판정할 수 있는 실패는 전부 여기서 걸러낸다.
-     * 등기부등본은 열람 건당 전자민원캐시가 차감되므로, 어차피 실패할 분석에
-     * 비용을 쓰지 않기 위한 장치다.
-     *
-     * <p><b>무료 외부 데이터가 새로 추가되면</b> 수집은 이 메서드를 호출하기 전에,
-     * 검증은 이 메서드 안에 추가해야 한다. 그래야 유료 호출이 항상 마지막에 남는다.
+     * 무료 데이터만으로 판정할 수 있는 실패는 전부 여기서 걸러냄.
+     * 실패할 분석에 비용을 쓰지 않기 위한 장치.
      */
     private void verifyFreeDataBeforePaidLookup(
             BuildingRegisterAnalysisData buildingRegister,
@@ -285,13 +299,10 @@ public class AnalysisExecutionService {
     /**
      * 수도권/비수도권 판정에 쓸 주소.
      *
-     * <p>반드시 <b>표준화된</b> 도로명주소를 쓴다. 사용자가 입력한 원본은 건물명이나
-     * 지번일 수 있어 시도명으로 시작하지 않을 수 있고, 그러면 수도권 매물이
-     * 비수도권으로 분류되어 HUG 보증금 한도가 7억이 아닌 5억으로 계산된다.
-     * 그 결과 정상 매물이 DANGER로 판정된다.
+     * 반드시 표준화된 도로명주소를 쓴다.
      */
-    private String regionAddress(AnalysisWorkflowState state) {
-        AnalysisTarget target = state.getTarget();
+    private String regionAddress(AnalysisWorkflowStateDTO state) {
+        AnalysisTargetDTO target = state.getTarget();
         if (target != null
                 && target.roadAddress() != null
                 && !target.roadAddress().isBlank()) {

@@ -7,6 +7,7 @@ import { formatAudioTime } from '@/utils/audio';
 const props = defineProps({
   src: { type: String, required: true },
   fallbackDuration: { type: Number, default: 0 },
+  beforePlay: { type: Function, default: undefined },
 });
 const player = useAudioPlayer(props);
 </script>

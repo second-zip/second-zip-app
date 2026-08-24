@@ -227,7 +227,7 @@ for ($step = 1; $step -le 30; $step++) {
             Write-Host "리포트 ID: $($report.analysisReportId)"
             Write-Host "최종 위험도: $($report.result)"
             Write-Host "주소: $($report.roadAddress) $($report.detailAddress)"
-            $illegalBuilding = $report.checkResults |
+            $illegalBuilding = $report.checkResultDTOS |
                 Where-Object { $_.checkType -eq "ILLEGAL_BUILDING" } |
                 Select-Object -First 1
             if ($null -ne $illegalBuilding) {

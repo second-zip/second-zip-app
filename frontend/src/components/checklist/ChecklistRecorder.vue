@@ -11,9 +11,14 @@ import RecordingTextModal from './RecordingTextModal.vue';
 
 const props = defineProps({
   reportChecklistId: { type: Number, required: true },
+  recordingSessionId: { type: Number, default: null },
 });
 const emit = defineEmits(['modal-visibility-change', 'processed']);
-const state = useChecklistRecorder(emit, toRef(props, 'reportChecklistId'));
+const state = useChecklistRecorder(
+  emit,
+  toRef(props, 'reportChecklistId'),
+  toRef(props, 'recordingSessionId'),
+);
 </script>
 
 <template>
@@ -33,13 +38,14 @@ const state = useChecklistRecorder(emit, toRef(props, 'reportChecklistId'));
       <RecordingSavedPanel
         v-else-if="state.savedRecording.value"
         :recording="state.savedRecording.value"
+        :before-play="state.ensureFreshUrl"
         can-delete
         @delete="state.isDeleteModalOpen.value = true"
         @show-text="state.openTextModal"
       />
       <RecordingIdlePanel
         v-else
-        :starting="state.isStarting.value"
+        :starting="state.isStarting.value || state.isLoadingRecording.value"
         @start="state.beginRecording"
       />
     </div>

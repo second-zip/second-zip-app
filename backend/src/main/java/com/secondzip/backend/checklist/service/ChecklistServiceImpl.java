@@ -1,11 +1,13 @@
 package com.secondzip.backend.checklist.service;
 
-import com.secondzip.backend.checklist.domain.ReportChecklistVO;
+import com.secondzip.backend.checklist.domain.ReportChecklist;
 import com.secondzip.backend.checklist.dto.request.ChecklistCheckRequestDTO;
 import com.secondzip.backend.checklist.dto.response.*;
 import com.secondzip.backend.checklist.mapper.ReportChecklistMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
+import com.secondzip.backend.record.domain.RecordingSession;
+import com.secondzip.backend.record.mapper.RecordingSessionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.List;
 public class ChecklistServiceImpl implements ChecklistService {
 
     private final ReportChecklistMapper reportChecklistMapper;
+    private final RecordingSessionMapper recordingSessionMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -72,8 +75,8 @@ public class ChecklistServiceImpl implements ChecklistService {
         }
 
 
-        ReportChecklistVO checklist =
-                ReportChecklistVO.builder()
+        ReportChecklist checklist =
+                ReportChecklist.builder()
                         .analysisReportId(
                                 analysisReportId
                         )
@@ -135,10 +138,13 @@ public class ChecklistServiceImpl implements ChecklistService {
                         reportChecklistId
                 );
 
+        RecordingSession recordingSession = recordingSessionMapper.findByReportChecklistId(reportChecklistId);
+
         return ChecklistDetailResponseDTO.builder()
                 .roadAddress(address.getRoadAddress())
                 .detailAddress(address.getDetailAddress())
                 .items(items)
+                .recordingSessionId(recordingSession != null ? recordingSession.getRecordingSessionId() : null)
                 .build();
     }
 
@@ -175,13 +181,13 @@ public class ChecklistServiceImpl implements ChecklistService {
             Long reportChecklistId
     ) {
 
-        int updatedCount =
-                reportChecklistMapper.reset(
+        int exists =
+                reportChecklistMapper.existsOwnedChecklist(
                         accountId,
                         reportChecklistId
                 );
 
-        if (updatedCount == 0) {
+        if (exists == 0) {
             throw new BusinessException(
                     ErrorCode.RESOURCE_NOT_FOUND,
                     "체크리스트를 찾을 수 없습니다."

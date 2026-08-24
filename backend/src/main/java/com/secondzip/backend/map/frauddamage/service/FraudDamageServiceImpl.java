@@ -1,9 +1,9 @@
 package com.secondzip.backend.map.frauddamage.service;
 
-import com.secondzip.backend.map.common.domain.RegionVO;
+import com.secondzip.backend.map.common.domain.Region;
 import com.secondzip.backend.map.common.enums.RegionLevel;
 import com.secondzip.backend.map.common.mapper.RegionMapper;
-import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegionVO;
+import com.secondzip.backend.map.frauddamage.domain.FraudDamageRegion;
 import com.secondzip.backend.map.frauddamage.dto.response.FraudDamageMapResponse;
 import com.secondzip.backend.map.frauddamage.mapper.FraudDamageMapper;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class FraudDamageServiceImpl implements FraudDamageService {
 
     //'시도'별 피해 현황 조회
     private FraudDamageMapResponse getSidoFraudDamages(LocalDate baseDate){
-        List<FraudDamageRegionVO> fraudDamages = fraudDamageMapper.selectSidoFraudDamages(baseDate);
+        List<FraudDamageRegion> fraudDamages = fraudDamageMapper.selectSidoFraudDamages(baseDate);
         long totalDamageHouseCount = calculateTotalDamageHouseCount(fraudDamages);
 
         return FraudDamageMapResponse.of(
@@ -61,9 +61,9 @@ public class FraudDamageServiceImpl implements FraudDamageService {
             String parentRegionCode
     ){
         validateParentRegionCode(parentRegionCode);
-        RegionVO parentRegion = getSidoRegion(parentRegionCode);
+        Region parentRegion = getSidoRegion(parentRegionCode);
 
-        List<FraudDamageRegionVO> fraudDamages = fraudDamageMapper.selectSigunguFraudDamages(
+        List<FraudDamageRegion> fraudDamages = fraudDamageMapper.selectSigunguFraudDamages(
                 baseDate, parentRegionCode
         );
 
@@ -93,8 +93,8 @@ public class FraudDamageServiceImpl implements FraudDamageService {
     }
 
     //상위 지역 코드에 해당하는 시도 조회
-    private RegionVO getSidoRegion(String parentRegionCode) {
-        RegionVO region = regionMapper.selectByRegionCode(parentRegionCode);
+    private Region getSidoRegion(String parentRegionCode) {
+        Region region = regionMapper.selectByRegionCode(parentRegionCode);
 
         if (region == null) {
             throw new IllegalArgumentException(
@@ -112,9 +112,9 @@ public class FraudDamageServiceImpl implements FraudDamageService {
     }
 
     //조회 범위 내 피해주택 수 합계 계산
-    private long calculateTotalDamageHouseCount(List<FraudDamageRegionVO> fraudDamages) {
+    private long calculateTotalDamageHouseCount(List<FraudDamageRegion> fraudDamages) {
         return fraudDamages.stream()
-                .map(FraudDamageRegionVO::getDamageHouseCount)
+                .map(FraudDamageRegion::getDamageHouseCount)
                 .filter(count -> count != null)
                 .mapToLong(Long::longValue)
                 .sum();

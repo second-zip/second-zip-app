@@ -1,7 +1,7 @@
 package com.secondzip.backend.map.jeonseprice.dto.response;
 
 import com.secondzip.backend.map.common.enums.RegionLevel;
-import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegionVO;
+import com.secondzip.backend.map.jeonseprice.domain.JeonsePriceRegion;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,7 +27,7 @@ public class JeonsePriceMapResponse {
             YearMonth baseMonth,
             RegionLevel regionLevel,
             String parentRegionCode,
-            List<JeonsePriceRegionVO> regionVOs
+            List<JeonsePriceRegion> regionVOs
     ) {
         List<JeonsePriceRegionResponse> regions =
                 regionVOs.stream()

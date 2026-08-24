@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -34,26 +34,25 @@ public class RedisAnalysisWorkflowStore implements AnalysisWorkflowStore {
     /**
      * 실행 락 TTL.
      *
-     * <p>이 값은 <b>정상 동작 시간이 아니라 장애 복구 시간</b>을 결정한다.
-     * 락은 각 요청이 {@code finally}에서 해제하므로, TTL은 서버가 처리 도중
-     * 죽었을 때 락이 남아 있는 시간이다.
+     * 이 값은 정상 동작 시간이 아니라 장애 복구 시간을 결정.
+     * 락은 각 요청이 finally에서 해제하므로, TTL은 서버가 처리 도중
+     * 죽었을 때 락이 남아 있는 시간.
      *
-     * <p>트레이드오프:
-     * <ul>
-     *   <li>너무 길면 — 서버가 죽은 뒤 사용자가 그 시간만큼 "이미 처리 중입니다"만 본다.
-     *       워크플로 TTL(기본 900초)보다 길면 사실상 그 요청을 포기해야 한다.</li>
-     *   <li>너무 짧으면 — 분석이 끝나기 전에 락이 풀려 같은 요청이 동시에 실행되고,
-     *       <b>등기부등본 유료 조회가 중복 과금</b>된다. 이쪽이 더 나쁘다.</li>
-     * </ul>
+     * 트레이드오프:
      *
-     * <p>그래서 가장 느린 경로(외부 API 여러 개 + 등기 조회)를 넉넉히 덮으면서도
+     *   너무 길면 서버가 죽은 뒤 사용자가 그 시간만큼 "이미 처리 중입니다"만 봄.
+     *   워크플로 TTL(기본 900초)보다 길면 사실상 그 요청을 포기해야 함.
+     *   너무 짧으면 분석이 끝나기 전에 락이 풀려 같은 요청이 동시에 실행되고,
+     *   등기부등본 유료 조회가 중복 과금된다. 이쪽이 더 나쁨.
+     *
+     * 그래서 가장 느린 경로(외부 API 여러 개 + 등기 조회)를 넉넉히 덮으면서도
      * 워크플로 TTL의 3분의 1 수준인 300초를 기본값으로 둔다.
      */
     @Value("${ANALYSIS_WORKFLOW_LOCK_TTL_SECONDS:300}")
     private long lockTtlSeconds;
 
     @Override
-    public void save(AnalysisWorkflowState state) {
+    public void save(AnalysisWorkflowStateDTO state) {
         long remainingMillis = state.getExpiresAtEpochMillis()
                 - System.currentTimeMillis();
         if (remainingMillis <= 0L) {
@@ -75,7 +74,7 @@ public class RedisAnalysisWorkflowStore implements AnalysisWorkflowStore {
     }
 
     @Override
-    public AnalysisWorkflowState findOwned(String requestId, Long accountId) {
+    public AnalysisWorkflowStateDTO findOwned(String requestId, Long accountId) {
         String json = redisTemplate.opsForValue().get(KEY_PREFIX + requestId);
         if (json == null) {
             throw new BusinessException(
@@ -85,8 +84,8 @@ public class RedisAnalysisWorkflowStore implements AnalysisWorkflowStore {
         }
 
         try {
-            AnalysisWorkflowState state =
-                    objectMapper.readValue(json, AnalysisWorkflowState.class);
+            AnalysisWorkflowStateDTO state =
+                    objectMapper.readValue(json, AnalysisWorkflowStateDTO.class);
             if (state.getExpiresAtEpochMillis() <= System.currentTimeMillis()) {
                 delete(requestId);
                 throw workflowNotFound();

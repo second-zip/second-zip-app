@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service.external.client;
 
-import com.secondzip.backend.report.dto.AnalysisTarget;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,10 +10,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.math.BigDecimal;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 건축HUB 건축물대장정보 서비스 (BldRgstHubService) - 표제부 조회(getBrTitleInfo) 클라이언트.
@@ -34,8 +39,14 @@ public class BuildingHubClient {
 
     private static final String BASE_URL =
             "https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo";
+    private static final int ROWS_PER_PAGE = 100;
+    private static final int MAX_PAGES = 100;
 
-    public BuildingData getBuildingData(AnalysisTarget target) {
+    public BuildingData getBuildingData(AnalysisTargetDTO target) {
+        return getBuildingData(target, null);
+    }
+
+    public BuildingData getBuildingData(AnalysisTargetDTO target, String detailAddress) {
         if (target == null) {
             log.warn("AnalysisTarget이 null이라 건축HUB 조회를 스킵합니다.");
             return null;
@@ -50,49 +61,39 @@ public class BuildingHubClient {
         }
 
         try {
-            URI uri = UriComponentsBuilder
-                    .fromHttpUrl(BASE_URL)
-                    .queryParam("serviceKey", apiKey)
-                    .queryParam("sigunguCd", target.sigunguCode())
-                    .queryParam("bjdongCd", target.bjdongCode())
-                    .queryParam("bun", normalizeLotNumber(target.mainNo()))
-                    .queryParam("ji", normalizeLotNumber(target.subNo()))
-                    .queryParam("numOfRows", 100)
-                    .queryParam("pageNo", 1)
-                    .queryParam("_type", "json")
-                    .build(true)   // 이중 인코딩 방지
-                    .toUri();
-
-            log.info("건축HUB 조회 요청");
-
-            ResponseEntity<Map> response = restTemplate.getForEntity(uri, Map.class);
-            Map<String, Object> body = response.getBody();
-            if (body == null) {
-                log.warn("건축HUB 응답이 비어있습니다.");
+            List<Map<String, Object>> allItems = new ArrayList<>();
+            int totalCount = Integer.MAX_VALUE;
+            Integer declaredTotalCount = null;
+            for (int pageNo = 1;
+                 pageNo <= MAX_PAGES && allItems.size() < totalCount;
+                 pageNo++) {
+                HubPage page = fetchPage(target, pageNo);
+                if (page == null) return null;
+                if (declaredTotalCount != null
+                        && declaredTotalCount != page.totalCount()) {
+                    log.warn(
+                            "건축HUB 페이지별 totalCount가 다릅니다: first={}, current={}",
+                            declaredTotalCount,
+                            page.totalCount()
+                    );
+                    return null;
+                }
+                declaredTotalCount = page.totalCount();
+                allItems.addAll(page.items());
+                totalCount = page.totalCount();
+                if (page.items().isEmpty()) break;
+            }
+            if (allItems.size() != totalCount) {
+                log.warn("건축HUB 수집 건수와 totalCount가 다릅니다: collected={}, totalCount={}",
+                        allItems.size(), totalCount);
                 return null;
             }
 
-            Map<String, Object> responseMap = (Map<String, Object>) body.get("response");
-            if (responseMap == null) {
-                log.warn("건축HUB 응답 형식이 예상과 다릅니다.");
-                return null;
-            }
-
-            Map<String, Object> header = (Map<String, Object>) responseMap.get("header");
-            String resultCode = header != null ? (String) header.get("resultCode") : null;
-            if (!"00".equals(resultCode)) {
-                log.warn("건축HUB 응답 에러: code={}, msg={}",
-                        resultCode, header != null ? header.get("resultMsg") : null);
-                return null;
-            }
-
-            Map<String, Object> bodyMap = (Map<String, Object>) responseMap.get("body");
-            if (bodyMap == null) {
-                log.warn("건축HUB 응답에 body가 없습니다.");
-                return null;
-            }
-
-            Map<String, Object> item = extractFirstItem(bodyMap);
+            Map<String, Object> item = selectTargetItem(
+                    allItems,
+                    target,
+                    detailAddress
+            );
             if (item == null) {
                 log.warn("건축물대장 표제부 조회 결과가 없습니다.");
                 return null;
@@ -105,9 +106,10 @@ public class BuildingHubClient {
             String violBldgYn = (String) item.get("violBldgYn");       // 공식 문서엔 없어서 방어적으로 확인
 
             BuildingData data = new BuildingData();
-            data.setBuildingUse(mainPurpsCdNm);
+            data.setBuildingUse(combineBuildingUse(mainPurpsCdNm, etcPurps));
             data.setBuildingType(inferBuildingType(mainPurpsCdNm, etcPurps, buildingName));
             data.setIsIllegalBuilding(parseNullableYn(violBldgYn));
+            data.setTransactionAreaSqm(parsePositiveDecimal(item.get("totArea")));
 
             log.info("건축HUB 조회 완료: buildingUse={}, buildingType={}, isIllegalBuilding={}",
                     data.getBuildingUse(), data.getBuildingType(), data.getIsIllegalBuilding());
@@ -123,23 +125,102 @@ public class BuildingHubClient {
     /**
      * items.item은 결과가 1건이면 Map, 여러 건이면 List로 오는 경우가 있어 방어적으로 처리.
      */
-    private Map<String, Object> extractFirstItem(Map<String, Object> bodyMap) {
-        Object itemsObj = bodyMap.get("items");
-        if (!(itemsObj instanceof Map)) {
+    private HubPage fetchPage(AnalysisTargetDTO target, int pageNo) {
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder
+                .fromHttpUrl(BASE_URL)
+                .queryParam("serviceKey", apiKey)
+                .queryParam("sigunguCd", target.sigunguCode())
+                .queryParam("bjdongCd", target.bjdongCode());
+        if (hasText(target.platGbCd())) {
+            uriBuilder.queryParam("platGbCd", target.platGbCd());
+        }
+        URI uri = uriBuilder
+                .queryParam("bun", normalizeLotNumber(target.mainNo()))
+                .queryParam("ji", normalizeLotNumber(target.subNo()))
+                .queryParam("numOfRows", ROWS_PER_PAGE)
+                .queryParam("pageNo", pageNo)
+                .queryParam("_type", "json")
+                .build(true)
+                .toUri();
+
+        log.info("건축HUB 조회 요청: pageNo={}", pageNo);
+        ResponseEntity<Map> response = restTemplate.getForEntity(uri, Map.class);
+        Map<String, Object> body = response.getBody();
+        if (body == null) {
+            log.warn("건축HUB 응답이 비어있습니다.");
             return null;
         }
-        Object itemObj = ((Map<String, Object>) itemsObj).get("item");
+        Map<String, Object> responseMap = asMap(body.get("response"));
+        if (responseMap == null) {
+            log.warn("건축HUB 응답 형식이 예상과 다릅니다.");
+            return null;
+        }
+        Map<String, Object> header = asMap(responseMap.get("header"));
+        String resultCode = header != null ? stringValue(header.get("resultCode")) : null;
+        if (!"00".equals(resultCode)) {
+            log.warn("건축HUB 응답 에러: code={}, msg={}",
+                    resultCode, header != null ? header.get("resultMsg") : null);
+            return null;
+        }
+        Map<String, Object> bodyMap = asMap(responseMap.get("body"));
+        if (bodyMap == null) {
+            log.warn("건축HUB 응답에 body가 없습니다.");
+            return null;
+        }
+        List<Map<String, Object>> items = extractItems(bodyMap);
+        Integer totalCount = parseNonNegativeInt(bodyMap.get("totalCount"));
+        if (totalCount == null || totalCount < items.size()) {
+            log.warn("건축HUB totalCount가 없거나 유효하지 않습니다: totalCount={}",
+                    bodyMap.get("totalCount"));
+            return null;
+        }
+        return new HubPage(items, totalCount);
+    }
 
-        if (itemObj instanceof List) {
-            List<Map<String, Object>> items = (List<Map<String, Object>>) itemObj;
-            return items.stream()
-                    .max((left, right) -> Integer.compare(residentialScore(left), residentialScore(right)))
-                    .orElse(null);
+    private Map<String, Object> selectTargetItem(
+            List<Map<String, Object>> items,
+            AnalysisTargetDTO target,
+            String detailAddress
+    ) {
+        if (items == null || items.isEmpty()) return null;
+        if (items.size() == 1) {
+            IdentityScore only = identityScore(items.get(0), target, detailAddress);
+            return only.conflict() ? null : items.get(0);
         }
-        if (itemObj instanceof Map) {
-            return (Map<String, Object>) itemObj;
+
+        Map<String, Object> best = null;
+        int bestScore = -1;
+        boolean tied = false;
+        for (Map<String, Object> item : items) {
+            IdentityScore identity = identityScore(item, target, detailAddress);
+            if (identity.matched() && !identity.conflict()) {
+                if (identity.score() > bestScore) {
+                    best = item;
+                    bestScore = identity.score();
+                    tied = false;
+                } else if (identity.score() == bestScore) {
+                    tied = true;
+                }
+            }
         }
-        return null;
+        return tied ? null : best;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractItems(Map<String, Object> bodyMap) {
+        Map<String, Object> items = asMap(bodyMap.get("items"));
+        if (items == null) return List.of();
+        Object item = items.get("item");
+        if (item instanceof List<?> list) {
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object value : list) {
+                Map<String, Object> map = asMap(value);
+                if (map != null) result.add(map);
+            }
+            return result;
+        }
+        Map<String, Object> single = asMap(item);
+        return single != null ? List.of(single) : List.of();
     }
 
     private boolean isBlank(String s) {
@@ -158,36 +239,207 @@ public class BuildingHubClient {
     }
 
     static String inferBuildingType(String mainPurpose, String etcPurpose, String buildingName) {
-        String purpose = ((mainPurpose == null ? "" : mainPurpose) + " "
-                + (etcPurpose == null ? "" : etcPurpose) + " "
-                + (buildingName == null ? "" : buildingName)).replace(" ", "");
+        TypeInference fromEtcPurpose = inferFromText(etcPurpose, false);
+        if (fromEtcPurpose.recognized()) return fromEtcPurpose.type();
 
-        if (purpose.contains("오피스텔")) return "OFFICETEL";
-        if (purpose.contains("아파트")) return "APARTMENT";
-        if (purpose.contains("다세대") || purpose.contains("연립") || purpose.contains("빌라")) {
-            return "MULTI_HOUSEHOLD";
+        TypeInference fromMainPurpose = inferFromText(mainPurpose, false);
+        if (fromMainPurpose.recognized()) return fromMainPurpose.type();
+
+        return inferFromText(buildingName, true).type();
+    }
+
+    /** 하나의 권위 필드가 서로 다른 주택유형을 함께 가리키면 임의 우선순위를 두지 않는다. */
+    private static TypeInference inferFromText(String raw, boolean allowInformalName) {
+        if (raw == null || raw.isBlank()) return TypeInference.none();
+        String value = raw.replaceAll("\\s+", "");
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        if (value.contains("오피스텔")) candidates.add("OFFICETEL");
+        boolean multiFamily = value.contains("다가구");
+        if (multiFamily) candidates.add("MULTI_FAMILY");
+        if (value.contains("다세대") || value.contains("연립")
+                || allowInformalName && value.contains("빌라")) {
+            candidates.add("MULTI_HOUSEHOLD");
         }
-        if (purpose.contains("다가구")) return "MULTI_FAMILY";
-        if (purpose.contains("단독주택")) return "SINGLE_FAMILY";
+        if (value.contains("아파트")) candidates.add("APARTMENT");
+        // 다가구는 단독주택의 세부 유형이므로 같은 문자열의 '단독주택'은 충돌로 세지 않는다.
+        if (!multiFamily && value.contains("단독주택")) {
+            candidates.add("SINGLE_FAMILY");
+        }
+        if (candidates.isEmpty()) return TypeInference.none();
+        return new TypeInference(
+                true,
+                candidates.size() == 1 ? candidates.iterator().next() : null
+        );
+    }
+
+    static String combineBuildingUse(String mainPurpose, String etcPurpose) {
+        String main = trimToNull(mainPurpose);
+        String etc = trimToNull(etcPurpose);
+        if (main == null) return etc;
+        if (etc == null || normalizeIdentity(main).equals(normalizeIdentity(etc))) {
+            return main;
+        }
+        return main + ", " + etc;
+    }
+
+    private IdentityScore identityScore(
+            Map<String, Object> item,
+            AnalysisTargetDTO target,
+            String detailAddress
+    ) {
+        if (item == null || target == null) {
+            return IdentityScore.none();
+        }
+
+        IdentityScore score = IdentityScore.none();
+        score = compareIdentity(
+                score,
+                target.buildingManagementNo(),
+                stringValue(item.get("mgmBldrgstPk")),
+                10_000
+        );
+        score = compareIdentity(
+                score,
+                target.roadBuildingMainNo(),
+                stringValue(item.get("naMainBun")),
+                1_000
+        );
+
+        String targetRoadSub = zeroIfBlank(target.roadBuildingSubNo());
+        String itemRoadSub = zeroIfBlank(stringValue(item.get("naSubBun")));
+        if (hasText(target.roadBuildingMainNo())
+                && hasText(stringValue(item.get("naMainBun")))
+                && item.containsKey("naSubBun")) {
+            score = compareIdentity(score, targetRoadSub, itemRoadSub, 100);
+        }
+
+        String targetDong = extractDetailToken(detailAddress, "동");
+        score = compareUnitIdentity(
+                score,
+                targetDong,
+                firstText(item, "dongNm", "resDong", "resDongNm"),
+                2_000
+        );
+
+        String itemRoadAddress = firstText(item, "newPlatPlc", "newPlatPlcAddr");
+        if (hasText(target.roadAddress()) && hasText(itemRoadAddress)
+                && normalizeIdentity(target.roadAddress())
+                .equals(normalizeIdentity(itemRoadAddress))) {
+            score = score.addMatch(3_000);
+        }
+        return score;
+    }
+
+    private IdentityScore compareIdentity(
+            IdentityScore current,
+            String expected,
+            String actual,
+            int weight
+    ) {
+        if (!hasText(expected) || !hasText(actual)) return current;
+        return normalizeIdentity(expected).equals(normalizeIdentity(actual))
+                ? current.addMatch(weight)
+                : current.addConflict();
+    }
+
+    private IdentityScore compareUnitIdentity(
+            IdentityScore current,
+            String expected,
+            String actual,
+            int weight
+    ) {
+        if (!hasText(expected) || !hasText(actual)) return current;
+        return normalizeUnitIdentity(expected).equals(normalizeUnitIdentity(actual))
+                ? current.addMatch(weight)
+                : current.addConflict();
+    }
+
+    private static String normalizeUnitIdentity(String value) {
+        String normalized = value.replaceAll("\\s+", "").trim();
+        if (normalized.endsWith("동")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        if (normalized.startsWith("제")) {
+            normalized = normalized.substring(1);
+        }
+        return normalizeIdentity(normalized);
+    }
+
+    private static String extractDetailToken(String detailAddress, String suffix) {
+        if (!hasText(detailAddress)) return null;
+        Matcher matcher = Pattern.compile(
+                "([0-9A-Za-z가-힣_-]+)\\s*" + Pattern.quote(suffix)
+        ).matcher(detailAddress);
+        String found = null;
+        while (matcher.find()) {
+            found = matcher.group(1) + suffix;
+        }
+        return found;
+    }
+
+    private static String firstText(Map<String, Object> item, String... keys) {
+        for (String key : keys) {
+            String value = stringValue(item.get(key));
+            if (hasText(value)) return value;
+        }
         return null;
     }
 
-    private int residentialScore(Map<String, Object> item) {
-        String mainPurpose = (String) item.get("mainPurpsCdNm");
-        String etcPurpose = (String) item.get("etcPurps");
-        String buildingName = (String) item.get("bldNm");
+    private static String stringValue(Object value) {
+        return value != null ? value.toString() : null;
+    }
 
-        int score = inferBuildingType(mainPurpose, etcPurpose, buildingName) != null ? 100 : 0;
-        if (mainPurpose != null && (mainPurpose.contains("공동주택") || mainPurpose.contains("단독주택"))) {
-            score += 20;
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object value) {
+        return value instanceof Map<?, ?> ? (Map<String, Object>) value : null;
+    }
+
+    private static Integer parseNonNegativeInt(Object raw) {
+        if (raw == null) return null;
+        try {
+            int value = Integer.parseInt(raw.toString().trim());
+            return value >= 0 ? value : null;
+        } catch (NumberFormatException ignored) {
+            return null;
         }
-        if (etcPurpose != null && etcPurpose.contains("주거")) {
-            score += 10;
+    }
+
+    private static BigDecimal parsePositiveDecimal(Object raw) {
+        if (raw == null) return null;
+        Matcher matcher = Pattern.compile("[-+]?[0-9][0-9,]*(?:\\.[0-9]+)?")
+                .matcher(raw.toString());
+        if (!matcher.find()) return null;
+        try {
+            BigDecimal value = new BigDecimal(matcher.group().replace(",", ""));
+            return value.signum() > 0 ? value : null;
+        } catch (NumberFormatException ignored) {
+            return null;
         }
-        if ("주건축물".equals(item.get("mainAtchGbCdNm"))) {
-            score += 5;
+    }
+
+    private static String zeroIfBlank(String value) {
+        return hasText(value) ? value : "0";
+    }
+
+    private static String trimToNull(String value) {
+        return hasText(value) ? value.trim() : null;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static String normalizeIdentity(String value) {
+        if (value == null) return "";
+        String normalized = value.replaceAll("\\s+", "").trim();
+        if (normalized.matches("[0-9]+")) {
+            try {
+                return Long.toString(Long.parseLong(normalized));
+            } catch (NumberFormatException ignored) {
+                return normalized;
+            }
         }
-        return score;
+        return normalized.toUpperCase(Locale.ROOT);
     }
 
     static Boolean parseNullableYn(String value) {
@@ -195,5 +447,28 @@ public class BuildingHubClient {
         if ("Y".equalsIgnoreCase(value.trim())) return true;
         if ("N".equalsIgnoreCase(value.trim())) return false;
         return null;
+    }
+
+    private record IdentityScore(int score, boolean matched, boolean conflict) {
+        static IdentityScore none() {
+            return new IdentityScore(0, false, false);
+        }
+
+        IdentityScore addMatch(int amount) {
+            return new IdentityScore(score + amount, true, conflict);
+        }
+
+        IdentityScore addConflict() {
+            return new IdentityScore(score, matched, true);
+        }
+    }
+
+    private record HubPage(List<Map<String, Object>> items, int totalCount) {
+    }
+
+    private record TypeInference(boolean recognized, String type) {
+        static TypeInference none() {
+            return new TypeInference(false, null);
+        }
     }
 }

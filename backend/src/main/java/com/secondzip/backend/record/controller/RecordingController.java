@@ -96,32 +96,38 @@ public class RecordingController {
 
     @ApiOperation(
             value = "실시간 녹음 종료",
-            notes = "실시간 STT를 종료하고 최종 GPT 체크리스트 분석을 시작합니다."
+            notes = "실시간 STT를 종료하고 최종 GPT 체크리스트 분석을 시작합니다.",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     @PostMapping("/{recordingSessionId}/stop")
     public ResponseEntity<Void>
     stopLiveRecording(
             @ApiIgnore @AuthenticationPrincipal Long accountId,
-            @PathVariable Long recordingSessionId
+            @PathVariable Long recordingSessionId,
+            @RequestPart(value = "file", required = false) MultipartFile file
     ) {
 
-        recordingService.stopLiveRecording(accountId, recordingSessionId);
+        recordingService.stopLiveRecording(accountId, recordingSessionId,file);
 
         return ResponseEntity.accepted().build();
     }
 
     @ApiOperation(
-            value = "녹음 조회",
-            notes = "녹음 세션 정보를 조회합니다."
+            value = "녹음 파일 URL 조회",
+            notes = "저장된 녹음 파일을 재생할 수 있는 임시 URL을 발급합니다."
     )
-    @GetMapping("/{recordingSessionId}/read")
-    public ResponseEntity<RecordingDetailResponseDTO>
-    getRecording(
-            @ApiIgnore @AuthenticationPrincipal Long accountId,
-            @PathVariable Long recordingSessionId
+    @GetMapping("/{recordingSessionId}/file-url")
+    public ResponseEntity<RecordingFileUrlResponseDTO>
+    getRecordingFileUrl(
+            @ApiIgnore
+            @AuthenticationPrincipal Long accountId,
+
+            @PathVariable
+            Long recordingSessionId
     ) {
+
         return ResponseEntity.ok(
-                recordingService.getRecording(
+                recordingService.getRecordingFileUrl(
                         accountId,
                         recordingSessionId
                 )

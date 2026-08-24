@@ -24,12 +24,8 @@ public interface RecordingService {
 
     void stopLiveRecording(
             Long accountId,
-            Long recordingSessionId
-    );
-
-    RecordingDetailResponseDTO getRecording(
-            Long accountId,
-            Long recordingSessionId
+            Long recordingSessionId,
+            MultipartFile file
     );
 
     RecordingTranscriptResponseDTO getTranscript(
@@ -38,6 +34,11 @@ public interface RecordingService {
     );
 
     void deleteRecording(
+            Long accountId,
+            Long recordingSessionId
+    );
+
+    RecordingFileUrlResponseDTO getRecordingFileUrl(
             Long accountId,
             Long recordingSessionId
     );

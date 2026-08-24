@@ -1,6 +1,6 @@
 package com.secondzip.backend.report.service.external.mock;
 
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import com.secondzip.backend.report.dto.request.StartAnalysisAuthRequest;
 import com.secondzip.backend.report.dto.request.ContinueAnalysisAuthRequest;
 import com.secondzip.backend.report.enums.AnalysisNextAction;
@@ -27,7 +27,7 @@ public class MockBuildingRegisterGateway implements BuildingRegisterGateway {
 
     @Override
     public BuildingRegisterGatewayResult start(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             BuildingRegisterDocumentType documentType,
             StartAnalysisAuthRequest authRequest
     ) {
@@ -38,7 +38,7 @@ public class MockBuildingRegisterGateway implements BuildingRegisterGateway {
 
     @Override
     public BuildingRegisterGatewayResult continueRequest(
-            AnalysisWorkflowState state,
+            AnalysisWorkflowStateDTO state,
             ContinueAnalysisAuthRequest request
     ) {
         // mock은 항상 1차 요청에서 completed=true로 끝나므로 호출될 일이 없지만 방어적으로 처리

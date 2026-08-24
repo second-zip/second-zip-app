@@ -3,19 +3,16 @@ package com.secondzip.backend.report.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secondzip.backend.common.exception.BusinessException;
-import com.secondzip.backend.report.dto.CheckResult;
-import com.secondzip.backend.report.dto.DetailResult;
-import com.secondzip.backend.report.dto.RiskEvaluationResult;
-import com.secondzip.backend.report.dto.response.ReportListItem;
+import com.secondzip.backend.report.domain.AnalysisReport;
+import com.secondzip.backend.report.domain.ReportCheckResult;
+import com.secondzip.backend.report.dto.CheckResultDTO;
+import com.secondzip.backend.report.dto.RiskEvaluationResultDTO;
 import com.secondzip.backend.report.enums.CheckType;
 import com.secondzip.backend.report.enums.DataStatus;
-import com.secondzip.backend.report.enums.DetailType;
 import com.secondzip.backend.report.enums.RiskLevel;
-import com.secondzip.backend.report.mapper.ReportMapper;
 import com.secondzip.backend.report.mapper.StubReportMapper;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -39,9 +36,9 @@ class ReportPersistenceServiceTest {
                 failingObjectMapper,
                 null
         );
-        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+        RiskEvaluationResultDTO evaluation = new RiskEvaluationResultDTO(
                 RiskLevel.CAUTION,
-                List.of(new CheckResult(
+                List.of(new CheckResultDTO(
                         CheckType.MORTGAGE_EXISTENCE,
                         RiskLevel.CAUTION,
                         DataStatus.VERIFIED,
@@ -74,7 +71,7 @@ class ReportPersistenceServiceTest {
                 new ObjectMapper(),
                 null
         );
-        RiskEvaluationResult evaluation = new RiskEvaluationResult(
+        RiskEvaluationResultDTO evaluation = new RiskEvaluationResultDTO(
                 RiskLevel.SAFE,
                 List.of(),
                 List.of()
@@ -91,23 +88,23 @@ class ReportPersistenceServiceTest {
                 true
         );
 
-        assertEquals("OFFICETEL", mapper.lastReportParams.get("housingCategory"));
-        assertEquals(true, mapper.lastReportParams.get("trustProperty"));
+        assertEquals("OFFICETEL", mapper.lastReport.getHousingCategory());
+        assertEquals(true, mapper.lastReport.getTrustProperty());
     }
 
     private static class CountingStubMapper extends StubReportMapper {
         private int insertedCheckResults;
-        private Map<String, Object> lastReportParams;
+        private AnalysisReport lastReport;
 
         @Override
-        public void insertCheckResult(Map<String, Object> params) {
+        public void insertCheckResult(ReportCheckResult checkResult) {
             insertedCheckResults++;
         }
 
         @Override
-        public void insertReportMap(Map<String, Object> params) {
-            lastReportParams = new java.util.HashMap<>(params);
-            params.put("reportId", 1L);
+        public void insertReport(AnalysisReport report) {
+            lastReport = report;
+            report.setAnalysisReportId(1L);
         }
     }
 }

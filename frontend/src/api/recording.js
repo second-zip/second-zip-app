@@ -5,8 +5,16 @@ export const startLiveRecording = async (reportChecklistId) => {
   return response.data;
 };
 
-export const stopLiveRecording = async (recordingSessionId) => {
-  await api.post(`/recordings/${recordingSessionId}/stop`);
+export const stopLiveRecording = async (recordingSessionId, recordingFile) => {
+  const url = `/recordings/${recordingSessionId}/stop`;
+  if (!recordingFile) {
+    await api.post(url);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', recordingFile, `recording-${recordingSessionId}.wav`);
+  await api.post(url, formData, { timeout: 120_000 });
 };
 
 export const getRecordingStatus = async (recordingSessionId) => {
@@ -14,8 +22,8 @@ export const getRecordingStatus = async (recordingSessionId) => {
   return response.data;
 };
 
-export const getRecording = async (recordingSessionId) => {
-  const response = await api.get(`/recordings/${recordingSessionId}/read`);
+export const getRecordingFileUrl = async (recordingSessionId) => {
+  const response = await api.get(`/recordings/${recordingSessionId}/file-url`);
   return response.data;
 };
 

@@ -8,7 +8,7 @@
     <!-- 약관 원문 매핑 -->
     <resultMap
             id="termMap"
-            type="com.secondzip.backend.terms.domain.TermVO">
+            type="com.secondzip.backend.terms.domain.Term">
 
         <id
                 column="term_id"

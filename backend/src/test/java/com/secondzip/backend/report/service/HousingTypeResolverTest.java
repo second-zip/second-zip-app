@@ -44,6 +44,9 @@ class HousingTypeResolverTest {
                         Collections.singletonMap("buildingUse", null)
                 ),
                 result(CheckType.BUILDING_USE, Map.of(
+                        "buildingUse", "계단실"
+                )),
+                result(CheckType.BUILDING_USE, Map.of(
                         "buildingUse", "공동주택 아파트"
                 ))
         );
@@ -86,6 +89,8 @@ class HousingTypeResolverTest {
                 Arguments.of("빌라", "MULTI_HOUSEHOLD"),
                 Arguments.of("다가구주택", "MULTI_FAMILY"),
                 Arguments.of("단독 주택", "SINGLE_FAMILY"),
+                Arguments.of("단독주택, 다가구주택, 행복빌라", "MULTI_FAMILY"),
+                Arguments.of("공동주택, 다세대주택, 샹떼빌아파트", "MULTI_HOUSEHOLD"),
                 Arguments.of("근린생활시설", "UNKNOWN"),
                 Arguments.of("아파트형 오피스텔", "OFFICETEL")
         );

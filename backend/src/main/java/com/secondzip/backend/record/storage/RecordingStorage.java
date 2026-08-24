@@ -7,4 +7,6 @@ public interface RecordingStorage {
     String upload(Long accountId, MultipartFile file);
 
     void delete(String objectKey);
+
+    String generatePresignedUrl(String objectKey);
 }

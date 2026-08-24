@@ -2,7 +2,7 @@ package com.secondzip.backend.report.service;
 
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
-import com.secondzip.backend.report.dto.SpecialTermResult;
+import com.secondzip.backend.report.dto.SpecialTermResultDTO;
 import com.secondzip.backend.report.dto.response.SpecialTermView;
 import com.secondzip.backend.report.mapper.ReportMapper;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ public class SpecialTermPersistenceService {
     private final ReportMapper reportMapper;
 
     @Transactional
-    public List<SpecialTermView> replace(Long reportId, List<SpecialTermResult> terms) {
+    public List<SpecialTermView> replace(Long reportId, List<SpecialTermResultDTO> terms) {
         Long lockedReportId = reportMapper.lockReportById(reportId);
 
         if (lockedReportId == null) {
@@ -33,7 +33,7 @@ public class SpecialTermPersistenceService {
         List<SpecialTermView> savedTerms = new ArrayList<>();
 
         for (int index = 0; index < terms.size(); index++) {
-            SpecialTermResult term = terms.get(index);
+            SpecialTermResultDTO term = terms.get(index);
             reportMapper.insertSpecialTerm(reportId, term.getTitle(), term.getContent());
             savedTerms.add(new SpecialTermView(index + 1, term.getTitle(), term.getContent()));
         }

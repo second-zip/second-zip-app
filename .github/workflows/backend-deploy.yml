@@ -3,7 +3,7 @@ name: Backend CI/CD
 on:
   push:
     branches:
-      - develop
+      - main
     paths:
       - 'backend/**'
       - '.github/workflows/backend-deploy.yml'
@@ -39,6 +39,9 @@ jobs:
 
       - name: Grant execute permission for Gradle
         run: chmod +x backend/gradlew
+
+      - name: Run tests
+        run: ./backend/gradlew -p backend clean test --no-daemon
 
       - name: Build WAR
         run: ./backend/gradlew -p backend clean war --no-daemon
@@ -79,9 +82,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Deploy backend ${GITHUB_SHA}" \
             --parameters 'commands=[
-              "cd /home/ec2-user/second-zip-app",
-              "docker compose -f docker/docker-compose.prod.yml pull backend",
-              "docker compose -f docker/docker-compose.prod.yml up -d backend"
+              "sudo -u ec2-user -H bash -lc \"cd /home/ec2-user/second-zip-app && docker compose -f docker/docker-compose.prod.yml pull backend && docker compose -f docker/docker-compose.prod.yml up -d backend\""
             ]' \
             --query "Command.CommandId" \
             --output text)
@@ -96,4 +97,3 @@ jobs:
             --command-id "$COMMAND_ID" \
             --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
             --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
-          

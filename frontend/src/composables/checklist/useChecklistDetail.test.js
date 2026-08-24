@@ -15,6 +15,7 @@ vi.mock('@/api/checklist', () => ({
 
 const response = {
   detailAddress: '101호',
+  recordingSessionId: 17,
   roadAddress: '서울시 마포구',
   items: [
     {
@@ -42,6 +43,7 @@ describe('useChecklistDetail', () => {
 
     expect(mocks.getChecklist).toHaveBeenCalledWith(8);
     expect(state.address.value).toBe('서울시 마포구 101호');
+    expect(state.recordingSessionId.value).toBe(17);
     expect(state.items.value[0]).toMatchObject({
       id: 1, title: '유형별 항목', description: '설명 1', checked: true,
     });
@@ -61,6 +63,7 @@ describe('useChecklistDetail', () => {
     const empty = useChecklistDetail(8);
     await empty.fetchChecklist();
     expect(empty.items.value).toEqual([]);
+    expect(empty.recordingSessionId.value).toBeNull();
     expect(empty.progress.value).toBe(0);
   });
 

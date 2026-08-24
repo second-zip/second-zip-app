@@ -1,8 +1,8 @@
 package com.secondzip.backend.report.service.workflow;
 
 import com.secondzip.backend.common.exception.BusinessException;
-import com.secondzip.backend.report.dto.AnalysisTarget;
-import com.secondzip.backend.report.dto.AnalysisWorkflowState;
+import com.secondzip.backend.report.dto.AnalysisTargetDTO;
+import com.secondzip.backend.report.dto.AnalysisWorkflowStateDTO;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.request.CreateReportRequest;
 import com.secondzip.backend.report.dto.response.AnalysisPreparationResponse;
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,6 +44,10 @@ class AnalysisPreparationServiceTest {
         );
         assertTrue(response.isAuthenticationRequired());
         assertEquals(1L, store.findOwned(response.getRequestId(), 1L).getAccountId());
+        assertEquals(
+                new BigDecimal("125.50"),
+                store.findOwned(response.getRequestId(), 1L).getTransactionAreaSqm()
+        );
     }
 
     @Test
@@ -53,6 +58,17 @@ class AnalysisPreparationServiceTest {
         assertThrows(
                 BusinessException.class,
                 () -> service.prepare(1L, request(""))
+        );
+    }
+
+    @Test
+    void collectiveBuildingRejectsDongWithoutUnitNumber() {
+        AnalysisPreparationService service =
+                service("APARTMENT", new InMemoryWorkflowStore());
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.prepare(1L, request("101동"))
         );
     }
 
@@ -101,7 +117,7 @@ class AnalysisPreparationServiceTest {
             String buildingType,
             AnalysisWorkflowStore store
     ) {
-        AnalysisTarget target = new AnalysisTarget(
+        AnalysisTargetDTO target = new AnalysisTargetDTO(
                 "서울 강남구 테헤란로 152",
                 "서울 강남구 테헤란로 152",
                 "1168010100",
@@ -130,19 +146,19 @@ class AnalysisPreparationServiceTest {
     }
 
     private static class FixedAddressSearchStore implements AddressSearchStore {
-        private final AnalysisTarget target;
+        private final AnalysisTargetDTO target;
 
-        private FixedAddressSearchStore(AnalysisTarget target) {
+        private FixedAddressSearchStore(AnalysisTargetDTO target) {
             this.target = target;
         }
 
         @Override
-        public String save(AnalysisTarget target) {
+        public String save(AnalysisTargetDTO target) {
             return "test-address-id";
         }
 
         @Override
-        public AnalysisTarget find(String addressId) {
+        public AnalysisTargetDTO find(String addressId) {
             return target;
         }
     }
@@ -151,12 +167,12 @@ class AnalysisPreparationServiceTest {
     private static class ExpiredAddressSearchStore implements AddressSearchStore {
 
         @Override
-        public String save(AnalysisTarget target) {
+        public String save(AnalysisTargetDTO target) {
             return "test-address-id";
         }
 
         @Override
-        public AnalysisTarget find(String addressId) {
+        public AnalysisTargetDTO find(String addressId) {
             throw new BusinessException(
                     ErrorCode.RESOURCE_CONFLICT,
                     "주소 정보가 만료되었습니다. 다시 검색해주세요."
@@ -173,26 +189,30 @@ class AnalysisPreparationServiceTest {
         }
 
         @Override
-        public BuildingData getBuildingData(AnalysisTarget target) {
+        public BuildingData getBuildingData(
+                AnalysisTargetDTO target,
+                String detailAddress
+        ) {
             BuildingData data = new BuildingData();
             data.setBuildingType(buildingType);
             data.setBuildingUse("주거");
+            data.setTransactionAreaSqm(new BigDecimal("125.50"));
             return data;
         }
     }
 
     private static class InMemoryWorkflowStore implements AnalysisWorkflowStore {
-        private final Map<String, AnalysisWorkflowState> states =
+        private final Map<String, AnalysisWorkflowStateDTO> states =
                 new ConcurrentHashMap<>();
 
         @Override
-        public void save(AnalysisWorkflowState state) {
+        public void save(AnalysisWorkflowStateDTO state) {
             states.put(state.getRequestId(), state);
         }
 
         @Override
-        public AnalysisWorkflowState findOwned(String requestId, Long accountId) {
-            AnalysisWorkflowState state = states.get(requestId);
+        public AnalysisWorkflowStateDTO findOwned(String requestId, Long accountId) {
+            AnalysisWorkflowStateDTO state = states.get(requestId);
             if (state == null || !state.getAccountId().equals(accountId)) {
                 throw new IllegalArgumentException("not found");
             }
