@@ -257,6 +257,7 @@ public class BuildingHubClient {
         boolean multiFamily = value.contains("다가구");
         if (multiFamily) candidates.add("MULTI_FAMILY");
         if (value.contains("다세대") || value.contains("연립")
+                || value.contains("도시형생활주택")
                 || allowInformalName && value.contains("빌라")) {
             candidates.add("MULTI_HOUSEHOLD");
         }
@@ -313,7 +314,8 @@ public class BuildingHubClient {
             score = compareIdentity(score, targetRoadSub, itemRoadSub, 100);
         }
 
-        String targetDong = extractDetailToken(detailAddress, "동");
+        String targetDong = extractDetailToken(
+                detailAddress, "동", target.legalDongName());
         score = compareUnitIdentity(
                 score,
                 targetDong,
@@ -365,14 +367,29 @@ public class BuildingHubClient {
         return normalizeIdentity(normalized);
     }
 
-    private static String extractDetailToken(String detailAddress, String suffix) {
+    /**
+     * 상세주소 원문(사용자가 직접 입력한 자유 텍스트)에서 suffix("동"/"호")로 끝나는
+     * 마지막 토큰을 찾는다. 법정동명(예: "백현동")이 상세주소에 함께 들어온 경우
+     * 이를 집합건물의 동 번호로 오인하지 않는다 — 법정동명은 절대 동 번호가 될 수
+     * 없고, 그대로 쓰면 건축HUB/등기부 양쪽에서 동 불일치로 대상을 특정하지 못한다.
+     */
+    private static String extractDetailToken(
+            String detailAddress, String suffix, String legalDongName
+    ) {
         if (!hasText(detailAddress)) return null;
+        String excluded = "동".equals(suffix) && hasText(legalDongName)
+                ? legalDongName.trim().replaceAll("\\s+", "")
+                : null;
         Matcher matcher = Pattern.compile(
                 "([0-9A-Za-z가-힣_-]+)\\s*" + Pattern.quote(suffix)
         ).matcher(detailAddress);
         String found = null;
         while (matcher.find()) {
-            found = matcher.group(1) + suffix;
+            String candidate = matcher.group(1) + suffix;
+            if (excluded != null && excluded.equals(candidate)) {
+                continue;
+            }
+            found = candidate;
         }
         return found;
     }

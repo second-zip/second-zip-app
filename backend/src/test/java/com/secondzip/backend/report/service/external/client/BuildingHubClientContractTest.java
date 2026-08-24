@@ -119,6 +119,22 @@ class BuildingHubClientContractTest {
     }
 
     @Test
+    void ignoresLegalDongNameMistakenlyIncludedInDetailAddress() {
+        // 상세주소에 실제 건물 동(302) 없이 법정동명("백현동")만 딸려 들어온 경우.
+        // 이 값을 그대로 동으로 취급하면 실제 동(302)과 달라 충돌로 보고 정상
+        // 건물을 거부해버린다.
+        server.expect(buildingRequest())
+                .andRespond(withSuccess(successResponse("""
+                        {"dongNm":"302","mainPurpsCdNm":"공동주택","etcPurps":"다세대주택"}
+                        """), MediaType.APPLICATION_JSON));
+
+        BuildingData result = client.getBuildingData(targetWithLegalDongName("백현동"), "백현동 402호");
+
+        assertThat(result).isNotNull();
+        assertThat(result.getBuildingType()).isEqualTo("MULTI_HOUSEHOLD");
+    }
+
+    @Test
     void doesNotTreatAStandaloneSubNumberAsTargetIdentity() {
         server.expect(buildingRequest())
                 .andRespond(withSuccess(successResponse("""
@@ -235,6 +251,14 @@ class BuildingHubClientContractTest {
         return new AnalysisTargetDTO(
                 "원본", "서울 강남구 테헤란로 1", "1168010100",
                 "11680", "10100", "737", "84", "1", "0", "building"
+        );
+    }
+
+    private AnalysisTargetDTO targetWithLegalDongName(String legalDongName) {
+        return new AnalysisTargetDTO(
+                "원본", "서울 강남구 테헤란로 1", "1168010100",
+                "11680", "10100", "737", "84", "1", "0", "building",
+                legalDongName, null
         );
     }
 

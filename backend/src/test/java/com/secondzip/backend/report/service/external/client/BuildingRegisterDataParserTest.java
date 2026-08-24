@@ -93,6 +93,44 @@ class BuildingRegisterDataParserTest {
     }
 
     @Test
+    void picksMostRecentBasePriceWhenDatedByResReferenceDate() {
+        // 실제 응답에서 확인된 사례: 공시가격 이력의 날짜 필드가 DATE_KEYS에
+        // 없던 resReferenceDate였다. 그러면 모든 항목이 "날짜 없음"으로
+        // 처리되고, 금액이 해마다 다르니 최신값을 증명 못 해 매번 null이었다.
+        BuildingRegisterAnalysisData result = parser.parse(
+                List.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE),
+                Map.of(
+                        BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE,
+                        Map.of(
+                                "resViolationStatus", "",
+                                "resPriceList", List.of(
+                                        Map.of(
+                                                "resReferenceDate", "20260101",
+                                                "resBasePrice", "111000000"
+                                        ),
+                                        Map.of(
+                                                "resReferenceDate", "20250101",
+                                                "resBasePrice", "107000000"
+                                        ),
+                                        Map.of(
+                                                "resReferenceDate", "20240101",
+                                                "resBasePrice", "105000000"
+                                        ),
+                                        Map.of(
+                                                "resReferenceDate", "20230101",
+                                                "resBasePrice", "96100000"
+                                        )
+                                )
+                        )
+                ),
+                "MULTI_HOUSEHOLD",
+                "공동주택"
+        );
+
+        assertEquals(111_000_000L, result.getOfficialPrice());
+    }
+
+    @Test
     void differentUndatedPricesRemainUnverified() {
         BuildingRegisterAnalysisData result = parser.parse(
                 List.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE),
@@ -376,6 +414,92 @@ class BuildingRegisterDataParserTest {
         );
 
         assertNull(result.getTransactionFloor());
+    }
+
+    @Test
+    void unmarkedResAreaFallbackIsAcceptedWhenAllCandidatesAgree() {
+        // CODEF 응답이 resExclusiveArea 계열 키 없이 resArea만 쓰고, 같은 값이
+        // 요약행·상세행처럼 두 번 노출되며 전유/동호 표식이 전혀 없는 실제 사례.
+        BuildingRegisterAnalysisData result = parser.parse(
+                List.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE),
+                Map.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE, Map.of(
+                        "resViolationStatus", "",
+                        "resUseType", "업무시설",
+                        "resArea", "20.24",
+                        "detail", Map.of("resArea", "20.24")
+                )),
+                "OFFICETEL",
+                "업무시설"
+        );
+
+        assertEquals(new BigDecimal("20.24"), result.getTransactionAreaSqm());
+    }
+
+    @Test
+    void conflictingUnmarkedResAreaFallbackCandidatesRemainUnresolved() {
+        BuildingRegisterAnalysisData result = parser.parse(
+                List.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE),
+                Map.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE, Map.of(
+                        "resViolationStatus", "",
+                        "resUseType", "업무시설",
+                        "resArea", "20.24",
+                        "detail", Map.of("resArea", "45.10")
+                )),
+                "OFFICETEL",
+                "업무시설"
+        );
+
+        assertNull(result.getTransactionAreaSqm());
+    }
+
+    @Test
+    void resTypeZeroPicksTheUnitsOwnAreaAndFloorOutOfTheFullFloorOverview() {
+        // 동/호 식별자가 전혀 없는 실제 오피스텔 응답. 대상 호실 자기 행은
+        // resType=0이고, 그 호실에 딸린 공용부분 배분 행(전기실·계단실·
+        // 주차장 등)은 다른 층 번호와 함께 resType=1로 섞여 내려온다.
+        BuildingRegisterAnalysisData result = parser.parse(
+                List.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE),
+                Map.of(BuildingRegisterDocumentType.COLLECTIVE_EXCLUSIVE, Map.of(
+                        "resViolationStatus", "",
+                        "rows", List.of(
+                                Map.of(
+                                        "resType", "0",
+                                        "resFloor", "16층",
+                                        "resUseType", "업무시설(오피스텔)",
+                                        "resArea", "20.24"
+                                ),
+                                Map.of(
+                                        "resType", "1",
+                                        "resFloor", "지2층",
+                                        "resUseType", "펌프실,전기실,발전기실,저수조",
+                                        "resArea", "1.73"
+                                ),
+                                Map.of(
+                                        "resType", "1",
+                                        "resFloor", "지1층",
+                                        "resUseType", "통신실,관리실",
+                                        "resArea", "0.27"
+                                ),
+                                Map.of(
+                                        "resType", "1",
+                                        "resFloor", "각층",
+                                        "resUseType", "계단실,복도,홀",
+                                        "resArea", "8.15"
+                                ),
+                                Map.of(
+                                        "resType", "1",
+                                        "resFloor", "1층",
+                                        "resUseType", "주차장",
+                                        "resArea", "0.32"
+                                )
+                        )
+                )),
+                "OFFICETEL",
+                "업무시설(오피스텔)"
+        );
+
+        assertEquals(new BigDecimal("20.24"), result.getTransactionAreaSqm());
+        assertEquals(16, result.getTransactionFloor());
     }
 
     @Test

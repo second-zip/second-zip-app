@@ -19,9 +19,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import com.secondzip.backend.report.service.external.RealApiCondition;
 import org.springframework.context.annotation.Conditional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +35,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Component
 @Conditional(RealApiCondition.class)
 public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
@@ -90,15 +93,12 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
 
         Map<String, Object> requestBody =
                 buildStartRequest(state, documentType, authRequest);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token);
 
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(
+            ResponseEntity<String> response = postWithTokenRetry(
                     baseUrl + ENDPOINTS.get(documentType),
-                    new HttpEntity<>(requestBody, headers),
-                    String.class
+                    requestBody,
+                    token
             );
             return parseResponse(response.getBody());
         } catch (BusinessException e) {
@@ -145,14 +145,11 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
         );
         applyTwoWayInput(requestBody, state, request);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token);
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(
+            ResponseEntity<String> response = postWithTokenRetry(
                     baseUrl + ENDPOINTS.get(state.getPendingDocument()),
-                    new HttpEntity<>(requestBody, headers),
-                    String.class
+                    requestBody,
+                    token
             );
             return parseResponse(response.getBody());
         } catch (BusinessException e) {
@@ -163,6 +160,45 @@ public class CodefBuildingRegisterGateway implements BuildingRegisterGateway {
                     "CODEF 건축물대장 추가인증 요청에 실패했습니다."
             );
         }
+    }
+
+    // RegistryClient.postWithTokenRetry와 동일한 패턴: 401(토큰 만료)이면 토큰을 한 번
+    // 무효화하고 새로 받아 1회만 재시도한다. 이게 없으면 토큰이 막 만료된 시점에 걸린
+    // 요청은 전부 그냥 실패로 끝나 사용자가 인증을 처음부터 다시 시작해야 했다.
+    private ResponseEntity<String> postWithTokenRetry(
+            String url,
+            Map<String, Object> requestBody,
+            String token
+    ) {
+        try {
+            return postForEntity(url, requestBody, token);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() != 401) {
+                throw e;
+            }
+            tokenProvider.invalidate();
+            String refreshedToken = tokenProvider.getToken();
+            if (refreshedToken == null) {
+                throw e;
+            }
+            log.info("CODEF 토큰 갱신 후 건축물대장 요청을 1회 재시도합니다.");
+            return postForEntity(url, requestBody, refreshedToken);
+        }
+    }
+
+    private ResponseEntity<String> postForEntity(
+            String url,
+            Map<String, Object> requestBody,
+            String token
+    ) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+        return restTemplate.postForEntity(
+                url,
+                new HttpEntity<>(requestBody, headers),
+                String.class
+        );
     }
 
     private void validateAuthRequest(StartAnalysisAuthRequest request) {

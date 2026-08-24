@@ -136,8 +136,10 @@ class ReportQueryServiceTest {
                         .dataStatus(null)
                         .evidence(null)
                         .build(),
-                // data_status 는 V3 에서 추가된 컬럼이라, 모르는 값이 들어와도
-                // 500 대신 VERIFIED 로 흘려보내는 방어가 걸려 있다.
+                // data_status 는 V3 에서 추가된 컬럼이라 값이 없거나(레거시 행) DB에
+                // 모르는 값이 들어올 수 있다. "틀린 정보 > 정보 없음" 원칙에 따라
+                // 이런 경우 확인 완료(VERIFIED)가 아니라 미확인(UNVERIFIED)으로
+                // 안전하게 내려야 한다 — 500으로 죽이지도, 확인된 것처럼 보이지도 않게.
                 ReportCheckResult.builder()
                         .checkType(CheckType.BUILDING_USE)
                         .riskLevel(RiskLevel.CAUTION)
@@ -187,10 +189,10 @@ class ReportQueryServiceTest {
                 .containsEntry("mortgageAmount", 120_000_000);
         assertThat(result.getCheckResults().get(1).getEvidence()).isEmpty();
         assertThat(result.getCheckResults().get(1).getDataStatus())
-                .isEqualTo(DataStatus.VERIFIED);
+                .isEqualTo(DataStatus.UNVERIFIED);
         assertThat(result.getCheckResults().get(2).getEvidence()).isEmpty();
         assertThat(result.getCheckResults().get(2).getDataStatus())
-                .isEqualTo(DataStatus.VERIFIED);
+                .isEqualTo(DataStatus.UNVERIFIED);
 
         assertThat(result.getFraudTypes()).hasSize(1);
         assertThat(result.getFraudTypes().get(0).getFraudType())
@@ -198,7 +200,7 @@ class ReportQueryServiceTest {
         assertThat(result.getFraudTypes().get(0).getDetailResults())
                 .hasSize(2);
         assertThat(result.getFraudTypes().get(0).getDetailResults().get(1)
-                .getDataStatus()).isEqualTo(DataStatus.VERIFIED);
+                .getDataStatus()).isEqualTo(DataStatus.UNVERIFIED);
 
         assertThat(result.getSpecialTerms())
                 .extracting(term -> term.getSequence())

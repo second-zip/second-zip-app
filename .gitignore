@@ -142,3 +142,4 @@ logs/
 !docs/**/*.md
 /docs/
 /_stage/
+/_to_delete/

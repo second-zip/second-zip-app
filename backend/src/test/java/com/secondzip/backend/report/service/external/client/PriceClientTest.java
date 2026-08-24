@@ -2,6 +2,9 @@ package com.secondzip.backend.report.service.external.client;
 
 import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.dto.external.PriceData;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PriceClientTest {
 
@@ -78,6 +83,87 @@ class PriceClientTest {
     }
 
     @Test
+    @DisplayName("shadow 비교는 최신일 중앙값을 쓰되 기존 가격과 API 호출 수를 바꾸지 않는다")
+    void shadowComparisonDoesNotChangeSelectedPriceOrCallCount() {
+        String items = item("역삼동", "737", "excluUseAr", "84.12", "3",
+                "20", "13,000", "", "")
+                + item("역삼동", "737", "excluUseAr", "84.12", "5",
+                "20", "17,000", "", "")
+                + item("역삼동", "737", "excluUseAr", "84.12", "10",
+                "19", "99,000", "", "");
+        StubRestTemplate restTemplate = new StubRestTemplate(uri -> xml(3, items));
+        PriceClient client = client(restTemplate);
+        ReflectionTestUtils.setField(client, "shadowComparisonEnabled", true);
+
+        List<String> logMessages = new ArrayList<>();
+        PriceData result = withCapturedPriceClientLogs(logMessages, () ->
+                client.getPriceData(
+                    target(), "APARTMENT", new BigDecimal("84.12"), 3
+                )
+        );
+
+        assertNotNull(result);
+        assertEquals(130_000_000L, result.getRecentSalePrice());
+        assertEquals(1, restTemplate.requestedUris.size());
+        assertTrue(logMessages.stream().anyMatch(message ->
+                message.contains("sameAreaLatestPrice=150000000")
+                        && message.contains("sameAreaLatestDealDate=")
+                        && message.contains("sameDateCandidateCount=2")
+                        && message.contains("candidateFloors=[3, 5]")
+        ), "이전 날짜의 9억 9천만원은 제외하고 최신일 두 거래의 중앙값을 기록해야 한다");
+    }
+
+    @Test
+    @DisplayName("shadow 비교는 동일 층 거래보다 최신 월의 지번·면적 거래를 사용한다")
+    void shadowComparisonUsesNewerSameAreaTradeFromPreviouslySearchedMonth() {
+        AtomicInteger callCount = new AtomicInteger();
+        StubRestTemplate restTemplate = new StubRestTemplate(uri -> {
+            if (callCount.incrementAndGet() == 1) {
+                return xml(1, item(
+                        "역삼동", "737", "excluUseAr", "84.12", "5",
+                        "21", "17,000", "", ""
+                ));
+            }
+            return xml(1, item(
+                    "역삼동", "737", "excluUseAr", "84.12", "3",
+                    "20", "13,000", "", ""
+            ));
+        });
+        PriceClient client = client(restTemplate);
+        ReflectionTestUtils.setField(client, "shadowComparisonEnabled", true);
+
+        List<String> logMessages = new ArrayList<>();
+        PriceData result = withCapturedPriceClientLogs(logMessages, () ->
+                client.getPriceData(
+                        target(), "APARTMENT", new BigDecimal("84.12"), 3
+                )
+        );
+
+        assertNotNull(result);
+        assertEquals(130_000_000L, result.getRecentSalePrice());
+        assertEquals(2, restTemplate.requestedUris.size());
+        assertTrue(logMessages.stream().anyMatch(message ->
+                message.contains("sameAreaLatestPrice=170000000")
+                        && message.contains("sameDateCandidateCount=1")
+                        && message.contains("candidateFloors=[5]")
+        ), "이미 조회한 더 최신 월의 다른 층 거래가 지번·면적 최신값이어야 한다");
+    }
+
+    @Test
+    @DisplayName("shadow 비교 중앙값은 짝수 후보도 두 중앙값의 평균으로 계산한다")
+    void calculatesSameAreaMedianForEvenCandidateCount() {
+        PriceClient client = client(new StubRestTemplate(uri -> xml(0, "")));
+
+        Long median = ReflectionTestUtils.invokeMethod(
+                client,
+                "median",
+                List.of(170_000_000L, 130_000_000L, 150_000_000L, 140_000_000L)
+        );
+
+        assertEquals(145_000_000L, median);
+    }
+
+    @Test
     @DisplayName("더 최신인 정확 후보의 금액을 읽지 못하면 과거 거래나 이전 달로 후퇴하지 않는다")
     void rejectsUnreadableExactCandidateThatMayBeLatest() {
         String items = item("역삼동", "737", "excluUseAr", "84.12", "3",
@@ -94,8 +180,8 @@ class PriceClientTest {
     }
 
     @Test
-    @DisplayName("최신 동일일자에 서로 다른 금액이 있으면 이전 달로 후퇴하지 않고 미확인 처리한다")
-    void rejectsDifferentAmountsOnSameLatestDay() {
+    @DisplayName("동일 층 최신일 금액이 여러 개면 층 제외 단계의 중앙값을 채택한다")
+    void fallsBackToSameAreaMedianWhenExactLatestDayIsAmbiguous() {
         String items = item("역삼동", "737", "excluUseAr", "84.12", "3",
                 "20", "13,000", "", "")
                 + item("역삼동", "737", "excluUseAr", "84.12", "3",
@@ -107,8 +193,95 @@ class PriceClientTest {
                 target(), "APARTMENT", new BigDecimal("84.12"), 3
         );
 
-        assertNull(result);
+        assertNotNull(result);
+        assertEquals(135_000_000L, result.getRecentSalePrice());
         assertEquals(1, restTemplate.requestedUris.size());
+    }
+
+    @Test
+    @DisplayName("최근 6개월 층 제외 거래는 7~24개월 동일 층 거래보다 우선한다")
+    void recentSameAreaTradeWinsOverOldExactFloorTrade() {
+        AtomicInteger callCount = new AtomicInteger();
+        StubRestTemplate restTemplate = new StubRestTemplate(uri -> {
+            int call = callCount.incrementAndGet();
+            if (call == 1) {
+                return xml(1, item(
+                        "역삼동", "737", "excluUseAr", "84.12", "5",
+                        "20", "15,000", "", ""
+                ));
+            }
+            if (call == 7) {
+                return xml(1, item(
+                        "역삼동", "737", "excluUseAr", "84.12", "3",
+                        "20", "13,000", "", ""
+                ));
+            }
+            return xml(0, "");
+        });
+        PriceClient client = client(restTemplate);
+
+        PriceData result = client.getPriceData(
+                target(), "APARTMENT", new BigDecimal("84.12"), 3
+        );
+
+        assertNotNull(result);
+        assertEquals(150_000_000L, result.getRecentSalePrice());
+        assertEquals(6, restTemplate.requestedUris.size());
+    }
+
+    @Test
+    @DisplayName("7~24개월에서는 동일 층 거래를 층 제외 거래보다 우선한다")
+    void oldExactFloorTradeWinsOverOldSameAreaTrade() {
+        AtomicInteger callCount = new AtomicInteger();
+        StubRestTemplate restTemplate = new StubRestTemplate(uri -> {
+            int call = callCount.incrementAndGet();
+            if (call == 7) {
+                return xml(1, item(
+                        "역삼동", "737", "excluUseAr", "84.12", "5",
+                        "20", "15,000", "", ""
+                ));
+            }
+            if (call == 8) {
+                return xml(1, item(
+                        "역삼동", "737", "excluUseAr", "84.12", "3",
+                        "20", "13,000", "", ""
+                ));
+            }
+            return xml(0, "");
+        });
+        PriceClient client = client(restTemplate);
+
+        PriceData result = client.getPriceData(
+                target(), "APARTMENT", new BigDecimal("84.12"), 3
+        );
+
+        assertNotNull(result);
+        assertEquals(130_000_000L, result.getRecentSalePrice());
+        assertEquals(8, restTemplate.requestedUris.size());
+    }
+
+    @Test
+    @DisplayName("동일 층 거래가 24개월 내 없으면 7~24개월 층 제외 최신 거래를 채택한다")
+    void usesOldSameAreaTradeAsFourthStage() {
+        AtomicInteger callCount = new AtomicInteger();
+        StubRestTemplate restTemplate = new StubRestTemplate(uri -> {
+            if (callCount.incrementAndGet() == 7) {
+                return xml(1, item(
+                        "역삼동", "737", "excluUseAr", "84.12", "5",
+                        "20", "15,000", "", ""
+                ));
+            }
+            return xml(0, "");
+        });
+        PriceClient client = client(restTemplate);
+
+        PriceData result = client.getPriceData(
+                target(), "APARTMENT", new BigDecimal("84.12"), 3
+        );
+
+        assertNotNull(result);
+        assertEquals(150_000_000L, result.getRecentSalePrice());
+        assertEquals(24, restTemplate.requestedUris.size());
     }
 
     @Test
@@ -128,8 +301,8 @@ class PriceClientTest {
     }
 
     @Test
-    @DisplayName("최근 6개월 모두 정확한 거래가 없으면 null을 반환한다")
-    void returnsNullAfterSixMonths() {
+    @DisplayName("최근 6개월에 없으면 24개월까지 넓혀 보고, 그래도 없으면 null을 반환한다")
+    void returnsNullAfterExtendingToTwentyFourMonths() {
         StubRestTemplate restTemplate = new StubRestTemplate(uri -> xml(0, ""));
         PriceClient client = client(restTemplate);
 
@@ -139,9 +312,35 @@ class PriceClientTest {
 
         assertNull(result);
         assertEquals(
-                6,
+                24,
                 restTemplate.requestedUris.size(),
-                "조회 개월 수가 늘면 시군구 전체 거래를 그만큼 더 받아온다"
+                "6개월에 못 찾으면 24개월까지 시군구 전체 거래를 더 받아온다"
+        );
+    }
+
+    @Test
+    @DisplayName("최근 6개월엔 없어도 7~24개월째에서 찾으면 그 거래를 채택한다")
+    void findsMatchInExtendedLookbackWhenPrimarySixMonthsHaveNoMatch() {
+        String matchingItem = item(
+                "역삼동", "737", "excluUseAr", "84.12", "3",
+                "10", "12,000", "", ""
+        );
+        AtomicInteger callCount = new AtomicInteger();
+        StubRestTemplate restTemplate = new StubRestTemplate(uri ->
+                callCount.incrementAndGet() <= 6 ? xml(0, "") : xml(1, matchingItem)
+        );
+        PriceClient client = client(restTemplate);
+
+        PriceData result = client.getPriceData(
+                target(), "APARTMENT", new BigDecimal("84.12"), 3
+        );
+
+        assertNotNull(result);
+        assertEquals(120_000_000L, result.getRecentSalePrice());
+        assertEquals(
+                7,
+                restTemplate.requestedUris.size(),
+                "7개월째에서 바로 찾으면 8~24개월째는 조회하지 않는다"
         );
     }
 
@@ -159,6 +358,40 @@ class PriceClientTest {
 
         assertNotNull(result);
         assertEquals(120_000_000L, result.getRecentSalePrice());
+    }
+
+    @Test
+    @DisplayName("면적을 몰라도 지번·층 후보가 하나면 그 거래를 채택한다")
+    void usesFloorOnlyMatchWhenAreaIsUnknownAndCandidateIsUnique() {
+        PriceClient client = client(new StubRestTemplate(uri -> xml(1, item(
+                "역삼동", "737", "excluUseAr", "84.12", "3",
+                "10", "12,000", "", ""
+        ))));
+
+        PriceData result = client.getPriceData(target(), "APARTMENT", null, 3);
+
+        assertNotNull(
+                result,
+                "면적을 못 읽었다고 실거래가를 통째로 버릴 이유는 없다"
+        );
+        assertEquals(120_000_000L, result.getRecentSalePrice());
+    }
+
+    @Test
+    @DisplayName("면적을 모르는 채로 같은 층 거래가 금액까지 갈리면 채택하지 않는다")
+    void refusesFloorOnlyMatchWhenAmountsDisagree() {
+        String items = item("역삼동", "737", "excluUseAr", "59.80", "3",
+                "10", "32,000", "", "")
+                + item("역삼동", "737", "excluUseAr", "84.12", "3",
+                "20", "41,000", "", "");
+        PriceClient client = client(new StubRestTemplate(uri -> xml(2, items)));
+
+        PriceData result = client.getPriceData(target(), "APARTMENT", null, 3);
+
+        assertNull(
+                result,
+                "같은 층의 다른 호일 수 있어 최신 계약일만 보고 고르면 안 된다"
+        );
     }
 
     @Test
@@ -459,6 +692,30 @@ class PriceClientTest {
                 "10100", "737", "", "11", "", "", "역삼동",
                 "서울특별시 강남구 역삼동 737"
         );
+    }
+
+    private PriceData withCapturedPriceClientLogs(
+            List<String> logMessages,
+            Supplier<PriceData> action
+    ) {
+        AbstractAppender appender = new AbstractAppender(
+                "shadow-test-" + System.nanoTime(), null, null, false, null
+        ) {
+            @Override
+            public void append(LogEvent event) {
+                logMessages.add(event.getMessage().getFormattedMessage());
+            }
+        };
+        org.apache.logging.log4j.core.Logger logger =
+                (org.apache.logging.log4j.core.Logger) LogManager.getLogger(PriceClient.class);
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            return action.get();
+        } finally {
+            logger.removeAppender(appender);
+            appender.stop();
+        }
     }
 
     private AnalysisTargetDTO mountainTarget() {

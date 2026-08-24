@@ -6,10 +6,12 @@
             parameterType="com.secondzip.backend.report.domain.AnalysisReport">
         INSERT INTO analysis_reports
         (account_id, request_id, road_address, detail_address, deposit, favorite, favorited_at, risk_level,
-         housing_category, is_trust_property)
+         housing_category, is_trust_property, recent_sale_price, official_price, base_price_source)
         VALUES
             (#{accountId}, #{requestId}, #{roadAddress}, #{detailAddress}, #{deposit}, false, NULL, #{riskLevel},
-             #{housingCategory, jdbcType=VARCHAR}, #{trustProperty})
+             #{housingCategory, jdbcType=VARCHAR}, #{trustProperty},
+             #{recentSalePrice, jdbcType=BIGINT}, #{officialPrice, jdbcType=BIGINT},
+             #{basePriceSource, jdbcType=VARCHAR})
     </insert>
 
     <insert id="insertCheckResult" parameterType="com.secondzip.backend.report.domain.ReportCheckResult">
@@ -109,7 +111,10 @@
             favorite,
             favorited_at AS favoritedAt,
             housing_category AS housingCategory,
-            is_trust_property AS trustProperty
+            is_trust_property AS trustProperty,
+            recent_sale_price AS recentSalePrice,
+            official_price AS officialPrice,
+            base_price_source AS basePriceSource
         FROM analysis_reports
         WHERE analysis_report_id = #{reportId}
     </select>

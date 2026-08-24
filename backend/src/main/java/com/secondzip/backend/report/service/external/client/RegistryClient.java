@@ -17,10 +17,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * CODEF 부동산등기부등본 열람 API 클라이언트.
@@ -326,7 +329,8 @@ public class RegistryClient implements RegistryDataProvider {
                                 : null
                 );
                 if (registryData == null) {
-                    log.warn("CODEF 등기부 응답 구조를 해석하지 못했습니다: shape={}", describeShape(data, 0));
+                    logUnparseableResponse(
+                            data, detailAddress, requestBody, target.legalDongName());
                     return null;
                 }
 
@@ -455,6 +459,127 @@ public class RegistryClient implements RegistryDataProvider {
             return URLDecoder.decode(text, StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
             return text;
+        }
+    }
+
+    /**
+     * registryDataParser.parse()가 null을 반환했을 때 원인을 구분해서 남긴다.
+     *
+     * resRegisterEntriesList가 비어있고 resAddrList만 채워진 경우는 진짜 파싱
+     * 실패가 아니라, CODEF(등기소)가 요청한 동/호로 등기부를 하나로 특정하지
+     * 못해 주소 후보 목록을 대신 내려준 것으로 보인다. 이 경우 실제로 무엇을
+     * 보냈는지(원문 상세주소, 파싱된 dong/ho)와 후보가 몇 건/어떤 지번인지를
+     * 남겨야 다음에 같은 상황이 재현될 때 추측 없이 원인을 확인할 수 있다.
+     */
+    private void logUnparseableResponse(
+            Map<String, Object> data,
+            String detailAddress,
+            Map<String, Object> requestBody,
+            String legalDongName
+    ) {
+        List<Map<String, Object>> registerEntries = new ArrayList<>();
+        collectMapsFromNamedList(data, "resRegisterEntriesList", registerEntries);
+        List<Map<String, Object>> addressCandidates = new ArrayList<>();
+        collectMapsFromNamedList(data, "resAddrList", addressCandidates);
+
+        if (registerEntries.isEmpty() && !addressCandidates.isEmpty()) {
+            // 동 없이 호수만 요청하면, 이 건물이 실제로 동으로 세대를 나누는 경우
+            // (숫자 동이든 "제비동"처럼 이름 붙은 동이든) 등기소가 후보를 하나로
+            // 좁히지 못한다. 이때 이 건물이 실제로 쓰는 동 이름을 후보 지번에서
+            // 뽑아 남겨두면, 사용자가 상세주소에 어떤 동을 채워 넣어야 하는지
+            // 추측 없이 바로 알 수 있다.
+            log.warn(
+                    "CODEF가 등기부를 하나로 특정하지 못해 주소 후보 목록을 대신 "
+                            + "반환했습니다: detailAddress={}, 요청 dong={}, ho={}, "
+                            + "후보 수={}, 이 건물이 쓰는 동 이름={}, 후보 지번 예시={}",
+                    detailAddress,
+                    requestBody.get("dong"),
+                    requestBody.get("ho"),
+                    addressCandidates.size(),
+                    distinctDongLabels(addressCandidates, legalDongName),
+                    distinctLotNumbers(addressCandidates)
+            );
+            return;
+        }
+        log.warn("CODEF 등기부 응답 구조를 해석하지 못했습니다: shape={}", describeShape(data, 0));
+    }
+
+    private static final java.util.regex.Pattern ADDR_DONG_TOKEN =
+            java.util.regex.Pattern.compile("([^\\s,()]+?)동(?=[0-9])");
+
+    /**
+     * 후보 지번 문자열(예: "...백현동 529 판교역에스케이허브 제1층 제비동101호")에서
+     * 실제 세대 구분에 쓰이는 동 이름만 뽑는다. "동" 바로 뒤에 공백 없이 숫자가
+     * 붙어야만 세대 동으로 보고, 법정동명(예: "백현동")은 뒤에 지번 숫자가 아니라
+     * 공백이 오므로 이 조건만으로도 자연히 걸러진다 — legalDongName은 혹시 공백
+     * 없이 붙어 나오는 응답 형식을 대비한 이중 방어다.
+     */
+    private Set<String> distinctDongLabels(
+            List<Map<String, Object>> candidates, String legalDongName
+    ) {
+        String excluded = legalDongName == null
+                ? null
+                : legalDongName.trim().replaceAll("\\s+", "");
+        Set<String> result = new LinkedHashSet<>();
+        for (Map<String, Object> candidate : candidates) {
+            Object value = candidate.get("commAddrLotNumber");
+            if (value == null) {
+                continue;
+            }
+            java.util.regex.Matcher matcher = ADDR_DONG_TOKEN.matcher(value.toString());
+            while (matcher.find()) {
+                String token = matcher.group(1) + "동";
+                if (excluded != null && excluded.equals(token)) {
+                    continue;
+                }
+                result.add(token);
+            }
+            if (result.size() >= 20) {
+                result.add("...");
+                break;
+            }
+        }
+        return result;
+    }
+
+    private Set<String> distinctLotNumbers(List<Map<String, Object>> candidates) {
+        Set<String> result = new LinkedHashSet<>();
+        for (Map<String, Object> candidate : candidates) {
+            Object value = candidate.get("commAddrLotNumber");
+            if (value != null && !value.toString().isBlank()) {
+                result.add(value.toString());
+            }
+            if (result.size() >= 10) {
+                result.add("...");
+                break;
+            }
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void collectMapsFromNamedList(
+            Object node,
+            String targetKey,
+            List<Map<String, Object>> destination
+    ) {
+        if (node instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                Object value = entry.getValue();
+                if (targetKey.equals(String.valueOf(entry.getKey()))
+                        && value instanceof Collection<?> collection) {
+                    for (Object item : collection) {
+                        if (item instanceof Map<?, ?> itemMap) {
+                            destination.add((Map<String, Object>) itemMap);
+                        }
+                    }
+                } else {
+                    collectMapsFromNamedList(value, targetKey, destination);
+                }
+            }
+        } else if (node instanceof Collection<?> collection) {
+            collection.forEach(item -> collectMapsFromNamedList(
+                    item, targetKey, destination));
         }
     }
 
