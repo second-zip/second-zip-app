@@ -79,6 +79,9 @@ const report = {
 describe('분석 결과 화면', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.authStore.isAuthenticated = false;
+    mocks.authStore.myPage = null;
+    mocks.authStore.fetchMyPage.mockResolvedValue({ characterType: 'CAT' });
     mocks.getReport.mockResolvedValue(report);
     mocks.getChecklists.mockResolvedValue([]);
     mocks.shareReport.mockResolvedValue({ shareToken: 'share-token' });
@@ -121,6 +124,36 @@ describe('분석 결과 화면', () => {
     expect(wrapper.get('.risk-summary').classes()).toContain(
       'risk-summary--danger',
     );
+  });
+
+  test('로그인 프로필 조회 실패를 기록하고 리포트는 계속 표시한다', async () => {
+    const error = new Error('profile failed');
+    mocks.authStore.isAuthenticated = true;
+    mocks.authStore.fetchMyPage.mockRejectedValue(error);
+
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    expect(logger.error).toHaveBeenCalledWith('analysis.fetch-user', error);
+    expect(wrapper.text()).toContain('서울시 마포구 101호');
+  });
+
+  test('미리보기 라우트는 API 요청 없이 시나리오 데이터를 표시한다', async () => {
+    mocks.route.meta = { analysisPreview: true };
+    mocks.route.params = {
+      analysisReportId: undefined,
+      scenario: 'b',
+      shareToken: undefined,
+    };
+
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    expect(mocks.getReport).not.toHaveBeenCalled();
+    expect(wrapper.get('.risk-summary').classes()).toContain(
+      'risk-summary--danger',
+    );
+    expect(wrapper.get('.ratio-field strong').text()).toBe('85%');
   });
 
   test('상세 응답의 즐겨찾기 상태를 표시하고 해제 API를 호출한다', async () => {
@@ -172,6 +205,74 @@ describe('분석 결과 화면', () => {
       `${window.location.origin}/report/shared/share-token`,
     );
     expect(wrapper.text()).toContain('링크를 복사했습니다.');
+  });
+
+  test('클립보드 API 실패 시 textarea 방식으로 링크를 복사한다', async () => {
+    mocks.clipboardWrite.mockRejectedValue(new Error('denied'));
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: vi.fn(() => true),
+    });
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    await wrapper.get('.share-button').trigger('click');
+    await flushPromises();
+
+    expect(document.execCommand).toHaveBeenCalledWith('copy');
+    expect(document.querySelector('textarea')).toBeNull();
+  });
+
+  test('복사 알림은 지정 시간이 지나면 자동으로 숨긴다', async () => {
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+    const timeoutSpy = vi.spyOn(window, 'setTimeout').mockImplementation((callback) => {
+      callback();
+      return 1;
+    });
+
+    await wrapper.get('.share-button').trigger('click');
+    await flushPromises();
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 2000);
+    expect(wrapper.text()).not.toContain('링크를 복사했습니다.');
+    timeoutSpy.mockRestore();
+  });
+
+  test('즐겨찾기 실패를 화면에 표시한다', async () => {
+    mocks.addReportFavorite.mockRejectedValue({
+      response: { data: { message: '즐겨찾기 실패' } },
+    });
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    await wrapper.get('.favorite-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('.result-actions__error').text()).toBe(
+      '즐겨찾기 실패',
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'analysis.toggle-favorite',
+      expect.anything(),
+      { analysisReportId: 12 },
+    );
+  });
+
+  test('공유 토큰이 없으면 오류를 표시한다', async () => {
+    mocks.shareReport.mockResolvedValue({});
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    await wrapper.get('.share-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('.result-actions__error').text()).not.toBe('');
+    expect(logger.error).toHaveBeenCalledWith(
+      'analysis.share-report',
+      expect.any(Error),
+      { analysisReportId: 12 },
+    );
   });
 
   test('목록 보기는 리포트 목록으로 이동한다', async () => {
@@ -227,6 +328,26 @@ describe('분석 결과 화면', () => {
       name: 'checklist-detail',
       params: { reportChecklistId: 55 },
     });
+  });
+
+  test('체크리스트 확인 실패를 화면에 표시한다', async () => {
+    mocks.getChecklists.mockRejectedValue({
+      response: { data: { message: '체크리스트 실패' } },
+    });
+    const wrapper = mount(AnalysisView);
+    await flushPromises();
+
+    await wrapper.get('.result-actions__button--primary').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('.result-actions__error').text()).toBe(
+      '체크리스트 실패',
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'analysis.open-checklist',
+      expect.anything(),
+      { analysisReportId: 12 },
+    );
   });
 
   test('공유 라우트는 토큰으로 리포트를 조회하고 소유자 동작을 숨긴다', async () => {

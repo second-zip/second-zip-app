@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import api, { AUTH_UNAUTHORIZED_EVENT } from './instance';
-import { removeAccessToken } from './token';
+import { getAccessToken, removeAccessToken } from './token';
 
 const { requestUse, responseUse } = vi.hoisted(() => ({
   requestUse: vi.fn(),
@@ -25,11 +25,38 @@ vi.mock('./token', () => ({
 }));
 
 const handleError = responseUse.mock.calls[0][1];
+const handleResponse = responseUse.mock.calls[0][0];
+const handleRequest = requestUse.mock.calls[0][0];
 
 describe('API response interceptor', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    getAccessToken.mockReset();
     removeAccessToken.mockClear();
+  });
+
+  it('저장된 토큰을 Authorization 헤더에 추가한다', () => {
+    getAccessToken.mockReturnValue('access-token');
+    const config = { headers: { set: vi.fn() } };
+
+    expect(handleRequest(config)).toBe(config);
+    expect(config.headers.set).toHaveBeenCalledWith(
+      'Authorization',
+      'Bearer access-token',
+    );
+  });
+
+  it('토큰이 없으면 Authorization 헤더를 추가하지 않는다', () => {
+    const config = { headers: { set: vi.fn() } };
+
+    expect(handleRequest(config)).toBe(config);
+    expect(config.headers.set).not.toHaveBeenCalled();
+  });
+
+  it('성공 응답을 그대로 반환한다', () => {
+    const response = { data: { ok: true } };
+
+    expect(handleResponse(response)).toBe(response);
   });
 
   it.each([401, 403])('%i 응답이면 인증 정보를 정리하고 로그인 이동 이벤트를 발생시킨다', async (status) => {

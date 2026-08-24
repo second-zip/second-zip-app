@@ -33,4 +33,34 @@ describe('report routes', () => {
     expect(shared.meta.analysisShared).toBe(true);
     expect(shared.meta.requiresAuth).toBeUndefined();
   });
+
+  test('비로그인 사용자는 인증 필수 화면에서 로그인으로 이동한다', async () => {
+    await router.push('/mypage');
+
+    expect(router.currentRoute.value.name).toBe('login');
+    expect(router.currentRoute.value.query.redirect).toBe('/mypage');
+  });
+
+  test('모든 지연 로딩 화면 모듈을 정상적으로 불러온다', async () => {
+    const loaders = router
+      .getRoutes()
+      .map((route) => route.components?.default)
+      .filter((component) => typeof component === 'function');
+
+    const modules = await Promise.all(loaders.map((load) => load()));
+
+    expect(loaders.length).toBeGreaterThan(15);
+    expect(modules.every((module) => module.default)).toBe(true);
+  });
+
+  test('이전 분석 상세 URL의 ID를 현재 라우트로 전달한다', () => {
+    const legacyRoute = router.getRoutes().find(
+      ({ path }) => path === '/analysis/:analysisReportId(\\d+)',
+    );
+
+    expect(legacyRoute.redirect({ params: { analysisReportId: '27' } })).toEqual({
+      name: 'analysis',
+      params: { analysisReportId: '27' },
+    });
+  });
 });

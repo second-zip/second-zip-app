@@ -171,3 +171,22 @@ test('시나리오별 비서 설정을 화면 캐릭터 타입으로 변환한�
   assert.equal(mapSecretary(ANALYSIS_PREVIEW_REPORTS.d.secretary), 'woman');
   assert.equal(mapSecretary('UNKNOWN'), null);
 });
+
+test('알 수 없는 점검·사기 유형도 API enum을 그대로 표시한다', () => {
+  const [check] = mapCheckResults([
+    { checkType: 'NEW_CHECK', result: 'SAFE', evidence: {} },
+  ]);
+  const [fraudType] = mapFraudTypes([
+    { fraudType: 'NEW_FRAUD', riskLevel: 'CAUTION' },
+  ]);
+
+  assert.deepEqual(
+    { id: check.id, label: check.label, basis: check.basis },
+    { id: 'NEW_CHECK', label: 'NEW_CHECK', basis: '판정 근거 확인 필요' },
+  );
+  assert.deepEqual(
+    { id: fraudType.id, title: fraudType.title, subtitle: fraudType.subtitle },
+    { id: 'NEW_FRAUD', title: 'NEW_FRAUD', subtitle: '세부 판정 결과' },
+  );
+  assert.deepEqual(fraudType.items, []);
+});

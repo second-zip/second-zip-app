@@ -29,6 +29,8 @@ vi.mock('vue-router', () => ({
 describe('MyPageView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.authStore.isAuthenticated = true;
+    mocks.authStore.logout.mockResolvedValue(undefined);
     mocks.authStore.fetchMyPage.mockResolvedValue(mocks.authStore.myPage);
     mocks.authStore.characterType = 'CAT';
     mocks.getReports.mockResolvedValue({
@@ -82,5 +84,46 @@ describe('MyPageView', () => {
 
     expect(wrapper.text()).toContain('엘리스');
     expect(wrapper.text()).toContain('현재 AI 비서');
+  });
+
+  it('로그인 사용자를 로그아웃하고 로그인 화면으로 이동한다', async () => {
+    const wrapper = mount(MyPageView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    await flushPromises();
+
+    await wrapper.get('.mypage__menu button').trigger('click');
+    await flushPromises();
+
+    expect(mocks.authStore.logout).toHaveBeenCalledOnce();
+    expect(mocks.replace).toHaveBeenCalledWith({ name: 'login' });
+  });
+
+  it('비로그인 상태에서는 서버 로그아웃 없이 로그인으로 이동한다', async () => {
+    mocks.authStore.isAuthenticated = false;
+    const wrapper = mount(MyPageView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    await flushPromises();
+
+    await wrapper.get('.mypage__menu button').trigger('click');
+
+    expect(mocks.authStore.logout).not.toHaveBeenCalled();
+    expect(mocks.replace).toHaveBeenCalledWith({ name: 'login' });
+  });
+
+  it('로그아웃 실패 메시지를 표시한다', async () => {
+    mocks.authStore.logout.mockRejectedValue({
+      response: { data: { message: '로그아웃 실패' } },
+    });
+    const wrapper = mount(MyPageView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    await flushPromises();
+
+    await wrapper.get('.mypage__menu button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('로그아웃 실패');
   });
 });

@@ -73,4 +73,33 @@ describe('recordingSocket', () => {
     currentSocket().dispatchEvent(new Event('close'));
     expect(onError).toHaveBeenCalledTimes(1);
   });
+
+  test('연결 오류를 콜백과 Promise 양쪽에 전달한다', async () => {
+    const onError = vi.fn();
+    const client = createRecordingSocket(onError);
+    const connecting = client.connect(1);
+
+    currentSocket().dispatchEvent(new Event('error'));
+
+    await expect(connecting).rejects.toThrow('녹음 서버에 연결하지 못했어요.');
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+      message: '녹음 서버에 연결하지 못했어요.',
+    }));
+  });
+
+  test('WebSocket 버퍼가 비워질 때까지 전송 완료를 기다린다', async () => {
+    vi.useFakeTimers();
+    const client = createRecordingSocket();
+    const connecting = client.connect(1);
+    currentSocket().dispatchEvent(new Event('open'));
+    await connecting;
+    currentSocket().bufferedAmount = 8;
+
+    const waiting = client.waitUntilSent();
+    currentSocket().bufferedAmount = 0;
+    await vi.advanceTimersByTimeAsync(30);
+
+    await expect(waiting).resolves.toBeUndefined();
+    vi.useRealTimers();
+  });
 });
