@@ -42,7 +42,6 @@ public class RiskEvaluationService {
     private static final BigDecimal HUG_COLLATERAL_RATIO = new BigDecimal("0.9");
     private static final BigDecimal HUG_SENIOR_CLAIM_RATIO = new BigDecimal("0.6");
 
-    private static final int CHECK_DANGER_THRESHOLD = 3;   // 필수점검 5개 중 3개 이상 CAUTION → DANGER
 
     // 건물과 토지의 등기가 분리된 유형. 이 외에는 집합건물로 보고 토지 등기를 따로 보지 않는다.
     private static final List<String> SEPARATE_LAND_REGISTRY_TYPES =
@@ -57,6 +56,8 @@ public class RiskEvaluationService {
 
         String regionType = resolveRegionType(roadAddress);
         Long basePrice = pickBasePrice(price);
+        // HUG 필수점검 evidence와 리포트 최상위 노출이 같은 값을 쓰도록 한 번만 계산한다.
+        String basePriceSourceValue = basePriceSource(price);
         Long hugHousePrice = pickHugHousePrice(
                 price,
                 building != null ? building.getBuildingType() : null
@@ -90,7 +91,7 @@ public class RiskEvaluationService {
         hugEvidence.put("mortgageAmount", mortgageAmount);
         hugEvidence.put("basePrice", basePrice);
         // 기준가가 실거래가인지 공시가격 환산액인지 리포트에서 구분할 수 있어야 한다.
-        hugEvidence.put("basePriceSource", basePriceSource(price));
+        hugEvidence.put("basePriceSource", basePriceSourceValue);
         hugEvidence.put("hugHousePrice", hugHousePrice);
 
         checkResultDTOS.add(new CheckResultDTO(
@@ -107,11 +108,10 @@ public class RiskEvaluationService {
         ));
 
         // ===== 1-2. 필수점검 최종 결과 (개수 기반) =====
-        RiskLevel checkOverall = aggregateJudgements(
+        RiskLevel checkOverall = RiskAggregation.aggregateChecks(
                 checkResultDTOS.stream()
                         .map(c -> new JudgementDTO(c.getRiskLevel(), c.getDataStatus()))
-                        .toList(),
-                CHECK_DANGER_THRESHOLD
+                        .toList()
         );
 
         // ===== 2. 유형별 세부 9개 → 유형 3개 =====
@@ -131,7 +131,14 @@ public class RiskEvaluationService {
         fraudTypeResultDTOS.forEach(f -> topLevels.add(f.getRiskLevel()));
         RiskLevel overall = RiskLevel.worstOf(topLevels);
 
-        return new RiskEvaluationResultDTO(overall, checkResultDTOS, fraudTypeResultDTOS);
+        return new RiskEvaluationResultDTO(
+                overall,
+                checkResultDTOS,
+                fraudTypeResultDTOS,
+                price != null ? price.getRecentSalePrice() : null,
+                price != null ? price.getOfficialPrice() : null,
+                basePriceSourceValue
+        );
     }
 
     private Map<String, Object> illegalBuildingEvidence(BuildingData building) {
@@ -414,7 +421,14 @@ public class RiskEvaluationService {
     }
 
     // 5. 권리침해 여부
-    /** 실제로 보는 것: 등기 갑구의 압류·가압류·경매개시결정 등 권리제한 표시. */
+    /**
+     * 실제로 보는 것: 등기 갑구의 압류·가압류·경매개시결정 등 권리제한 표시.
+     *
+     * 유형2-C({@code RIGHTS_INFRINGEMENT_CONCEALMENT})가 같은 결과를 재사용한다.
+     * 다만 그 항목 이름이 뜻하는 "은폐"(고지 내용과 실제가 다름)를 검증하는
+     * 것은 아니다 — 비교할 고지 원문이 없어 여기서는 등기부 자체의 권리제한
+     * 유무만 본다.
+     */
     private JudgementDTO judgeRightsInfringement(RegistryData registry) {
         if (registry == null || registry.getHasSeizure() == null) {
             return JudgementDTO.unverified();
@@ -557,23 +571,23 @@ public class RiskEvaluationService {
                         DetailType.LAND_BUILDING_OWNERSHIP_MISMATCH,
                         judgeOwnershipMismatch(registry, building)
                 ),
-                // 2-B, 2-C는 "고지·광고된 내용"과 등기·대장의 차이를 보는 항목이다.
-                // 광고 원문을 입력받는 경로가 아직 없어 비교 대상 자체가 없으므로
-                // 판정하지 않는다.
-                //
-                // 여기서 unverified()를 쓰면 안 된다. unverified()는 (CAUTION,
-                // UNVERIFIED)라서 집계에 남고, aggregateJudgements가 SAFE를
-                // CAUTION으로 끌어올린다. 그러면 이 두 항목만으로 유형2가 영원히
-                // CAUTION에 묶이고, 전체 결과가 어떤 매물에서도 SAFE가 될 수 없다.
-                // "확인에 실패한 항목"이 아니라 "이 리포트에 해당하지 않는 항목"이므로
-                // 집계에서 제외되는 notApplicable()이 맞다.
+                // 2-B·2-C는 명세서(리포트-분석-완전정리.md 4-5)상 필수점검 3·5번
+                // 판정을 그대로 재사용하는 의도된 중복 집계다. 항목 이름
+                // (FALSE_BUILDING_USE_INFORMATION = "허위 안내",
+                // RIGHTS_INFRINGEMENT_CONCEALMENT = "권리침해 은폐")이 암시하는
+                // "고지된 내용과 실제가 다른가"를 검증하는 것은 아니다 — 비교할
+                // 고지·광고 원문을 입력받는 경로가 없어 그 차이 자체는 볼 수 없다.
+                // 그렇다고 notApplicable()로 빼면 등기·대장으로 이미 확인한
+                // 위반·압류 신호가 유형2 대표값에서 사라진다(예: 압류가 있는데도
+                // "권리은폐 유형 SAFE"로 표시됨). 필수점검 결과를 그대로 반영해
+                // 이 유형 카드에서도 같은 위험을 놓치지 않게 한다.
                 new DetailResultDTO(
                         DetailType.FALSE_BUILDING_USE_INFORMATION,
-                        JudgementDTO.notApplicable()
+                        judgeBuildingUse(building)
                 ),
                 new DetailResultDTO(
                         DetailType.RIGHTS_INFRINGEMENT_CONCEALMENT,
-                        JudgementDTO.notApplicable()
+                        judgeRightsInfringement(registry)
                 )
         );
 
@@ -796,37 +810,18 @@ public class RiskEvaluationService {
     /**
      * 유형별 세부 3개를 유형 대표값으로 집계한다.
      *
-     * NOT_APPLICABLE 항목은 제외하고, 남은 항목이 전부 CAUTION일 때 DANGER로 올린다.
-     * 임계값을 3으로 고정하면 해당 없는 항목이 있는 매물(예: 아파트)은
-     * 아무리 나빠도 그 조건에 도달하지 못한다.
+     * 규칙 자체는 RiskAggregation에 있다. 리포트를 다시 조회할 때도
+     * 같은 규칙으로 대표값을 만들어야 저장된 판정과 화면이 어긋나지 않는다.
      */
     private RiskLevel aggregateDetails(List<DetailResultDTO> details) {
-        List<JudgementDTO> judgementDTOS = details.stream()
-                .map(detail -> new JudgementDTO(detail.getRiskLevel(), detail.getDataStatus()))
-                .toList();
-        long applicableCount = judgementDTOS.stream().filter(JudgementDTO::isApplicable).count();
-        return aggregateJudgements(judgementDTOS, Math.max(1, (int) applicableCount));
-    }
-
-    /**
-     * 확인 불가 CAUTION은 화면의 최소 CAUTION 표시에는 반영하되,
-     * 실제 위험 CAUTION 개수에 포함해 DANGER로 승격하지 않는다.
-     */
-    private RiskLevel aggregateJudgements(List<JudgementDTO> judgementDTOS, int dangerThreshold) {
-        List<RiskLevel> verifiedLevels = judgementDTOS.stream()
-                .filter(JudgementDTO::isApplicable)
-                .filter(judgementDTO -> judgementDTO.dataStatus() == DataStatus.VERIFIED)
-                .map(JudgementDTO::riskLevel)
-                .toList();
-        RiskLevel verifiedAggregate = RiskLevel.aggregateByCount(
-                verifiedLevels,
-                dangerThreshold
+        return RiskAggregation.aggregateDetails(
+                details.stream()
+                        .map(detail -> new JudgementDTO(
+                                detail.getRiskLevel(),
+                                detail.getDataStatus()
+                        ))
+                        .toList()
         );
-        boolean hasUnverified = judgementDTOS.stream()
-                .anyMatch(judgementDTO -> judgementDTO.dataStatus() == DataStatus.UNVERIFIED);
-        return verifiedAggregate == RiskLevel.SAFE && hasUnverified
-                ? RiskLevel.CAUTION
-                : verifiedAggregate;
     }
 
     // =========================================================

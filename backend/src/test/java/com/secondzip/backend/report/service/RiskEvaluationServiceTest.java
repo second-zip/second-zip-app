@@ -209,8 +209,8 @@ class RiskEvaluationServiceTest {
     }
 
     @Test
-    @DisplayName("고지·광고 입력이 없는 은폐 항목은 집계에서 제외된다")
-    void concealmentWithoutAdvertisedFactsIsNotApplicable() {
+    @DisplayName("건축물 용도·권리침해 은폐 세부항목은 필수점검 3·5번 판정을 그대로 재사용한다")
+    void concealmentDetailsReuseRequiredCheckResults() {
         BuildingData building = new BuildingData();
         building.setBuildingType("APARTMENT");
         building.setBuildingUse("아파트");
@@ -235,15 +235,22 @@ class RiskEvaluationServiceTest {
                 .orElseThrow();
 
         assertEquals(
-                DataStatus.NOT_APPLICABLE,
-                buildingUseConcealment.getDataStatus(),
-                "비교할 광고·고지 원문이 없는 것은 확인 실패가 아니라 해당 없음이다"
-        );
-        assertEquals(DataStatus.NOT_APPLICABLE, rightsConcealment.getDataStatus());
-        assertEquals(
                 RiskLevel.SAFE,
+                buildingUseConcealment.getRiskLevel(),
+                "건축물 용도가 정상 주거용이면 필수점검 3번과 같은 판정을 반환해야 한다"
+        );
+        assertEquals(DataStatus.VERIFIED, buildingUseConcealment.getDataStatus());
+        assertEquals(
+                RiskLevel.DANGER,
+                rightsConcealment.getRiskLevel(),
+                "등기상 압류가 있으면 필수점검 5번과 같은 판정을 반환해야 한다 — "
+                        + "notApplicable()로 빼면 실제 압류가 권리은폐 유형에서 사라진다"
+        );
+        assertEquals(DataStatus.VERIFIED, rightsConcealment.getDataStatus());
+        assertEquals(
+                RiskLevel.DANGER,
                 result.getRiskLevel(),
-                "해당 없는 항목만 남으면 유형 대표값을 CAUTION으로 붙잡아두지 않는다"
+                "권리침해가 확인되면 권리은폐 유형 대표값도 DANGER여야 한다"
         );
     }
 
@@ -363,6 +370,50 @@ class RiskEvaluationServiceTest {
                 "OFFICIAL_PRICE_CONVERTED",
                 result.getEvidence().get("basePriceSource")
         );
+    }
+
+    @Test
+    @DisplayName("실거래가/공시가격/기준가 출처가 RiskEvaluationResultDTO 최상위에도 그대로 노출된다")
+    void exposesPriceFieldsOnEvaluationResult() {
+        PriceData recentSaleOnly = new PriceData();
+        recentSaleOnly.setRecentSalePrice(900_000_000L);
+
+        RiskEvaluationResultDTO withRecentSale = service.evaluate(
+                cleanRegistry(), cleanApartment(), recentSaleOnly, 300_000_000L,
+                "서울특별시 강남구 테헤란로 152"
+        );
+
+        assertEquals(900_000_000L, withRecentSale.getRecentSalePrice());
+        assertEquals(null, withRecentSale.getOfficialPrice());
+        assertEquals("RECENT_SALE_PRICE", withRecentSale.getBasePriceSource());
+
+        PriceData officialOnly = new PriceData();
+        officialOnly.setOfficialPrice(1_000_000_000L);
+
+        RiskEvaluationResultDTO withOfficialOnly = service.evaluate(
+                cleanRegistry(), cleanApartment(), officialOnly, 300_000_000L,
+                "서울특별시 강남구 테헤란로 152"
+        );
+
+        // 최상위 필드는 환산 전 원본값을 그대로 담는다. 환산된 값(1.4배)은
+        // basePrice(HUG evidence)에만 있고, officialPrice 자체는 원본을 유지해야
+        // 프론트가 "공시가격: N원" 같은 원본 표시를 할 수 있다.
+        assertEquals(1_000_000_000L, withOfficialOnly.getOfficialPrice());
+        assertEquals(null, withOfficialOnly.getRecentSalePrice());
+        assertEquals("OFFICIAL_PRICE_CONVERTED", withOfficialOnly.getBasePriceSource());
+    }
+
+    @Test
+    @DisplayName("실거래가/공시가격이 둘 다 없으면 기준가 출처도 null이다")
+    void exposesNullPriceFieldsWhenNoPriceDataAtAll() {
+        RiskEvaluationResultDTO result = service.evaluate(
+                cleanRegistry(), cleanApartment(), new PriceData(), 300_000_000L,
+                "서울특별시 강남구 테헤란로 152"
+        );
+
+        assertEquals(null, result.getRecentSalePrice());
+        assertEquals(null, result.getOfficialPrice());
+        assertEquals(null, result.getBasePriceSource());
     }
 
     private RegistryData cleanRegistry() {

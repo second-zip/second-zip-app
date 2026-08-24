@@ -19,5 +19,9 @@
         </Logger>
         <Logger name="org.springframework.web.servlet" level="INFO" />
         <Logger name="org.springframework.context.annotation" level="WARN" />
+
+        <Logger name="com.secondzip.backend.report.service.external.client.PriceClient" level="INFO" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
     </Loggers>
 </Configuration>

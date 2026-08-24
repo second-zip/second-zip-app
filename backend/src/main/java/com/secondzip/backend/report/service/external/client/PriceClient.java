@@ -23,6 +23,7 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
@@ -40,7 +42,7 @@ import java.util.regex.Pattern;
  * buildingType에 맞는 서비스 URL을 선택해 호출하고, 지번(본번/부번)이 일치하는
  * 매물을 찾아 최근 실거래가를 반환.
  *
- * 실패/데이터없음 시 항상 null 반환 (Mock 데이터 생성 금지 원칙 유지).
+ * 실패/데이터없음 시 항상 null 반환 (Mock 데이터 생성 금지).
  */
 @Slf4j
 @Component
@@ -57,6 +59,13 @@ public class PriceClient implements PriceDataProvider {
     @Value("${REALTY_PRICE_API_KEY:}")
     private String apiKey;
 
+    /**
+     * [지번 + 면적 + 층] 가격을 채택한 경우, 이미 조회한 응답으로 층 제외 가격과
+     * 오차율을 추가 기록하는 검증 스위치. 실제 채택값에는 영향이 없다.
+     */
+    @Value("${REALTY_PRICE_SHADOW_COMPARISON_ENABLED:false}")
+    private boolean shadowComparisonEnabled;
+
     private static final Map<String, String> SERVICE_URLS = Map.of(
             "APARTMENT",       "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade",
             "MULTI_HOUSEHOLD", "https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade",
@@ -67,13 +76,15 @@ public class PriceClient implements PriceDataProvider {
 
     private static final Set<String> SUCCESS_CODES = Set.of("000", "00");
     /**
-     * 실거래가 소급 조회 개월 수.
-     *
-     * 이 API는 매물이 아니라 시군구 전체 거래를 월 단위로 내려주므로,
-     * 한 달을 더 볼 때마다 (그 달의 거래 수 / 100)만큼 요청이 늘어난다.
-     * 기준가로 쓸 만한 최신성과 호출량 사이에서 6개월로 둔다.
+     * 실거래가 소급 조회 개월 수 (1단계: 우선 조회).
+     * 6개월 내 실거래가 조회
      */
-    private static final int MAX_MONTHS_LOOKBACK = 6;
+    private static final int PRIMARY_MONTHS_LOOKBACK = 6;
+    /**
+     * 실거래가 소급 조회 개월 수 (2단계: 확장 조회).
+     * 최대 24개월까지.
+     */
+    private static final int EXTENDED_MONTHS_LOOKBACK = 24;
     private static final int ROWS_PER_PAGE = 100;
     private static final int MAX_PAGES_PER_MONTH = 100;
     private static final int MAX_PAGE_ATTEMPTS = 2;
@@ -91,7 +102,7 @@ public class PriceClient implements PriceDataProvider {
             Pattern.compile("(?:^|\\s)산\\s*\\d");
 
     /**
-     * target       주소 표준화 결과 (sigunguCode, mainNo, subNo 필요)
+     * target 주소 표준화 결과 (sigunguCode, mainNo, subNo 필요)
      * buildingType SINGLE_FAMILY/MULTI_FAMILY/APARTMENT/MULTI_HOUSEHOLD/OFFICETEL
      */
     public PriceData getPriceData(
@@ -104,10 +115,22 @@ public class PriceClient implements PriceDataProvider {
             log.warn("AnalysisTarget 또는 시군구코드가 없어 실거래가 조회를 스킵합니다.");
             return null;
         }
-        if (isBlank(target.legalDongName()) || transactionAreaSqm == null
-                || transactionAreaSqm.signum() <= 0) {
-            log.warn("법정동명 또는 대상 면적이 없어 실거래가를 안전하게 매칭할 수 없습니다: {}", target);
+        if (isBlank(target.legalDongName())) {
+            log.warn("법정동명이 없어 실거래가를 안전하게 매칭할 수 없습니다: {}", target);
             return null;
+        }
+        // 전용면적은 같은 지번·같은 층의 다른 호를 갈라내는 유일한 단서다.
+        // 다만 없다고 실거래가를 통째로 버리지는 않는다. 후보가 하나로
+        // 좁혀지면 그 거래가 곧 정답이고, 갈리면 아래에서 미확정 처리한다.
+        BigDecimal targetArea = transactionAreaSqm != null
+                && transactionAreaSqm.signum() > 0
+                ? transactionAreaSqm
+                : null;
+        if (targetArea == null) {
+            log.warn(
+                    "대상 면적이 없어 지번·층만으로 매칭합니다. 후보가 갈리면 채택하지 않습니다: {}",
+                    target
+            );
         }
         Integer targetMainNo = parseToInt(target.mainNo());
         Integer targetSubNo = parseToInt(target.subNo());
@@ -133,27 +156,82 @@ public class PriceClient implements PriceDataProvider {
 
         try {
             YearMonth latestMonth = YearMonth.now(SEOUL_ZONE);
-            for (int monthsAgo = 0; monthsAgo < MAX_MONTHS_LOOKBACK; monthsAgo++) {
-                String dealYmd = latestMonth.minusMonths(monthsAgo)
-                        .toString().replace("-", "");
+            // 한 번의 분석 안에서는 외부 캐시 유무와 관계없이 같은 월을
+            // 단계별로 다시 호출하지 않는다.
+            List<MonthlyTradeItems> loadedMonths = new ArrayList<>();
 
-                PriceData found = fetchAndFind(
-                        serviceUrl,
-                        target,
-                        buildingType,
-                        transactionAreaSqm,
-                        transactionFloor,
-                        dealYmd
+            PriceData found;
+            try {
+                found = findExactInRange(
+                        serviceUrl, target, buildingType, targetArea,
+                        transactionFloor, latestMonth, 0,
+                        PRIMARY_MONTHS_LOOKBACK, "EXACT_FLOOR_RECENT", loadedMonths
                 );
-                if (found != null) {
-                    return found;
+            } catch (AmbiguousTradeException e) {
+                if (targetArea == null) {
+                    throw e;
                 }
+                log.warn("최근 동일 층 거래가 없어 지번+면적 단계로 전환 : {}", target);
+                found = null;
             }
-            log.warn("최근 {}개월 내 일치하는 실거래 데이터를 찾지 못했습니다: {}", MAX_MONTHS_LOOKBACK, target);
+            if (found != null) {
+                return found;
+            }
+
+            found = findSameAreaInRange(
+                    serviceUrl, target, buildingType, targetArea,
+                    transactionFloor, latestMonth, 0,
+                    PRIMARY_MONTHS_LOOKBACK, "SAME_AREA_RECENT", loadedMonths
+            );
+            if (found != null) {
+                return found;
+            }
+
+            log.info(
+                    "최근 {}개월 내 동일 층·층 제외 거래가 없어 {}개월까지 넓혀서 조회 : {}",
+                    PRIMARY_MONTHS_LOOKBACK, EXTENDED_MONTHS_LOOKBACK, target
+            );
+
+            try {
+                found = findExactInRange(
+                        serviceUrl, target, buildingType, targetArea,
+                        transactionFloor, latestMonth, PRIMARY_MONTHS_LOOKBACK,
+                        EXTENDED_MONTHS_LOOKBACK, "EXACT_FLOOR_OLD", loadedMonths
+                );
+            } catch (AmbiguousTradeException e) {
+                if (targetArea == null) {
+                    throw e;
+                }
+                log.warn("7~24개월 동일 층 거래가 없어 지번+면적 단계로 전환 : {}", target);
+                found = null;
+            }
+            if (found != null) {
+                return found;
+            }
+
+            found = findSameAreaInRange(
+                    serviceUrl, target, buildingType, targetArea,
+                    transactionFloor, latestMonth, PRIMARY_MONTHS_LOOKBACK,
+                    EXTENDED_MONTHS_LOOKBACK, "SAME_AREA_OLD", loadedMonths
+            );
+            if (found != null) {
+                return found;
+            }
+
+            log.warn(
+                    "최근 {}개월 내 지번/면적 기준 실거래 데이터를 찾지 못해 공시가격으로 대체 : {}",
+                    EXTENDED_MONTHS_LOOKBACK,
+                    target
+            );
             return null;
 
         } catch (AmbiguousTradeException e) {
-            log.warn("동일 최신 거래일의 금액이 여러 개라 실거래가를 확정하지 않습니다: {}", target);
+            log.warn(
+                    "같은 조건의 거래가 금액까지 갈려 실거래가를 확정하지 않습니다"
+                            + " (면적 미상: {}): {}",
+                    targetArea == null,
+                    target
+            );
             return null;
         } catch (PriceLookupException e) {
             log.error("실거래가 응답을 완전하게 확인하지 못했습니다: {}", target, e);
@@ -164,26 +242,101 @@ public class PriceClient implements PriceDataProvider {
         }
     }
 
-    private String resolveServiceUrl(String buildingType) {
-        if (buildingType == null) return null;
-        return SERVICE_URLS.get(buildingType);
+    private String dealYmd(YearMonth latestMonth, int monthsAgo) {
+        return latestMonth.minusMonths(monthsAgo).toString().replace("-", "");
     }
 
-    private PriceData fetchAndFind(
+    private PriceData findExactInRange(
             String serviceUrl,
             AnalysisTargetDTO target,
             String buildingType,
             BigDecimal transactionAreaSqm,
             Integer transactionFloor,
-            String dealYmd
+            YearMonth latestMonth,
+            int fromMonthsAgo,
+            int toMonthsAgo,
+            String matchStrategy,
+            List<MonthlyTradeItems> loadedMonths
+    ) throws Exception {
+        for (int monthsAgo = fromMonthsAgo; monthsAgo < toMonthsAgo; monthsAgo++) {
+            PriceData found = fetchAndFindExact(
+                    serviceUrl,
+                    target,
+                    buildingType,
+                    transactionAreaSqm,
+                    transactionFloor,
+                    dealYmd(latestMonth, monthsAgo),
+                    matchStrategy,
+                    loadedMonths
+            );
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private PriceData findSameAreaInRange(
+            String serviceUrl,
+            AnalysisTargetDTO target,
+            String buildingType,
+            BigDecimal transactionAreaSqm,
+            Integer transactionFloor,
+            YearMonth latestMonth,
+            int fromMonthsAgo,
+            int toMonthsAgo,
+            String matchStrategy,
+            List<MonthlyTradeItems> loadedMonths
+    ) throws Exception {
+        if (transactionAreaSqm == null) {
+            return null;
+        }
+        for (int monthsAgo = fromMonthsAgo; monthsAgo < toMonthsAgo; monthsAgo++) {
+            PriceData found = fetchAndFindSameArea(
+                    serviceUrl,
+                    target,
+                    buildingType,
+                    transactionAreaSqm,
+                    transactionFloor,
+                    dealYmd(latestMonth, monthsAgo),
+                    matchStrategy,
+                    loadedMonths
+            );
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private String resolveServiceUrl(String buildingType) {
+        if (buildingType == null) return null;
+        return SERVICE_URLS.get(buildingType);
+    }
+
+    private PriceData fetchAndFindExact(
+            String serviceUrl,
+            AnalysisTargetDTO target,
+            String buildingType,
+            BigDecimal transactionAreaSqm,
+            Integer transactionFloor,
+            String dealYmd,
+            String matchStrategy,
+            List<MonthlyTradeItems> loadedMonths
     ) throws Exception {
         TradeCandidate latest = null;
         boolean latestDateAmbiguous = false;
         LocalDate latestUnreadableAmountDate = null;
         boolean hasUnreadableDealDate = false;
+        // 면적을 모르는 채로 매칭할 때는 남은 후보가 같은 호라는 보장이 없다.
+        // 금액이 서로 다르면 어느 것이 이 매물의 거래인지 증명할 수 없다.
+        boolean areaUnknown = transactionAreaSqm == null;
+        Long soleAmount = null;
+        boolean amountConflict = false;
 
-        List<Map<String, Object>> monthItems =
-                loadMonthItems(serviceUrl, target, dealYmd);
+        List<Map<String, Object>> monthItems = loadMonthItemsOnce(
+                serviceUrl, target, dealYmd, loadedMonths
+        );
         if (monthItems.isEmpty()) {
             log.info("{}월 거래 내역 없음: {}", dealYmd, target);
         }
@@ -216,6 +369,12 @@ public class PriceClient implements PriceDataProvider {
                 continue;
             }
 
+            if (soleAmount == null) {
+                soleAmount = amount;
+            } else if (!soleAmount.equals(amount)) {
+                amountConflict = true;
+            }
+
             if (latest == null || dealDate.isAfter(latest.dealDate())) {
                 latest = new TradeCandidate(dealDate, amount);
                 latestDateAmbiguous = false;
@@ -223,6 +382,13 @@ public class PriceClient implements PriceDataProvider {
                     && !amount.equals(latest.amount())) {
                 latestDateAmbiguous = true;
             }
+        }
+
+        if (areaUnknown && amountConflict) {
+            // 지번·층까지 같은 거래가 금액까지 갈렸다. 같은 층의 다른 호일
+            // 가능성이 커서, 최신 계약일만 보고 고르면 엉뚱한 호의 가격을
+            // 기준가로 쓰게 된다.
+            throw new AmbiguousTradeException();
         }
 
         boolean unreadableCandidateMayBeLatest = hasUnreadableDealDate
@@ -242,11 +408,107 @@ public class PriceClient implements PriceDataProvider {
             return null;
         }
 
+        logSameAreaShadowComparison(
+                loadedMonths,
+                target,
+                buildingType,
+                transactionAreaSqm,
+                transactionFloor,
+                dealYmd,
+                latest.amount()
+        );
+
         PriceData data = new PriceData();
         data.setRecentSalePrice(latest.amount());
-        log.info("실거래가 매칭 성공: dealYmd={}, dealDate={}, amount={}원",
-                dealYmd, latest.dealDate(), latest.amount());
+        long monthsSinceDeal = java.time.temporal.ChronoUnit.MONTHS.between(
+                YearMonth.from(latest.dealDate()), YearMonth.now(SEOUL_ZONE)
+        );
+        log.info(
+                "실거래가 매칭 성공: strategy={}, dealYmd={}, dealDate={}, amount={}원, 현재로부터 {}개월 전 거래",
+                matchStrategy, dealYmd, latest.dealDate(), latest.amount(), monthsSinceDeal
+        );
+        if (monthsSinceDeal > PRIMARY_MONTHS_LOOKBACK) {
+            // 오래된 거래일수록 그 사이 시세가 달라져 전세가율 계산의 정확도가
+            // 떨어질 수 있다. 값 자체는 그대로 채택하되(같은 호실이라는 확신은
+            // 지번·면적·층이 전부 일치해 여전히 유효하다), 추후 근거 표시나
+            // 재검토가 필요할 때 추적할 수 있도록 남겨 둔다.
+            log.warn(
+                    "기준가로 채택한 거래가 {}개월 전 거래입니다. 최신 시세와 다를 수 있어"
+                            + " 전세가율 계산의 정확도가 떨어질 수 있습니다: dealDate={}, amount={}원, target={}",
+                    monthsSinceDeal, latest.dealDate(), latest.amount(), target
+            );
+        }
         return data;
+    }
+
+    private PriceData fetchAndFindSameArea(
+            String serviceUrl,
+            AnalysisTargetDTO target,
+            String buildingType,
+            BigDecimal transactionAreaSqm,
+            Integer transactionFloor,
+            String dealYmd,
+            String matchStrategy,
+            List<MonthlyTradeItems> loadedMonths
+    ) throws Exception {
+        List<Map<String, Object>> monthItems = loadMonthItemsOnce(
+                serviceUrl, target, dealYmd, loadedMonths
+        );
+        SameAreaTradeCandidate latest = selectLatestSameAreaTrade(
+                List.of(new MonthlyTradeItems(dealYmd, monthItems)),
+                target,
+                buildingType,
+                transactionAreaSqm,
+                transactionFloor
+        );
+        if (latest == null) {
+            return null;
+        }
+
+        PriceData data = new PriceData();
+        data.setRecentSalePrice(latest.amount());
+        long monthsSinceDeal = java.time.temporal.ChronoUnit.MONTHS.between(
+                YearMonth.from(latest.dealDate()), YearMonth.now(SEOUL_ZONE)
+        );
+        log.info(
+                "실거래가 매칭 성공: strategy={}, dealYmd={}, dealDate={}, amount={}원, "
+                        + "sameDateCandidateCount={}, candidateFloors={}, 현재로부터 {}개월 전 거래",
+                matchStrategy,
+                dealYmd,
+                latest.dealDate(),
+                latest.amount(),
+                latest.candidateCount(),
+                latest.floors(),
+                monthsSinceDeal
+        );
+        if (monthsSinceDeal > PRIMARY_MONTHS_LOOKBACK) {
+            log.warn(
+                    "층 제외 기준으로 채택한 거래가 {}개월 전 거래입니다. 최신 시세와 다를 수 있습니다: "
+                            + "dealDate={}, amount={}원, target={}",
+                    monthsSinceDeal,
+                    latest.dealDate(),
+                    latest.amount(),
+                    target
+            );
+        }
+        return data;
+    }
+
+    private List<Map<String, Object>> loadMonthItemsOnce(
+            String serviceUrl,
+            AnalysisTargetDTO target,
+            String dealYmd,
+            List<MonthlyTradeItems> loadedMonths
+    ) throws Exception {
+        for (MonthlyTradeItems loaded : loadedMonths) {
+            if (loaded.dealYmd().equals(dealYmd)) {
+                return loaded.items();
+            }
+        }
+
+        List<Map<String, Object>> items = loadMonthItems(serviceUrl, target, dealYmd);
+        loadedMonths.add(new MonthlyTradeItems(dealYmd, items));
+        return items;
     }
 
     /**
@@ -356,6 +618,16 @@ public class PriceClient implements PriceDataProvider {
                 ResponseEntity<String> response =
                         restTemplate.getForEntity(uri, String.class);
                 String payload = response.getBody();
+                // 실제로 어떤 필드/값이 오는지 확인하기 위한 원본 응답 덤프.
+                // DEBUG 전용 — INFO로 올리면 24개월 확장 조회 시 로그 용량이
+                // 급격히 커진다. 응답 바디만 찍고 uri는 찍지 않는다: uri에는
+                // serviceKey(API 키)가 쿼리 파라미터로 그대로 들어있다.
+                if (log.isDebugEnabled()) {
+                    log.info(
+                            "실거래가 원본 응답: dealYmd={}, pageNo={}, attempt={}, body={}",
+                            dealYmd, pageNo, attempt, payload
+                    );
+                }
                 if (payload == null || payload.isBlank()) {
                     throw new PriceLookupFailedException("실거래가 응답이 비어있습니다.");
                 }
@@ -550,6 +822,24 @@ public class PriceClient implements PriceDataProvider {
             BigDecimal transactionAreaSqm,
             Integer transactionFloor
     ) {
+        return findMatchingItems(
+                items,
+                target,
+                buildingType,
+                transactionAreaSqm,
+                transactionFloor,
+                true
+        );
+    }
+
+    private List<Map<String, Object>> findMatchingItems(
+            List<Map<String, Object>> items,
+            AnalysisTargetDTO target,
+            String buildingType,
+            BigDecimal transactionAreaSqm,
+            Integer transactionFloor,
+            boolean matchFloor
+    ) {
         Integer targetMain = parseToInt(target.mainNo());
         Integer targetSub = parseToInt(target.subNo());
 
@@ -576,16 +866,184 @@ public class PriceClient implements PriceDataProvider {
 
             if (mainMatches && subMatches
                     && sameArea(item, buildingType, transactionAreaSqm)
-                    && sameFloor(item, buildingType, transactionFloor)) {
+                    && (!matchFloor
+                    || sameFloor(item, buildingType, transactionFloor))) {
                 matched.add(item);
             }
         }
 
-        if (matched.isEmpty()) {
-            log.warn("법정동/본번/부번/면적이 모두 일치하는 거래를 찾지 못했습니다. target={}, 후보 {}건",
+        if (matchFloor && matched.isEmpty()) {
+            log.warn("법정동/본번/부번/면적/층이 모두 일치하는 거래를 찾지 못했습니다. target={}, 후보 {}건",
                     target, items.size());
         }
         return matched;
+    }
+
+    /**
+     * 실제 반환값과 외부 호출 횟수에는 영향을 주지 않는 shadow 비교 로그.
+     * 현재 exact 거래를 찾을 때까지 이미 받아 둔 월별 응답만 재사용한다.
+     */
+    private void logSameAreaShadowComparison(
+            List<MonthlyTradeItems> searchedMonths,
+            AnalysisTargetDTO target,
+            String buildingType,
+            BigDecimal transactionAreaSqm,
+            Integer transactionFloor,
+            String dealYmd,
+            Long exactPrice
+    ) {
+        if (!shadowComparisonEnabled
+                || !requiresFloor(buildingType)
+                || transactionAreaSqm == null
+                || exactPrice == null
+                || exactPrice <= 0L) {
+            return;
+        }
+
+        try {
+            SameAreaTradeCandidate latest = selectLatestSameAreaTrade(
+                    searchedMonths,
+                    target,
+                    buildingType,
+                    transactionAreaSqm,
+                    transactionFloor
+            );
+            if (latest == null) {
+                log.info(
+                        "[REALTY_PRICE_SHADOW] 지번+면적 비교 후보 없음: dealYmd={}, "
+                                + "buildingType={}, exactFloor={}, exactPrice={}",
+                        dealYmd,
+                        buildingType,
+                        transactionFloor,
+                        exactPrice
+                );
+                return;
+            }
+
+            BigDecimal signedErrorRatePct = BigDecimal
+                    .valueOf(latest.amount())
+                    .subtract(BigDecimal.valueOf(exactPrice))
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(exactPrice), 2, RoundingMode.HALF_UP);
+            BigDecimal errorRatePct = signedErrorRatePct.abs();
+
+            log.info(
+                    "[REALTY_PRICE_SHADOW] 지번+면적 비교: dealYmd={}, buildingType={}, "
+                            + "exactFloor={}, exactPrice={}, sameAreaLatestPrice={}, "
+                            + "sameAreaLatestDealDate={}, errorRatePct={}, signedErrorRatePct={}, "
+                            + "sameDateCandidateCount={}, candidateFloors={}, "
+                            + "sampleStatus={}",
+                    dealYmd,
+                    buildingType,
+                    transactionFloor,
+                    exactPrice,
+                    latest.amount(),
+                    latest.dealDate(),
+                    errorRatePct,
+                    signedErrorRatePct,
+                    latest.candidateCount(),
+                    latest.floors(),
+                    latest.candidateCount() >= 3 ? "SUFFICIENT" : "INSUFFICIENT"
+            );
+        } catch (RuntimeException e) {
+            // 검증용 계산 실패가 실제 실거래가 반환을 막아서는 안 된다.
+            log.warn(
+                    "[REALTY_PRICE_SHADOW] 비교 계산을 건너뜁니다: dealYmd={}, type={}",
+                    dealYmd,
+                    e.getClass().getSimpleName()
+            );
+        }
+    }
+
+    private SameAreaTradeCandidate selectLatestSameAreaTrade(
+            List<MonthlyTradeItems> searchedMonths,
+            AnalysisTargetDTO target,
+            String buildingType,
+            BigDecimal transactionAreaSqm,
+            Integer transactionFloor
+    ) {
+        LocalDate latestDealDate = null;
+        LocalDate latestUnreadableAmountDate = null;
+        boolean hasUnreadableDealDate = false;
+        List<Long> latestDateAmounts = new ArrayList<>();
+        Set<Integer> floors = new TreeSet<>();
+
+        for (MonthlyTradeItems month : searchedMonths) {
+            for (Map<String, Object> item : findMatchingItems(
+                    month.items(),
+                    target,
+                    buildingType,
+                    transactionAreaSqm,
+                    transactionFloor,
+                    false
+            )) {
+                if (isCancelled(item)) {
+                    continue;
+                }
+
+                LocalDate dealDate = parseDealDate(item, month.dealYmd());
+                if (dealDate == null) {
+                    hasUnreadableDealDate = true;
+                    continue;
+                }
+
+                Long amount = parseDealAmount(asText(item.get("dealAmount")));
+                if (amount == null) {
+                    if (latestUnreadableAmountDate == null
+                            || dealDate.isAfter(latestUnreadableAmountDate)) {
+                        latestUnreadableAmountDate = dealDate;
+                    }
+                    continue;
+                }
+
+                Integer floor = parseToInt(asText(item.get("floor")));
+                if (latestDealDate == null || dealDate.isAfter(latestDealDate)) {
+                    latestDealDate = dealDate;
+                    latestDateAmounts.clear();
+                    floors.clear();
+                }
+                if (dealDate.equals(latestDealDate)) {
+                    latestDateAmounts.add(amount);
+                    if (floor != null) {
+                        floors.add(floor);
+                    }
+                }
+            }
+        }
+
+        boolean unreadableCandidateMayBeLatest = hasUnreadableDealDate
+                || latestUnreadableAmountDate != null
+                && (latestDealDate == null
+                || !latestUnreadableAmountDate.isBefore(latestDealDate));
+        if (unreadableCandidateMayBeLatest) {
+            throw new PriceLookupFailedException(
+                    "지번+면적 후보의 최신 일자 또는 금액을 확인할 수 없습니다."
+            );
+        }
+        if (latestDealDate == null || latestDateAmounts.isEmpty()) {
+            return null;
+        }
+
+        // API 응답 순서는 계약일 안에서도 보장되지 않는다. 최신일 거래가
+        // 여러 건이면 임의의 한 건 대신 중앙값으로 대표 가격을 정한다.
+        return new SameAreaTradeCandidate(
+                latestDealDate,
+                median(latestDateAmounts),
+                latestDateAmounts.size(),
+                new TreeSet<>(floors)
+        );
+    }
+
+    private Long median(List<Long> values) {
+        List<Long> sorted = values.stream().sorted().toList();
+        int middle = sorted.size() / 2;
+        if (sorted.size() % 2 == 1) {
+            return sorted.get(middle);
+        }
+        return BigDecimal.valueOf(sorted.get(middle - 1))
+                .add(BigDecimal.valueOf(sorted.get(middle)))
+                .divide(BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP)
+                .longValueExact();
     }
 
     private boolean sameLotType(
@@ -703,6 +1161,11 @@ public class PriceClient implements PriceDataProvider {
             String buildingType,
             BigDecimal targetArea
     ) {
+        // 대상 면적을 모르면 면적으로 후보를 거르지 않는다. 대신 남은 후보의
+        // 금액이 갈리면 채택하지 않는다(호출부의 미확정 처리).
+        if (targetArea == null) {
+            return true;
+        }
         Object rawArea = switch (buildingType) {
             case "SINGLE_FAMILY", "MULTI_FAMILY" -> firstPresent(
                     item,
@@ -804,6 +1267,20 @@ public class PriceClient implements PriceDataProvider {
     }
 
     private record TradeCandidate(LocalDate dealDate, Long amount) {
+    }
+
+    private record SameAreaTradeCandidate(
+            LocalDate dealDate,
+            Long amount,
+            int candidateCount,
+            Set<Integer> floors
+    ) {
+    }
+
+    private record MonthlyTradeItems(
+            String dealYmd,
+            List<Map<String, Object>> items
+    ) {
     }
 
     private static final class AmbiguousTradeException extends RuntimeException {

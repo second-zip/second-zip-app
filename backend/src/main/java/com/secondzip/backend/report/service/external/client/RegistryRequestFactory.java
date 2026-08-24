@@ -35,7 +35,7 @@ public class RegistryRequestFactory {
         } else {
             applyRoadAddress(body, target);
             if (documentType == RegistryDocumentType.COLLECTIVE) {
-                applyDongHo(body, detailAddress);
+                applyDongHo(body, detailAddress, target.legalDongName());
             }
         }
         return body;
@@ -110,8 +110,12 @@ public class RegistryRequestFactory {
         );
     }
 
-    private void applyDongHo(Map<String, Object> body, String detailAddress) {
-        DongHo dongHo = DongHo.parse(detailAddress);
+    private void applyDongHo(
+            Map<String, Object> body,
+            String detailAddress,
+            String legalDongName
+    ) {
+        DongHo dongHo = DongHo.parse(detailAddress, legalDongName);
         if (dongHo.ho() == null) {
             throw new IllegalArgumentException("집합건물 등기부 조회에는 호수가 필요합니다.");
         }
@@ -189,15 +193,45 @@ public class RegistryRequestFactory {
 
     record DongHo(String dong, String ho) {
         private static final String TOKEN = "([^\\s,()]+?)\\s*";
+        private static final java.util.regex.Pattern DONG_TOKEN =
+                java.util.regex.Pattern.compile(TOKEN + "동");
 
+        /** 기존 호출부(법정동명을 모르는 곳) 호환용. 법정동명 오인식 필터가 적용되지 않는다. */
         static DongHo parse(String detailAddress) {
+            return parse(detailAddress, null);
+        }
+
+        static DongHo parse(String detailAddress, String legalDongName) {
             if (detailAddress == null || detailAddress.isBlank()) {
                 return new DongHo(null, null);
             }
             return new DongHo(
-                    lastGroup(detailAddress, TOKEN + "동"),
+                    lastDongGroup(detailAddress, legalDongName),
                     lastGroup(detailAddress, TOKEN + "호")
             );
+        }
+
+        /**
+         * 상세주소 원문(사용자가 직접 입력한 자유 텍스트)에서 집합건물의 '동' 번호를
+         * 찾는다. 법정동명(예: "백현동")이 상세주소에 함께 들어온 경우 이를 동 번호로
+         * 오인하면 안 된다 — 법정동명은 절대 집합건물의 동 번호가 될 수 없고, 실제로
+         * 이걸 그대로 CODEF에 보내면 등기소가 하나의 등기부로 특정하지 못해 주소
+         * 후보 목록만 돌아온다.
+         */
+        private static String lastDongGroup(String input, String legalDongName) {
+            String excluded = legalDongName == null
+                    ? null
+                    : legalDongName.trim().replaceAll("\\s+", "");
+            java.util.regex.Matcher matcher = DONG_TOKEN.matcher(input);
+            String result = null;
+            while (matcher.find()) {
+                String token = matcher.group(1);
+                if (excluded != null && excluded.equals(token + "동")) {
+                    continue;
+                }
+                result = token;
+            }
+            return result;
         }
 
         private static String lastGroup(String input, String regex) {

@@ -2,6 +2,7 @@ package com.secondzip.backend.report.service.external.client;
 
 import com.secondzip.backend.report.dto.AnalysisTargetDTO;
 import com.secondzip.backend.report.enums.RegistryDocumentType;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -88,6 +89,46 @@ class RegistryRequestFactoryTest {
         assertEquals("101-1", hyphenated.get("ho"));
         assertEquals("101", addressPrefixed.get("dong"));
         assertEquals("B101", addressPrefixed.get("ho"));
+    }
+
+    @Test
+    @DisplayName("상세주소에 법정동명이 섞여 들어와도 동 번호로 오인하지 않는다")
+    void collectiveIgnoresLegalDongNameMistakenlyIncludedInDetailAddress() {
+        // target()의 법정동명은 "대치동". 실제 건물에는 동 구분이 없는데
+        // 사용자가 상세주소에 법정동명을 함께 적어 넣은 경우를 재현한다.
+        Map<String, Object> noRealDong = factory.create(
+                target(),
+                RegistryDocumentType.COLLECTIVE,
+                "대치동 502호",
+                "01000000000",
+                "encrypted",
+                "prepay",
+                "prepay-pass"
+        );
+        Map<String, Object> legalDongLast = factory.create(
+                target(),
+                RegistryDocumentType.COLLECTIVE,
+                "502호 대치동",
+                "01000000000",
+                "encrypted",
+                "prepay",
+                "prepay-pass"
+        );
+        Map<String, Object> legalDongThenRealDong = factory.create(
+                target(),
+                RegistryDocumentType.COLLECTIVE,
+                "대치동 101동 502호",
+                "01000000000",
+                "encrypted",
+                "prepay",
+                "prepay-pass"
+        );
+
+        assertEquals("", noRealDong.get("dong"));
+        assertEquals("502", noRealDong.get("ho"));
+        assertEquals("", legalDongLast.get("dong"));
+        assertEquals("502", legalDongLast.get("ho"));
+        assertEquals("101", legalDongThenRealDong.get("dong"));
     }
 
     @Test

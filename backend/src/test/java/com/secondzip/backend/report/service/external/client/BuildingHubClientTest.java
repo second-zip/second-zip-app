@@ -36,6 +36,12 @@ class BuildingHubClientTest {
                 "공동주택", "다세대주택", "샹떼빌아파트"));
         assertNull(BuildingHubClient.inferBuildingType(
                 "공동주택", "오피스텔, 다세대주택", "행복아파트"));
+        // "공동주택"은 아파트·연립·다세대를 포괄하는 상위 분류라 단독으로는 판별하지
+        // 않는다. 실제 등기부에서 나온 사례: 도시형생활주택(원룸형)은 규모에 따라
+        // 다세대·연립주택 요건으로 지어지므로 MULTI_HOUSEHOLD(연립다세대 실거래가
+        // API)로 묶인다.
+        assertEquals("MULTI_HOUSEHOLD", BuildingHubClient.inferBuildingType(
+                "공동주택", "도시형생활주택(원룸형주택), 근린생활시설", null));
     }
 
     @Test

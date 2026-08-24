@@ -69,7 +69,10 @@ public class ReportPersistenceService {
                 reportId, roadAddress, detailAddress, deposit,
                 evalResult.getOverallRiskLevel(), false,
                 housingCategory, trustProperty,
-                checkViews, fraudViews, Collections.emptyList()
+                checkViews, fraudViews, Collections.emptyList(),
+                evalResult.getRecentSalePrice(),
+                evalResult.getOfficialPrice(),
+                evalResult.getBasePriceSource()
         );
     }
 
@@ -86,6 +89,11 @@ public class ReportPersistenceService {
                 .riskLevel(evalResult.getOverallRiskLevel())
                 .housingCategory(housingCategory)
                 .trustProperty(trustProperty)
+                // 위험도 판정에 실제로 쓰인 가격 정보를 리포트에 그대로 남긴다.
+                // evalResult에서 이미 계산된 값을 그대로 쓰므로 여기서 다시 계산하지 않는다.
+                .recentSalePrice(evalResult.getRecentSalePrice())
+                .officialPrice(evalResult.getOfficialPrice())
+                .basePriceSource(evalResult.getBasePriceSource())
                 .build();
 
         // useGeneratedKeys 가 report.analysisReportId 를 채운다.

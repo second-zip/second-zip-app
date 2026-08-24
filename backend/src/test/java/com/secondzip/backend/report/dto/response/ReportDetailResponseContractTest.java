@@ -65,6 +65,27 @@ class ReportDetailResponseContractTest {
     }
 
     @Test
+    @DisplayName("필수점검 대표값이 응답에 포함되고, 확인 불가는 위험으로 세지 않는다")
+    void exposesAggregatedCheckResult() throws Exception {
+        JsonNode json = objectMapper.readTree(
+                objectMapper.writeValueAsString(sample())
+        );
+
+        assertTrue(
+                json.has("checkResult"),
+                "화면이 같은 집계 규칙을 다시 구현하지 않도록 서버가 대표값을 준다"
+        );
+        assertEquals(
+                "CAUTION",
+                json.get("checkResult").asText(),
+                "확인 불가 항목을 위험 개수에 세면 근거가 없는 매물이 위험으로 표시된다"
+        );
+
+        assertTrue(json.has("fraudResult"), "유형 섹션 대표값도 서버가 준다");
+        assertEquals("CAUTION", json.get("fraudResult").asText());
+    }
+
+    @Test
     @DisplayName("건축물 유형과 신탁 여부가 응답에 포함된다")
     void exposesHousingCategoryAndTrustProperty() throws Exception {
         JsonNode json = objectMapper.readTree(
@@ -104,6 +125,49 @@ class ReportDetailResponseContractTest {
         assertTrue(json.get("housingCategory").isNull());
         assertTrue(json.has("trustProperty"));
         assertTrue(json.get("trustProperty").isNull());
+
+        // 실거래가 필드(11-arg 레거시 생성자 호출)도 같은 이유로 명시적 null이어야 한다
+        assertTrue(json.has("recentSalePrice"));
+        assertTrue(json.get("recentSalePrice").isNull());
+        assertTrue(json.has("officialPrice"));
+        assertTrue(json.get("officialPrice").isNull());
+        assertTrue(json.has("basePriceSource"));
+        assertTrue(json.get("basePriceSource").isNull());
+    }
+
+    @Test
+    @DisplayName("실거래가/공시가격/기준가 출처가 응답 최상위에 노출된다")
+    void exposesPriceFields() throws Exception {
+        ReportDetailResponse response = new ReportDetailResponse(
+                1L,
+                "서울 강남구 테헤란로 152",
+                "101동 1203호",
+                500_000_000L,
+                RiskLevel.CAUTION,
+                false,
+                "OFFICETEL",
+                true,
+                List.of(),
+                List.of(),
+                List.of(),
+                900_000_000L,
+                null,
+                "RECENT_SALE_PRICE"
+        );
+
+        JsonNode json = objectMapper.readTree(
+                objectMapper.writeValueAsString(response)
+        );
+
+        assertTrue(json.has("recentSalePrice"), "recentSalePrice가 있어야 한다");
+        assertEquals(900_000_000L, json.get("recentSalePrice").asLong());
+
+        // officialPrice는 확인 못한 값이므로 키는 있되 null이어야 한다
+        assertTrue(json.has("officialPrice"), "officialPrice가 있어야 한다");
+        assertTrue(json.get("officialPrice").isNull());
+
+        assertTrue(json.has("basePriceSource"), "basePriceSource가 있어야 한다");
+        assertEquals("RECENT_SALE_PRICE", json.get("basePriceSource").asText());
     }
 
     @Test

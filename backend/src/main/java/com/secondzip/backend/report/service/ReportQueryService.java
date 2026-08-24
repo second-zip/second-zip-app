@@ -87,7 +87,10 @@ public class ReportQueryService {
                 report.getTrustProperty(),
                 checkViews,
                 fraudViews,
-                specialTermViews
+                specialTermViews,
+                report.getRecentSalePrice(),
+                report.getOfficialPrice(),
+                report.getBasePriceSource()
         );
     }
 
@@ -104,14 +107,18 @@ public class ReportQueryService {
                 .collect(Collectors.toList());
     }
 
+    // data_status가 비어 있거나 파싱할 수 없는 값이면 "확인 완료(VERIFIED)"가 아니라
+    // "확인 안 됨(UNVERIFIED)"으로 처리한다. "틀린 정보 > 정보 없음" 원칙: 알 수 없는
+    // 상태를 확인된 것처럼 보여주는 쪽이 더 위험하다.
     private DataStatus parseDataStatus(String raw) {
         if (raw == null) {
-            return DataStatus.VERIFIED;
+            return DataStatus.UNVERIFIED;
         }
         try {
             return DataStatus.valueOf(raw);
         } catch (IllegalArgumentException e) {
-            return DataStatus.VERIFIED;
+            log.warn("알 수 없는 dataStatus 값이라 UNVERIFIED로 대체합니다: raw={}", raw);
+            return DataStatus.UNVERIFIED;
         }
     }
 
@@ -122,13 +129,14 @@ public class ReportQueryService {
             List<DetailResultDTO> details =
                     reportMapper.findDetailResultsByFraudTypeId(row.getReportFraudTypeId());
 
+            // parseDataStatus와 동일한 이유로 null이면 UNVERIFIED로 처리한다.
             List<DetailResultView> detailViews = details.stream()
                     .map(d -> new DetailResultView(
                             d.getDetailType(),
                             d.getRiskLevel(),
                             d.getDataStatus() != null
                                     ? d.getDataStatus()
-                                    : DataStatus.VERIFIED
+                                    : DataStatus.UNVERIFIED
                     ))
                     .collect(Collectors.toList());
 
