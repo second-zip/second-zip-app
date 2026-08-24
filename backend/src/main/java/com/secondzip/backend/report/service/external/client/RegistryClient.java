@@ -333,6 +333,20 @@ public class RegistryClient implements RegistryDataProvider {
                             data, detailAddress, requestBody, target.legalDongName());
                     return null;
                 }
+                if ((registryData.getOwnerNames() == null
+                        || registryData.getOwnerNames().isEmpty())
+                        && (registryData.getOwnerName() == null
+                        || registryData.getOwnerName().isBlank())) {
+                    // 이름·주민번호 같은 값은 남기지 않고 key와 자료형만 기록한다.
+                    // 실제 응답에서 새 소유자 필드가 추가돼도 개인정보 노출 없이
+                    // 파서 보완에 필요한 구조를 확인할 수 있다.
+                    log.warn(
+                            "CODEF 등기부 소유자 파싱 결과가 비어있습니다: "
+                                    + "documentType={}, shape={}",
+                            documentType,
+                            describeShape(data, 0)
+                    );
+                }
 
                 // 과금이 끝난 결과이므로 반드시 캐시에 남긴다.
                 putCached(cacheKey, registryData);
