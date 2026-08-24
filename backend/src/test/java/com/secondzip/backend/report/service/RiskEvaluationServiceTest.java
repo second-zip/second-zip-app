@@ -291,7 +291,8 @@ class RiskEvaluationServiceTest {
 
         assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
         assertEquals(DataStatus.VERIFIED, result.getDataStatus());
-        assertEquals("다세대주택", result.getEvidence().get("buildingUse"));
+        assertEquals("연립·다세대주택", result.getEvidence().get("buildingUse"));
+        assertEquals("다세대주택", result.getEvidence().get("buildingUseRaw"));
         assertEquals(
                 "제2종근린생활시설",
                 result.getEvidence().get("buildingLevelNonResidentialUses")
