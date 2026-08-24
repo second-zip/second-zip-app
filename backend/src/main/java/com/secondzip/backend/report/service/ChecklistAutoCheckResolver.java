@@ -125,13 +125,8 @@ public final class ChecklistAutoCheckResolver {
                     CheckType.ILLEGAL_BUILDING, CheckType.BUILDING_USE),
             // "전세가율 확인" 항목은 전세가율 자체가 안전 범위인지만 묻는 것이고,
             // HIGH_JEONSE_RATIO 판정이 정확히 그걸 검증한다. VERIFIED+SAFE면 그대로
-            // 자동 체크한다.
-            //
-            // [8/23] 예전엔 이 자리에 "HUG 사전점검 하나로 HF·SGI까지 확인했다고 볼 수
-            // 없어 자동 체크하지 않는다"는 주석이 있었는데, 이는 별도로 있다가 이미
-            // 제거된 "HUG/HF/SGI 보증보험 가능 여부 확인" 항목에 대한 주석이 이 규칙
-            // 자리에 잘못 남아 있던 것이다(frontend-handoff-risk-analysis.md 참고).
-            // 이 규칙 자체가 잘못 자동 체크되고 있다는 뜻은 아니었다.
+            // 자동 체크.
+           
             byDetails(Category.COMMON, "전세가율 확인",
                     DetailType.HIGH_JEONSE_RATIO),
 

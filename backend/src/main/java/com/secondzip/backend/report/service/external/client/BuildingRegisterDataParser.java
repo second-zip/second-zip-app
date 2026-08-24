@@ -130,7 +130,7 @@ public class BuildingRegisterDataParser {
                 document(documents, BuildingRegisterDocumentType.COLLECTIVE_TITLE);
         TargetScope titleScope = null;
         if (collective && !exclusiveHasBasePrice) {
-            // 표제부는 건물 전체 정보만 담아 호 단위 구분이 원래 없는 문서다.
+            // 표제부는 건물 전체 정보만 담아 호 단위 구분이 원래 없는 문서.
             // 동/호 식별 필드가 하나도 없으면(=섞일 후보 자체가 없으면) 통째로
             // 신뢰해도 안전하므로 emptyCandidatesAreSafe=true로 호출한다.
             titleScope = selectTargetScope(rawTitleDoc, detailAddress, true);
@@ -242,10 +242,6 @@ public class BuildingRegisterDataParser {
      * 호실 값이 섞여 들어올 방법이 없어(구분할 필드 자체가 없음) 통째로 신뢰해도
      * 안전하다. 표제부처럼 호 단위 구분이 원래 없는 문서 종류에서만 true로 켠다.
      * 전유부처럼 호별로 다른 값이 섞여 들어올 수 있는 문서는 계속 false로 막는다.
-     * (참고: resBasePrice 값이 여러 개인데 서로 다르고 최신 여부를 못 가리면
-     * resolveLatestPrice가 별도로 null을 반환하므로, 이 플래그를 켜도 상충하는
-     * 값을 잘못 골라 쓰는 것까지 막아 주지는 못한다는 뜻은 아니다 — 그 안전장치는
-     * 그대로 살아 있다.)
      */
     private TargetScope selectTargetScope(
             Object root,

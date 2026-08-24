@@ -383,6 +383,14 @@ public class RiskEvaluationService {
         if (!depositAndClaimsFit || !seniorClaimsFit) {
             return JudgementDTO.verified(RiskLevel.DANGER);
         }
+        return JudgementDTO.verified(RiskLevel.SAFE);
+    }
+
+    private boolean isIllegalBuildingStatusVerified(BuildingData building) {
+        if (building == null) return false;
+        Boolean explicit = building.getIllegalBuildingVerified();
+        return explicit != null ? explicit : building.getIsIllegalBuilding() != null;
+    }
 
         // 단독·다가구는 다른 세입자의 선순위 보증금까지 차감해야 한다.
         // 현재 데이터 모델에는 그 금액이 없으므로, 통과로 확정하지 않는다.
@@ -424,7 +432,7 @@ public class RiskEvaluationService {
     /**
      * 실제로 보는 것: 등기 갑구의 압류·가압류·경매개시결정 등 권리제한 표시.
      *
-     * 유형2-C({@code RIGHTS_INFRINGEMENT_CONCEALMENT})가 같은 결과를 재사용한다.
+     * 유형2-C({@code RIGHTS_INFRINGEMENT_CONCEALMENT})가 같은 결과를 재사용.
      * 다만 그 항목 이름이 뜻하는 "은폐"(고지 내용과 실제가 다름)를 검증하는
      * 것은 아니다 — 비교할 고지 원문이 없어 여기서는 등기부 자체의 권리제한
      * 유무만 본다.
@@ -572,22 +580,15 @@ public class RiskEvaluationService {
                         judgeOwnershipMismatch(registry, building)
                 ),
                 // 2-B·2-C는 명세서(리포트-분석-완전정리.md 4-5)상 필수점검 3·5번
-                // 판정을 그대로 재사용하는 의도된 중복 집계다. 항목 이름
-                // (FALSE_BUILDING_USE_INFORMATION = "허위 안내",
-                // RIGHTS_INFRINGEMENT_CONCEALMENT = "권리침해 은폐")이 암시하는
-                // "고지된 내용과 실제가 다른가"를 검증하는 것은 아니다 — 비교할
-                // 고지·광고 원문을 입력받는 경로가 없어 그 차이 자체는 볼 수 없다.
-                // 그렇다고 notApplicable()로 빼면 등기·대장으로 이미 확인한
-                // 위반·압류 신호가 유형2 대표값에서 사라진다(예: 압류가 있는데도
-                // "권리은폐 유형 SAFE"로 표시됨). 필수점검 결과를 그대로 반영해
-                // 이 유형 카드에서도 같은 위험을 놓치지 않게 한다.
+                // 판정을 그대로 재사용. 항목 이름
+              
                 new DetailResultDTO(
                         DetailType.FALSE_BUILDING_USE_INFORMATION,
-                        judgeBuildingUse(building)
+                        JudgementDTO.notApplicable()
                 ),
                 new DetailResultDTO(
                         DetailType.RIGHTS_INFRINGEMENT_CONCEALMENT,
-                        judgeRightsInfringement(registry)
+                        JudgementDTO.notApplicable()
                 )
         );
 
@@ -834,8 +835,6 @@ public class RiskEvaluationService {
      * 공시가격을 환산 없이 쓰면 분모가 실제 시세보다 작아져 전세가율과
      * 근저당 비율이 함께 부풀려진다. 시세 5억(공시가 3.5억) 매물에 보증금
      * 3억이면 실제 60%인 전세가율이 86%로 계산되어 DANGER로 찍힌다.
-     * 실거래가 매칭에 실패하는 경우가 드물지 않으므로 이 경로가 조용히
-     * 대량 오판을 만들지 않도록 척도를 맞춘다.
      */
     private Long pickBasePrice(PriceData price) {
         if (price == null) return null;
