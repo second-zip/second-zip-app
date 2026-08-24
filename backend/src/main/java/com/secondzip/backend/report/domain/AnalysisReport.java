@@ -29,4 +29,13 @@ public class AnalysisReport {
 
     /** 신탁주택 여부. TRUE 면 체크리스트에 TRUST_PROPERTY 항목이 추가된다. */
     private Boolean trustProperty;
+
+    /** 최근 매매가(실거래가). 매칭된 거래가 없으면 null. */
+    private Long recentSalePrice;
+
+    /** 공시가격(환산 전 원본). 확인하지 못했으면 null. */
+    private Long officialPrice;
+
+    /** 위험도 판정에 쓴 기준가 출처: RECENT_SALE_PRICE / OFFICIAL_PRICE_CONVERTED / null(둘 다 없음). */
+    private String basePriceSource;
 }

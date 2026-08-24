@@ -3,6 +3,7 @@ package com.secondzip.backend.report.service.external.client;
 import com.secondzip.backend.report.dto.external.BuildingData;
 import com.secondzip.backend.report.dto.external.BuildingRegisterAnalysisData;
 import com.secondzip.backend.report.enums.BuildingRegisterDocumentType;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -21,10 +22,12 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Component
 public class BuildingRegisterDataParser {
     private static final List<String> DATE_KEYS = List.of(
-            "resBaseDate", "resStdDay", "resDate", "resBaseYm", "resBaseYear"
+            "resBaseDate", "resStdDay", "resDate", "resBaseYm", "resBaseYear",
+            "resReferenceDate"
     );
     private static final List<String> DONG_KEYS = List.of(
             "resDong", "resDongNm", "resDongName", "commDongNum", "dong", "dongNm"
@@ -122,14 +125,40 @@ public class BuildingRegisterDataParser {
 
         String use = combineTargetUses(targetScope);
         Long officialPrice = findLatestPrice(targetScope);
-        if (collective && !containsKey(targetScope, "resBasePrice")) {
-            TargetScope titleScope = selectTargetScope(
-                    document(documents, BuildingRegisterDocumentType.COLLECTIVE_TITLE),
-                    detailAddress
-            );
+        boolean exclusiveHasBasePrice = containsKey(targetScope, "resBasePrice");
+        Map<String, Object> rawTitleDoc =
+                document(documents, BuildingRegisterDocumentType.COLLECTIVE_TITLE);
+        TargetScope titleScope = null;
+        if (collective && !exclusiveHasBasePrice) {
+            // 표제부는 건물 전체 정보만 담아 호 단위 구분이 원래 없는 문서다.
+            // 동/호 식별 필드가 하나도 없으면(=섞일 후보 자체가 없으면) 통째로
+            // 신뢰해도 안전하므로 emptyCandidatesAreSafe=true로 호출한다.
+            titleScope = selectTargetScope(rawTitleDoc, detailAddress, true);
             if (titleScope.identityVerified()) {
                 officialPrice = findLatestPrice(titleScope.data());
             }
+        }
+        if (collective && officialPrice == null) {
+            // findLatestPrice 내부 경고는 resBasePrice 항목이 하나라도 있을 때만
+            // 남는다. 전유부에 그 항목 자체가 없고(오피스텔 등에서 흔함) 표제부에서도
+            // 동/호를 특정하지 못하면 두 시도 모두 조용히 null만 반환해 아무 로그도
+            // 남지 않는다. "항목이 없어서"인지 "동/호를 못 찾아서"인지 구분해야
+            // 실제 데이터 부재인지 파싱 버그인지 판단할 수 있으므로 여기서 남긴다.
+            // 표제부에 실제로 어떤 동/호 값이 들어있는지도 같이 남겨야, 호 단위
+            // 매칭이 구조적으로 불가능한 문서인지 아니면 다른 이유로 안 맞는지
+            // 구분할 수 있다.
+            log.warn(
+                    "공시가격을 확정하지 못했습니다(전유부·표제부 모두 실패): buildingType={},"
+                            + " 전유부 resBasePrice 존재={}, 표제부 문서 존재={}, 표제부 resBasePrice 존재={},"
+                            + " 표제부 동/호 식별 성공={}, 표제부 식별 후보={}, detailAddress={}",
+                    buildingType,
+                    exclusiveHasBasePrice,
+                    rawTitleDoc != null,
+                    rawTitleDoc != null && containsKey(rawTitleDoc, "resBasePrice"),
+                    titleScope != null && titleScope.identityVerified(),
+                    rawTitleDoc != null ? describeIdentityCandidates(rawTitleDoc) : "[]",
+                    detailAddress
+            );
         }
         DecimalSelection totalArea = collective
                 ? DecimalSelection.absent()
@@ -140,7 +169,34 @@ public class BuildingRegisterDataParser {
         if (!collective && !totalArea.present()) {
             transactionAreaSqm = positive(fallbackTransactionAreaSqm);
         }
+        if (transactionAreaSqm == null) {
+            // 면적을 못 읽으면 실거래가를 지번·층만으로 맞춰야 해서 정확도가 떨어진다.
+            // 어느 키를 봤고 응답에 실제로 어떤 키가 있었는지 남겨 두어야
+            // 후보 목록에 무엇을 추가할지 판단할 수 있다.
+            log.warn(
+                    "대상 면적을 확정하지 못했습니다: collective={}, buildingType={},"
+                            + " 찾아본 키={}, 응답에 있는 면적 후보={}, resArea 항목 상세={}",
+                    collective,
+                    buildingType,
+                    collective ? EXCLUSIVE_AREA_KEYS : TOTAL_AREA_KEYS,
+                    describeAreaCandidates(targetScope),
+                    describeEntriesContaining(targetScope, "resArea")
+            );
+        }
         Integer transactionFloor = collective ? findFloor(targetScope) : null;
+        if (collective && transactionFloor == null) {
+            // 층을 못 읽으면 집합건물 실거래가를 지번만으로 맞출 수 없어 매칭을 포기한다.
+            // 어느 키를 봤고 응답에 실제로 어떤 키가 있었는지 남겨 두어야
+            // 후보 목록에 무엇을 추가할지 판단할 수 있다.
+            log.warn(
+                    "대상 층을 확정하지 못했습니다: buildingType={}, 찾아본 키={},"
+                            + " 응답에 있는 층 후보={}, resFloor 항목 상세={}",
+                    buildingType,
+                    FLOOR_KEYS,
+                    describeFloorCandidates(targetScope),
+                    describeEntriesContaining(targetScope, "resFloor")
+            );
+        }
 
         BuildingData buildingData = new BuildingData();
         buildingData.setBuildingType(buildingType);
@@ -178,6 +234,24 @@ public class BuildingRegisterDataParser {
 
     /** 응답에 동·호 식별자가 있으면 요청 상세주소와 일치하는 가장 구체적인 맵만 남긴다. */
     private TargetScope selectTargetScope(Object root, String detailAddress) {
+        return selectTargetScope(root, detailAddress, false);
+    }
+
+    /**
+     * emptyCandidatesAreSafe: 문서에 동/호 식별 필드가 하나도 없으면 애초에 여러
+     * 호실 값이 섞여 들어올 방법이 없어(구분할 필드 자체가 없음) 통째로 신뢰해도
+     * 안전하다. 표제부처럼 호 단위 구분이 원래 없는 문서 종류에서만 true로 켠다.
+     * 전유부처럼 호별로 다른 값이 섞여 들어올 수 있는 문서는 계속 false로 막는다.
+     * (참고: resBasePrice 값이 여러 개인데 서로 다르고 최신 여부를 못 가리면
+     * resolveLatestPrice가 별도로 null을 반환하므로, 이 플래그를 켜도 상충하는
+     * 값을 잘못 골라 쓰는 것까지 막아 주지는 못한다는 뜻은 아니다 — 그 안전장치는
+     * 그대로 살아 있다.)
+     */
+    private TargetScope selectTargetScope(
+            Object root,
+            String detailAddress,
+            boolean emptyCandidatesAreSafe
+    ) {
         if (root == null || detailAddress == null || detailAddress.isBlank()) {
             return new TargetScope(root, false);
         }
@@ -185,7 +259,7 @@ public class BuildingRegisterDataParser {
         String expectedHo = normalizeUnit(extractDetailPart(detailAddress, "호"));
         List<IdentityCandidate> candidates = new ArrayList<>();
         collectIdentityCandidates(root, null, null, candidates);
-        if (candidates.isEmpty()) return new TargetScope(root, false);
+        if (candidates.isEmpty()) return new TargetScope(root, emptyCandidatesAreSafe);
 
         List<IdentityCandidate> selectedCandidates = candidates.stream()
                 .filter(candidate -> expectedDong == null
@@ -282,6 +356,22 @@ public class BuildingRegisterDataParser {
     private Long findLatestPrice(Object root) {
         List<Map<String, Object>> entries = new ArrayList<>();
         collectMapsContainingKey(root, "resBasePrice", entries);
+        Long result = resolveLatestPrice(entries);
+        if (result == null && !entries.isEmpty()) {
+            // 동/호로 좁혀지지 않은 응답에는 건물 전체 호실의 공시가격이 같은
+            // 기준일에 서로 다른 금액으로 섞여 들어온다(대부분 공동주택
+            // 공시가격은 단지 전체가 같은 기준일로 고시되기 때문). 어떤
+            // 항목들이 후보로 잡혔는지 남겨야 실제로 어떤 필드로 호실을
+            // 구분해야 하는지 판단할 수 있다.
+            log.warn(
+                    "공시가격을 확정하지 못했습니다: resBasePrice 항목 상세={}",
+                    describeEntriesContaining(root, "resBasePrice")
+            );
+        }
+        return result;
+    }
+
+    private Long resolveLatestPrice(List<Map<String, Object>> entries) {
         Long latestPrice = null;
         String latestDate = null;
         boolean undated = false;
@@ -404,33 +494,161 @@ public class BuildingRegisterDataParser {
         List<Map<String, Object>> candidates = new ArrayList<>();
         collectMapsContainingKey(root, "resArea", candidates);
         candidates.removeIf(this::isCommonArea);
-        LinkedHashSet<BigDecimal> values = new LinkedHashSet<>();
-        boolean eligible = false;
+        if (candidates.isEmpty()) return null;
+
+        LinkedHashSet<BigDecimal> allValues = new LinkedHashSet<>();
+        for (Map<String, Object> candidate : candidates) {
+            BigDecimal value = parseDecimal(candidate.get("resArea"));
+            if (value == null) return null;
+            allValues.add(value.stripTrailingZeros());
+        }
+        // 공용면적을 제외한 나머지 후보가 전부 같은 값으로 수렴하면, 전유 표식이나
+        // 동·호 귀속이 따로 없어도 그 값 하나로 좁혀진 것이므로 채택한다.
+        // (예: 같은 전유부 안에 동일한 면적이 요약행·상세행으로 중복 노출되는 응답)
+        if (allValues.size() == 1) return allValues.iterator().next();
+
+        // 값이 서로 다르면 전유 표식이 있거나 동·호에 직접 귀속된 후보만 신뢰한다.
+        LinkedHashSet<BigDecimal> trusted = new LinkedHashSet<>();
         for (Map<String, Object> candidate : candidates) {
             boolean boundToUnit = firstDirectValue(candidate, DONG_KEYS) != null
                     || firstDirectValue(candidate, HO_KEYS) != null;
-            if (boundToUnit || isExclusiveArea(candidate) || candidates.size() == 1) {
-                eligible = true;
+            if (boundToUnit || isExclusiveArea(candidate)) {
                 BigDecimal value = parseDecimal(candidate.get("resArea"));
-                if (value == null) return null;
-                values.add(value.stripTrailingZeros());
+                if (value != null) trusted.add(value.stripTrailingZeros());
             }
         }
-        return eligible && values.size() == 1 ? values.iterator().next() : null;
+        return trusted.size() == 1 ? trusted.iterator().next() : null;
     }
 
+    /**
+     * 응답에서 이름에 area가 들어간 키와 값을 모아 보여준다.
+     * 면적 확정에 실패했을 때 어떤 키를 후보에 넣어야 하는지 판단하는 근거다.
+     */
+    private String describeAreaCandidates(Object root) {
+        Map<String, List<String>> found = new LinkedHashMap<>();
+        collectCandidatesByKeyword(root, "area", found);
+        return found.isEmpty() ? "없음" : found.toString();
+    }
+
+    private String describeFloorCandidates(Object root) {
+        Map<String, List<String>> found = new LinkedHashMap<>();
+        collectCandidatesByKeyword(root, "floor", found);
+        collectCandidatesByKeyword(root, "flr", found);
+        return found.isEmpty() ? "없음" : found.toString();
+    }
+
+    /**
+     * 응답에 실제로 어떤 동/호 식별자 조합이 들어 있는지 보여준다. 공시가격을
+     * 표제부에서 못 찾았을 때, 그 문서가 애초에 호 단위 식별자를 안 가진 것인지
+     * (구조적 한계) 아니면 다른 동/호로 채워져 있어서 안 맞은 것인지를 로그만
+     * 보고 구분하기 위한 진단용이다.
+     */
+    private String describeIdentityCandidates(Object root) {
+        List<IdentityCandidate> candidates = new ArrayList<>();
+        collectIdentityCandidates(root, null, null, candidates);
+        LinkedHashSet<String> labels = new LinkedHashSet<>();
+        for (IdentityCandidate candidate : candidates) {
+            labels.add("동=" + candidate.dong() + ",호=" + candidate.ho());
+            if (labels.size() >= 20) break;
+        }
+        return labels.isEmpty() ? "없음" : labels.toString();
+    }
+
+    /**
+     * 응답에서 이름에 주어진 키워드가 들어간 필드와 값을 모아 보여준다.
+     * 후보 목록에 추가해야 할 실제 키 이름을 찾을 때 쓰는 진단용 로그다.
+     * 같은 키가 여러 번 나오면 값을 전부(최대 5개) 남겨서, 값이 하나로
+     * 수렴하는지 갈리는지도 로그만으로 판단할 수 있게 한다.
+     */
+    private void collectCandidatesByKeyword(
+            Object node,
+            String keyword,
+            Map<String, List<String>> destination
+    ) {
+        if (destination.size() >= 20) {
+            return;
+        }
+        if (node instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                Object value = entry.getValue();
+                if (key.toLowerCase(Locale.ROOT).contains(keyword)
+                        && value != null && !(value instanceof Map)
+                        && !(value instanceof Collection)) {
+                    List<String> values = destination.computeIfAbsent(
+                            key, k -> new ArrayList<>()
+                    );
+                    String text = value.toString();
+                    if (values.size() < 5 && !values.contains(text)) {
+                        values.add(text);
+                    }
+                }
+                collectCandidatesByKeyword(value, keyword, destination);
+            }
+        } else if (node instanceof Collection<?> collection) {
+            collection.forEach(value ->
+                    collectCandidatesByKeyword(value, keyword, destination)
+            );
+        }
+    }
+
+    /**
+     * 주어진 키를 직접 가진 맵들을 찾아, 각 맵의 나머지 필드(값이 스칼라인 것만)를
+     * 통째로 보여준다. resArea/resFloor 후보가 여러 개 나올 때, 그중 어느 것이
+     * 대상 호실 것인지 구분할 실마리(동·호 키, 전유/공용 구분 코드 등)가 실제로
+     * 어떤 이름으로 오는지는 후보 목록·값만 봐서는 알 수 없어서 필요하다.
+     */
+    private String describeEntriesContaining(Object root, String key) {
+        List<Map<String, Object>> candidates = new ArrayList<>();
+        collectMapsContainingKey(root, key, candidates);
+        if (candidates.isEmpty()) return "없음";
+        StringBuilder result = new StringBuilder();
+        int limit = Math.min(candidates.size(), 6);
+        for (int i = 0; i < limit; i++) {
+            if (i > 0) result.append(" | ");
+            result.append(scalarFieldsOf(candidates.get(i)));
+        }
+        if (candidates.size() > limit) {
+            result.append(" ... 외 ").append(candidates.size() - limit).append("건");
+        }
+        return result.toString();
+    }
+
+    private Map<String, Object> scalarFieldsOf(Map<String, Object> map) {
+        Map<String, Object> scalars = new LinkedHashMap<>();
+        map.forEach((k, v) -> {
+            if (v != null && !(v instanceof Map) && !(v instanceof Collection)) {
+                scalars.put(k, v);
+            }
+        });
+        return scalars;
+    }
+
+    /**
+     * 전유부 응답 중에는 문자 표식(resExposPubuseGbCdNm 등) 없이 resType
+     * 코드 하나로만 전유/공용을 구분하는 경우가 있다. 실제 로그로 확인한
+     * 패턴: 대상 호실 자기 행은 resType=0, 그 호실에 딸린 공용부분
+     * 배분 행(전기실·계단실·주차장 등)은 전부 resType=1로 내려온다.
+     */
     private boolean isExclusiveArea(Map<String, Object> entry) {
+        if ("0".equals(typeCode(entry))) return true;
         String marker = areaMarker(entry);
         return marker.contains("전유") || marker.contains("전용");
     }
 
     private boolean isCommonArea(Map<String, Object> entry) {
+        if ("1".equals(typeCode(entry))) return true;
         String marker = areaMarker(entry);
         return marker.contains("공용") || marker.contains("계단실")
                 || marker.contains("복도") || marker.contains("승강기")
                 || marker.contains("주차장") || marker.contains("기계실")
                 || marker.contains("전기실") || marker.contains("관리실")
                 || marker.contains("경비실");
+    }
+
+    private String typeCode(Map<String, Object> entry) {
+        Object value = entry.get("resType");
+        return value != null ? value.toString().trim() : null;
     }
 
     private String areaMarker(Map<String, Object> entry) {
@@ -483,11 +701,49 @@ public class BuildingRegisterDataParser {
             FloorSelection direct = selectFloorValues(directValues(root, key));
             if (direct.present()) return direct.value();
         }
+        // 대상 호실로 좁혀지지 않은 응답에는 건물 전체의 층별 현황(공용부분이
+        // 배분된 지하 설비실·계단실·주차장 등)이 같은 키로 섞여 나온다.
+        // 값만 모으면 항상 여러 층이 갈려 보이므로, 전유 표식이 있는 행을
+        // 먼저 가려낸 뒤에야 값이 하나로 수렴하는지 판단할 수 있다.
         for (String key : FLOOR_KEYS) {
-            FloorSelection recursive = selectFloorValues(findValues(root, key, false));
-            if (recursive.present()) return recursive.value();
+            FloorSelection resolved = selectFloorFromCandidates(root, key);
+            if (resolved.present()) return resolved.value();
         }
         return null;
+    }
+
+    private FloorSelection selectFloorFromCandidates(Object root, String key) {
+        List<Map<String, Object>> candidates = new ArrayList<>();
+        collectMapsContainingKey(root, key, candidates);
+        if (candidates.isEmpty()) return FloorSelection.absent();
+
+        List<Map<String, Object>> nonCommon = candidates.stream()
+                .filter(candidate -> !isCommonArea(candidate))
+                .toList();
+        if (nonCommon.isEmpty()) return new FloorSelection(true, null);
+
+        LinkedHashSet<Integer> allFloors = new LinkedHashSet<>();
+        for (Map<String, Object> candidate : nonCommon) {
+            Integer floor = parseFloor(textValue(candidate.get(key)));
+            if (floor == null) return new FloorSelection(true, null);
+            allFloors.add(floor);
+        }
+        if (allFloors.size() == 1) return new FloorSelection(true, allFloors.iterator().next());
+
+        LinkedHashSet<Integer> trusted = new LinkedHashSet<>();
+        for (Map<String, Object> candidate : nonCommon) {
+            boolean boundToUnit = firstDirectValue(candidate, DONG_KEYS) != null
+                    || firstDirectValue(candidate, HO_KEYS) != null;
+            if (boundToUnit || isExclusiveArea(candidate)) {
+                Integer floor = parseFloor(textValue(candidate.get(key)));
+                if (floor != null) trusted.add(floor);
+            }
+        }
+        return new FloorSelection(true, trusted.size() == 1 ? trusted.iterator().next() : null);
+    }
+
+    private String textValue(Object raw) {
+        return raw != null ? raw.toString() : null;
     }
 
     private List<String> directValues(Object root, String key) {

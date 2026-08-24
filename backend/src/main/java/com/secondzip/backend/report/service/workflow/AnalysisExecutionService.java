@@ -96,6 +96,7 @@ public class AnalysisExecutionService {
             state.setStatus(AnalysisRequestStatus.COMPLETED);
             state.setFailureMessage(null);
             state.setBuildingRegisterData(new java.util.LinkedHashMap<>());
+            state.setRegistryData(null);
             workflowStore.save(state);
             return reportQueryService.getReportDetail(
                     accountId,
@@ -157,16 +158,33 @@ public class AnalysisExecutionService {
 
             // ===== 3단계. 유료 데이터 조회 (등기부등본) =====
             // 과금 발생. 반드시 위 관문을 통과한 뒤에만 호출할 것.
-            RegistryData registry =
-                    registryDataProvider.getRegistryDataForAnalysis(
-                            state.getTarget(),
-                            state.getDetailAddress(),
-                            state.getBuildingType()
-                    );
+            //
+            // 이전 시도에서 조회까지는 성공했지만 그 아래(평가·저장)에서 실패해
+            // retry()로 다시 들어온 경우, state.getRegistryData()에 그 결과가 남아
+            // 있으면 재사용하고 유료 API를 다시 부르지 않는다. RegistryClient의
+            // RegistryDataCache(TTL 5~30분)도 같은 문제를 어느 정도 막아 주지만,
+            // 그 TTL이 지난 뒤 재시도하면 캐시가 없어 이 필드가 유일한 방어선이 된다.
+            RegistryData registry = state.getRegistryData();
             if (registry == null) {
-                throw new BusinessException(
-                        ErrorCode.EXTERNAL_API_ERROR,
-                        "등기부등본 데이터를 확인하지 못해 분석을 완료할 수 없습니다."
+                registry = registryDataProvider.getRegistryDataForAnalysis(
+                        state.getTarget(),
+                        state.getDetailAddress(),
+                        state.getBuildingType()
+                );
+                if (registry == null) {
+                    throw new BusinessException(
+                            ErrorCode.EXTERNAL_API_ERROR,
+                            "등기부등본 데이터를 확인하지 못해 분석을 완료할 수 없습니다."
+                    );
+                }
+                // 과금이 끝난 결과이므로 state에 남긴다. 아래에서 예외가 나면
+                // 맨 아래 catch가 이 state를 그대로 저장하므로 재시도 시 위에서
+                // 재사용된다.
+                state.setRegistryData(registry);
+            } else {
+                log.info(
+                        "이전 시도에서 과금이 끝난 등기부등본 조회 결과를 재사용합니다(재시도). requestId={}",
+                        requestId
                 );
             }
 
@@ -206,6 +224,9 @@ public class AnalysisExecutionService {
             state.setStatus(AnalysisRequestStatus.COMPLETED);
             state.setFailureMessage(null);
             state.setBuildingRegisterData(new java.util.LinkedHashMap<>());
+            // 등기부 조회 결과도 리포트에 이미 반영·저장됐으니 워크플로 상태에
+            // 더 들고 있을 필요가 없다(불필요하게 개인정보를 남겨 두지 않음).
+            state.setRegistryData(null);
             saveStateQuietly(state, "완료 상태");
 
             // AI 특약은 부가 기능이므로 실패해도 분석 성공에는 영향을 주지 않음
@@ -283,12 +304,38 @@ public class AnalysisExecutionService {
                 buildingRegister.getBuildingData()
                         .getIllegalBuildingVerified()
         )) {
+            log.warn(
+                    "위반건축물 여부를 확인하지 못해 유료 조회 전 관문에서 막혔습니다: "
+                            + "isIllegalBuilding={}, illegalBuildingVerified={}, "
+                            + "illegalBuildingSource={}, buildingType={}",
+                    buildingRegister.getBuildingData().getIsIllegalBuilding(),
+                    buildingRegister.getBuildingData().getIllegalBuildingVerified(),
+                    buildingRegister.getBuildingData().getIllegalBuildingSource(),
+                    buildingRegister.getBuildingData().getBuildingType()
+            );
             throw new BusinessException(
                     ErrorCode.EXTERNAL_API_ERROR,
                     "위반건축물 여부를 확인하지 못해 분석을 완료할 수 없습니다."
             );
         }
         if (!hasPriceBasis(price)) {
+            // 실거래가/공시가격이 각각 왜 없는지는 PriceClient/BuildingRegisterDataParser가
+            // 자기 단계에서 이미 WARN으로 남긴다. 여기서는 그 결과값 자체(둘 다 없다는
+            // 최종 상태)만 한 줄로 모아 남겨서, 실패 시점에 로그 하나만 봐도 원인
+            // 후보가 뭔지 바로 잡히게 한다 — 앞 단계 로그까지 거슬러 올라가지 않아도
+            // 되도록.
+            log.warn(
+                    "실거래가/공시가격을 모두 확인하지 못해 유료 조회 전 관문에서 막혔습니다: "
+                            + "recentSalePrice={}, officialPrice(실거래가+공시가격 병합)={}, "
+                            + "건축물대장 공시가격={}, transactionAreaSqm={}, "
+                            + "transactionFloor={}, buildingType={}",
+                    price == null ? null : price.getRecentSalePrice(),
+                    price == null ? null : price.getOfficialPrice(),
+                    buildingRegister.getOfficialPrice(),
+                    buildingRegister.getTransactionAreaSqm(),
+                    buildingRegister.getTransactionFloor(),
+                    buildingRegister.getBuildingData().getBuildingType()
+            );
             throw new BusinessException(
                     ErrorCode.EXTERNAL_API_ERROR,
                     "실거래가 또는 공시가격을 확인하지 못해 분석을 완료할 수 없습니다."
