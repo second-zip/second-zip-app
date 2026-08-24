@@ -77,7 +77,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/swagger-ui.html",
                         "/swagger-resources/**",
                         "/v2/api-docs",
-                        "/webjars/**"
+                        "/webjars/**",
+                        "/ws/**"
                 ).permitAll()
 
                 // 비회원 GET API
