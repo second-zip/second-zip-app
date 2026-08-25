@@ -46,13 +46,30 @@ describe('RecordingTextModal', () => {
     [{ isLoading: true }, '녹음 내용을 불러오고 있어요.'],
     [{ errorMessage: '조회 실패' }, '조회 실패'],
     [{ text: '' }, '변환된 녹음 텍스트가 아직 없어요.'],
-    [{ text: '첫 줄\n둘째 줄' }, '첫 줄\n둘째 줄'],
+    [{ text: '화자 정보 없는 녹음' }, '화자 정보 없는 녹음'],
   ])('조회 상태에 맞는 본문을 표시한다', (state, message) => {
     const wrapper = mount(RecordingTextModal, {
       props: { open: true, ...state },
     });
 
     expect(wrapper.text()).toContain(message);
+  });
+
+  test('백엔드 화자 번호를 A와 B로 바꾸고 화자마다 별도 줄로 표시한다', () => {
+    const wrapper = mount(RecordingTextModal, {
+      props: {
+        open: true,
+        text: '화자 1: 첫 번째 발화 이어지는 발화\n화자 2: 두 번째 발화\n화자 1: 다시 첫 번째 화자',
+      },
+    });
+
+    expect(
+      wrapper.findAll('.recording-text-modal__speaker-line').map((line) => line.text()),
+    ).toEqual([
+      'A: 첫 번째 발화 이어지는 발화',
+      'B: 두 번째 발화',
+      'A: 다시 첫 번째 화자',
+    ]);
   });
 
   test('모달 shell 닫힘을 상위로 전달한다', async () => {

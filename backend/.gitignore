@@ -47,6 +47,7 @@ bin/
 
 # 문서 폴더
 /docs/
+/scripts/
 # 로컬 전용 분석 워크플로 API 명세
 /analysis-workflow-api-spec.md
 

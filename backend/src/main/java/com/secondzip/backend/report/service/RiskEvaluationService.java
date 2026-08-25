@@ -20,7 +20,7 @@ import java.util.TreeSet;
 /** 위험도 판단 순서
  1. 필수점검 5개 판정 → 개수기반 집계로 대표값 1개
  2. 유형별 세부 9개 판정 (3개씩) → 개수기반 집계로 유형 대표값 3개
- 3. [필수점검대표값, 유형1, 유형2, 유형3] 4개 중 최악값 = 전체 결과
+ 3. 대표값 4개 중 DANGER 1개 또는 CAUTION 3개 이상이면 전체 DANGER
  **/
 
 @Service
@@ -125,11 +125,11 @@ public class RiskEvaluationService {
         fraudTypeResultDTOS.add(buildRightsConcealment(registry, building));
         fraudTypeResultDTOS.add(buildTrustPropertyFraud(registry));
 
-        // ===== 3. 전체 결과 = [필수점검최종, 유형1, 유형2, 유형3] 4개 중 최악값 =====
+        // ===== 3. 전체 결과 = 대표값 4개 중 DANGER 1개 또는 CAUTION 3개 이상이면 DANGER =====
         List<RiskLevel> topLevels = new ArrayList<>();
         topLevels.add(checkOverall);
         fraudTypeResultDTOS.forEach(f -> topLevels.add(f.getRiskLevel()));
-        RiskLevel overall = RiskLevel.worstOf(topLevels);
+        RiskLevel overall = RiskAggregation.aggregateOverall(topLevels);
 
         return new RiskEvaluationResultDTO(
                 overall,

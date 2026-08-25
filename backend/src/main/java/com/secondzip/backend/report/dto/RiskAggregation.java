@@ -9,12 +9,28 @@ import java.util.Objects;
 public final class RiskAggregation {
 
     private static final int CHECK_DANGER_THRESHOLD = 3;
+    private static final int OVERALL_DANGER_THRESHOLD = 3;
 
     private RiskAggregation() {
     }
 
     public static RiskLevel aggregateChecks(List<JudgementDTO> judgements) {
         return aggregate(judgements, CHECK_DANGER_THRESHOLD);
+    }
+
+    /**
+     * 필수점검 대표값 1개와 사기 유형 대표값 3개를 최종 집계한다.
+     * DANGER가 하나라도 있거나 CAUTION이 3개 이상이면 DANGER다.
+     */
+    public static RiskLevel aggregateOverall(List<RiskLevel> levels) {
+        if (levels == null) {
+            return RiskLevel.SAFE;
+        }
+
+        return RiskLevel.aggregateByCount(
+                levels.stream().filter(Objects::nonNull).toList(),
+                OVERALL_DANGER_THRESHOLD
+        );
     }
 
     public static RiskLevel aggregateDetails(List<JudgementDTO> judgements) {
