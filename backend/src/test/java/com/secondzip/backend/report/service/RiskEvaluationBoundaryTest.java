@@ -117,6 +117,60 @@ class RiskEvaluationBoundaryTest {
         );
     }
 
+    @ParameterizedTest(name = "deposit={0} -> {1}")
+    @MethodSource("multiHouseholdJeonseRatioBoundaries")
+    @DisplayName("연립·다세대는 전세가율 60%와 80% 경계값으로 판정한다")
+    void appliesMultiHouseholdJeonseRatioBoundaries(long deposit, RiskLevel expected) {
+        BuildingData building = baselineBuilding();
+        building.setBuildingType("MULTI_HOUSEHOLD");
+        building.setBuildingUse("다세대주택");
+
+        DetailResultDTO result = detail(
+                evaluate(
+                        baselineRegistry(),
+                        building,
+                        price(1_000_000_000L),
+                        deposit,
+                        "서울"
+                ),
+                DetailType.HIGH_JEONSE_RATIO
+        );
+
+        assertEquals(expected, result.getRiskLevel());
+        assertEquals(DataStatus.VERIFIED, result.getDataStatus());
+    }
+
+    static Stream<Arguments> multiHouseholdJeonseRatioBoundaries() {
+        return Stream.of(
+                Arguments.of(599_999_999L, RiskLevel.SAFE),
+                Arguments.of(600_000_000L, RiskLevel.CAUTION),
+                Arguments.of(799_999_999L, RiskLevel.CAUTION),
+                Arguments.of(800_000_000L, RiskLevel.DANGER)
+        );
+    }
+
+    @Test
+    @DisplayName("다가구는 건물 전체 가격과 한 세대 보증금을 직접 비교하지 않는다")
+    void multiFamilyJeonseRatioIsUnverified() {
+        BuildingData building = baselineBuilding();
+        building.setBuildingType("MULTI_FAMILY");
+        building.setBuildingUse("다가구주택");
+
+        DetailResultDTO result = detail(
+                evaluate(
+                        baselineRegistry(),
+                        building,
+                        price(1_000_000_000L),
+                        100_000_000L,
+                        "서울"
+                ),
+                DetailType.HIGH_JEONSE_RATIO
+        );
+
+        assertEquals(RiskLevel.CAUTION, result.getRiskLevel());
+        assertEquals(DataStatus.UNVERIFIED, result.getDataStatus());
+    }
+
     @ParameterizedTest(name = "mortgage={0} -> {1}")
     @CsvSource({
             "0, SAFE",
