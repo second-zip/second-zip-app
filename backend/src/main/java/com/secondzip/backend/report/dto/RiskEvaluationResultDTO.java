@@ -8,7 +8,7 @@ import java.util.List;
 // 위험 분석 결과
 @Getter
 public class RiskEvaluationResultDTO {
-    private final RiskLevel overallRiskLevel;             // 필수 5 + 유형 3 중 최악값
+    private final RiskLevel overallRiskLevel;             // 필수점검 대표값 1개 + 유형 대표값 3개의 개수 기반 집계
     private final List<CheckResultDTO> checkResultDTOS;          // 필수 5개
     private final List<FraudTypeResultDTO> fraudTypeResultDTOS;   // 유형 3개 (각각 세부 3개 포함)
 

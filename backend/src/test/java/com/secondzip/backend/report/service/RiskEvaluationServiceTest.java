@@ -274,6 +274,49 @@ class RiskEvaluationServiceTest {
     }
 
     @Test
+    @DisplayName("필수점검과 유형 대표값 중 CAUTION이 3개면 전체 결과가 DANGER다")
+    void threeCautionRepresentativesEscalateOverallToDanger() {
+        RegistryData registry = cleanRegistry();
+        registry.setMortgageAmount(40_000_000L);
+
+        BuildingData building = cleanApartment();
+        building.setBuildingUse("공동주택(아파트)");
+        building.setBuildingLevelNonResidentialUses("근린생활시설");
+
+        RiskEvaluationResultDTO evaluation = service.evaluate(
+                registry,
+                building,
+                price(450_000_000L),
+                315_000_000L,
+                "서울특별시 성동구 왕십리로 410"
+        );
+
+        RiskLevel checkOverall = RiskAggregation.aggregateChecks(
+                evaluation.getCheckResultDTOS().stream()
+                        .map(result -> new JudgementDTO(
+                                result.getRiskLevel(), result.getDataStatus()))
+                        .toList()
+        );
+        List<RiskLevel> representatives = List.of(
+                checkOverall,
+                evaluation.getFraudTypeResultDTOS().get(0).getRiskLevel(),
+                evaluation.getFraudTypeResultDTOS().get(1).getRiskLevel(),
+                evaluation.getFraudTypeResultDTOS().get(2).getRiskLevel()
+        );
+
+        assertEquals(
+                List.of(
+                        RiskLevel.CAUTION,
+                        RiskLevel.CAUTION,
+                        RiskLevel.CAUTION,
+                        RiskLevel.SAFE
+                ),
+                representatives
+        );
+        assertEquals(RiskLevel.DANGER, evaluation.getOverallRiskLevel());
+    }
+
+    @Test
     @DisplayName("1층이 근린생활시설인 정상 다세대는 위험이 아니라 주의로 남긴다")
     void residentialUnitInMixedUseBuildingIsCautionNotDanger() {
         BuildingData building = cleanApartment();
