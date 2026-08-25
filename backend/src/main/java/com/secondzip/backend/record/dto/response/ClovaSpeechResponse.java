@@ -21,6 +21,18 @@ public class ClovaSpeechResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Segment {
 
-        private String text; //녹취 기록 분할
+        private String text;
+
+        // CLOVA 화자 분리 결과
+        private Diarization diarization;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Diarization {
+
+        // "1", "2", ...
+        private String label;
     }
 }

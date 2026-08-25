@@ -12,6 +12,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -89,6 +90,15 @@ public class ClovaSpeechClient implements SpeechToTextClient {
         requestBody.put("wordAlignment", true);
         requestBody.put("fullText", true);
 
+        Map<String, Object> diarization = new LinkedHashMap<>();
+
+        diarization.put("enable", true);
+
+        requestBody.put(
+                "diarization",
+                diarization
+        );
+
         return requestBody;
     }
 
@@ -125,33 +135,26 @@ public class ClovaSpeechClient implements SpeechToTextClient {
                         ClovaSpeechResponse.class
                 );
 
-        if (response.getText() != null
-                && !response.getText().isBlank()) {
-            return response.getText().trim();
-        }
-
+        // 화자 정보가 포함된 segments 우선 사용
         if (response.getSegments() != null
                 && !response.getSegments().isEmpty()) {
 
             String transcript =
-                    response.getSegments()
-                            .stream()
-                            .map(
-                                    ClovaSpeechResponse
-                                            .Segment::getText
-                            )
-                            .filter(text ->
-                                    text != null
-                                            && !text.isBlank()
-                            )
-                            .collect(
-                                    Collectors.joining(" ")
-                            );
+                    buildSpeakerTranscript(
+                            response.getSegments()
+                    );
 
             if (!transcript.isBlank()) {
                 return transcript.trim();
             }
         }
+
+        // segments가 없는 경우에만 fullText 사용
+        if (response.getText() != null
+                && !response.getText().isBlank()) {
+            return response.getText().trim();
+        }
+
 
         throw new IllegalStateException(
                 "CLOVA Speech 응답에서 녹취문을 찾을 수 없습니다. "
@@ -160,5 +163,58 @@ public class ClovaSpeechClient implements SpeechToTextClient {
                         + ", message="
                         + response.getMessage()
         );
+    }
+
+    private String buildSpeakerTranscript(List<ClovaSpeechResponse.Segment> segments) {
+
+        StringBuilder transcript = new StringBuilder();
+
+        String previousSpeaker = null;
+
+        for (ClovaSpeechResponse.Segment segment : segments) {
+
+            String text = segment.getText();
+
+            if (text == null || text.isBlank()) {
+                continue;
+            }
+
+            String speaker = null;
+
+            if (segment.getDiarization() != null) {
+                speaker = segment
+                        .getDiarization()
+                        .getLabel();
+            }
+
+            if (speaker == null || speaker.isBlank()) {
+                speaker = "알 수 없음";
+            }
+
+
+            // 같은 화자가 계속 말한 경우 한 줄로 연결
+            if (speaker.equals(previousSpeaker)) {
+
+                transcript
+                        .append(" ")
+                        .append(text.trim());
+
+            } else {
+
+                if (transcript.length() > 0) {
+                    transcript.append("\n");
+                }
+
+                transcript
+                        .append("화자 ")
+                        .append(speaker)
+                        .append(": ")
+                        .append(text.trim());
+            }
+
+            previousSpeaker = speaker;
+        }
+
+        return transcript.toString().trim();
     }
 }
