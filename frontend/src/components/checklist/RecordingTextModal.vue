@@ -10,7 +10,28 @@ const props = defineProps({
   errorMessage: { type: String, default: '' },
 });
 const emit = defineEmits(['close']);
-const hasText = computed(() => Boolean(props.text.trim()));
+const transcriptLines = computed(() => {
+  const speakerAliases = new Map();
+
+  return props.text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const speakerLine = line.match(/^화자\s+([^:]+):\s*(.*)$/);
+      if (!speakerLine) return line;
+
+      const [, speaker, content] = speakerLine;
+      if (!speakerAliases.has(speaker)) {
+        speakerAliases.set(
+          speaker,
+          String.fromCharCode(65 + speakerAliases.size),
+        );
+      }
+      return `${speakerAliases.get(speaker)}: ${content}`;
+    });
+});
+const hasText = computed(() => transcriptLines.value.length > 0);
 </script>
 
 <template>
@@ -29,7 +50,13 @@ const hasText = computed(() => Boolean(props.text.trim()));
         class="recording-text-modal__error mb-0 text-center"
         role="alert"
       >{{ errorMessage }}</p>
-      <p v-else-if="hasText" class="recording-text-modal__text mb-0">{{ text }}</p>
+      <div v-else-if="hasText" class="recording-text-modal__text">
+        <p
+          v-for="(line, index) in transcriptLines"
+          :key="`${index}-${line}`"
+          class="recording-text-modal__speaker-line mb-0"
+        >{{ line }}</p>
+      </div>
       <p v-else class="recording-text-modal__empty mb-0 text-center">
         변환된 녹음 텍스트가 아직 없어요.
       </p>
@@ -51,6 +78,9 @@ const hasText = computed(() => Boolean(props.text.trim()));
   font-size: 0.875rem;
   line-height: 1.75;
   white-space: pre-wrap;
+}
+.recording-text-modal__speaker-line + .recording-text-modal__speaker-line {
+  margin-top: 12px;
 }
 .recording-text-modal__empty {
   padding: 24px 0;
