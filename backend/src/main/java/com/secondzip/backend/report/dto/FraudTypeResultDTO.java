@@ -12,6 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 public class FraudTypeResultDTO {
     private FraudType fraudType;
-    private RiskLevel riskLevel;        // 세부 3개 중 최악값
+    private RiskLevel riskLevel;        // 세부 판정들을 집계한 유형 대표값
     private List<DetailResultDTO> details; // 세부 3개
 }

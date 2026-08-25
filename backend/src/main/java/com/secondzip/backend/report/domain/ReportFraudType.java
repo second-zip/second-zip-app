@@ -23,6 +23,6 @@ public class ReportFraudType {
     private Long analysisReportId;
     private FraudType fraudType;
 
-    /** 세부 3개 중 최악값. */
+    /** 세부 판정들을 개수 기반으로 집계한 유형 대표값. */
     private RiskLevel riskLevel;
 }

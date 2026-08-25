@@ -20,7 +20,7 @@ import java.util.TreeSet;
 /** 위험도 판단 순서
  1. 필수점검 5개 판정 → 개수기반 집계로 대표값 1개
  2. 유형별 세부 9개 판정 (3개씩) → 개수기반 집계로 유형 대표값 3개
- 3. [필수점검대표값, 유형1, 유형2, 유형3] 4개 중 최악값 = 전체 결과
+ 3. 대표값 4개 중 DANGER 1개 또는 CAUTION 3개 이상이면 전체 DANGER
  **/
 
 @Service
@@ -28,6 +28,7 @@ public class RiskEvaluationService {
 
     // 전세가율 기준
     private static final double JEONSE_RATIO_CAUTION = 0.70;
+    private static final double MULTI_HOUSING_JEONSE_RATIO_CAUTION = 0.60;
     private static final double JEONSE_RATIO_DANGER = 0.80;
     // 선순위채권 부담 기준 (주택가격 90% × 60%)
     private static final double PRIORITY_DEBT_LIMIT_RATIO = 0.54;
@@ -48,6 +49,8 @@ public class RiskEvaluationService {
             Arrays.asList("SINGLE_FAMILY", "MULTI_FAMILY");
     private static final List<String> COLLECTIVE_REGISTRY_TYPES =
             Arrays.asList("APARTMENT", "MULTI_HOUSEHOLD", "OFFICETEL");
+    private static final Set<String> LOWER_JEONSE_RATIO_CAUTION_TYPES =
+            Set.of("MULTI_HOUSEHOLD");
     private static final Set<String> KNOWN_OWNER_TYPES =
             Set.of("INDIVIDUAL", "CORPORATION", "TRUST_COMPANY");
 
@@ -125,11 +128,11 @@ public class RiskEvaluationService {
         fraudTypeResultDTOS.add(buildRightsConcealment(registry, building));
         fraudTypeResultDTOS.add(buildTrustPropertyFraud(registry));
 
-        // ===== 3. 전체 결과 = [필수점검최종, 유형1, 유형2, 유형3] 4개 중 최악값 =====
+        // ===== 3. 전체 결과 = 대표값 4개 중 DANGER 1개 또는 CAUTION 3개 이상이면 DANGER =====
         List<RiskLevel> topLevels = new ArrayList<>();
         topLevels.add(checkOverall);
         fraudTypeResultDTOS.forEach(f -> topLevels.add(f.getRiskLevel()));
-        RiskLevel overall = RiskLevel.worstOf(topLevels);
+        RiskLevel overall = RiskAggregation.aggregateOverall(topLevels);
 
         return new RiskEvaluationResultDTO(
                 overall,
@@ -543,11 +546,14 @@ public class RiskEvaluationService {
      * 실제로 보는 것: 매매 기준가 대비 전세보증금 비율.
      *
      * [판정 로직]
-     * - 80% 이상 -> DANGER / 70~80% -> CAUTION / 70% 미만 -> SAFE
+     * - 연립·다세대: 80% 이상 -> DANGER / 60~80% -> CAUTION / 60% 미만 -> SAFE
+     * - 다가구: 다른 세입자의 선순위보증금을 알 수 없어 CAUTION / UNVERIFIED
+     * - 그 외 유형: 80% 이상 -> DANGER / 70~80% -> CAUTION / 70% 미만 -> SAFE
      * - 가격 데이터 누락 -> CAUTION / UNVERIFIED
      */
     private JudgementDTO judgeHighJeonseRatio(BuildingData building, PriceData price, Long deposit) {
-        // 다가구 실거래가는 건물 전체 가격이어서 한 세대 보증금과 직접 나눌 수 없다.
+        // 다가구는 분모가 건물 전체 가격이지만 분자는 특정 세대의 보증금이다.
+        // 다른 세입자의 선순위보증금을 모르는 상태에서 안전을 확정하지 않는다.
         if (building != null && "MULTI_FAMILY".equals(building.getBuildingType())) {
             return JudgementDTO.unverified();
         }
@@ -557,8 +563,12 @@ public class RiskEvaluationService {
         }
 
         double ratio = (double) deposit / basePrice;
+        String buildingType = building != null ? building.getBuildingType() : null;
+        double cautionThreshold = LOWER_JEONSE_RATIO_CAUTION_TYPES.contains(buildingType)
+                ? MULTI_HOUSING_JEONSE_RATIO_CAUTION
+                : JEONSE_RATIO_CAUTION;
         if (ratio >= JEONSE_RATIO_DANGER) return JudgementDTO.verified(RiskLevel.DANGER);
-        if (ratio >= JEONSE_RATIO_CAUTION) return JudgementDTO.verified(RiskLevel.CAUTION);
+        if (ratio >= cautionThreshold) return JudgementDTO.verified(RiskLevel.CAUTION);
         return JudgementDTO.verified(RiskLevel.SAFE);
     }
 
