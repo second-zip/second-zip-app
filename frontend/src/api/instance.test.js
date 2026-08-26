@@ -141,10 +141,27 @@ describe('API response interceptor', () => {
     );
   });
 
-  it.each([403, 500])('%i 오류는 재발급하거나 인증 상태를 변경하지 않는다', async (status) => {
+  it('403 오류는 재발급 없이 인증 정보를 정리하고 로그인 이동 이벤트를 발생시킨다', async () => {
     const error = {
       config: { url: '/users/me' },
-      response: { status },
+      response: { status: 403 },
+    };
+    const dispatchEvent = vi.spyOn(window, 'dispatchEvent');
+
+    await expect(handleError(error)).rejects.toBe(error);
+
+    expect(reissueAccessToken).not.toHaveBeenCalled();
+    expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(removeRefreshToken).toHaveBeenCalledOnce();
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: AUTH_UNAUTHORIZED_EVENT }),
+    );
+  });
+
+  it('401/403이 아닌 오류는 재발급하거나 인증 상태를 변경하지 않는다', async () => {
+    const error = {
+      config: { url: '/users/me' },
+      response: { status: 500 },
     };
     const dispatchEvent = vi.spyOn(window, 'dispatchEvent');
 
