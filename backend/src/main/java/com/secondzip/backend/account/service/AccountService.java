@@ -4,6 +4,7 @@ import com.secondzip.backend.account.dto.request.*;
 import com.secondzip.backend.account.dto.response.AccountResponseDTO;
 import com.secondzip.backend.account.dto.response.LoginResponseDTO;
 import com.secondzip.backend.account.dto.response.MyPageResponseDTO;
+import com.secondzip.backend.account.dto.response.TokenResponseDTO;
 
 public interface AccountService {
     void signup(SignupDTO signupDTO);
@@ -21,6 +22,8 @@ public interface AccountService {
     void withdraw(Long accountId, String accessToken, WithdrawAccountDTO withdrawDTO);
 
     void updatePassword(Long accountId, String accessToken, UpdatePasswordDTO updatePasswordDTO);
+
+    TokenResponseDTO reissueAccessToken(TokenReissueRequestDTO requestDTO);
 
     MyPageResponseDTO getMyPage(Long accountId);
 }

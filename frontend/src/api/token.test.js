@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getAccessToken, removeAccessToken, setAccessToken } from './token';
+import {
+  getAccessToken,
+  getRefreshToken,
+  removeAccessToken,
+  removeRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from './token';
 
-describe('access token', () => {
+describe('인증 토큰', () => {
   const storage = new Map();
 
   beforeEach(() => {
@@ -33,5 +40,25 @@ describe('access token', () => {
     removeAccessToken();
 
     expect(getAccessToken()).toBeNull();
+  });
+
+  it('Refresh Token을 저장하고 조회한다', () => {
+    setRefreshToken('refresh-token');
+
+    expect(getRefreshToken()).toBe('refresh-token');
+  });
+
+  it('빈 Refresh Token은 저장하지 않는다', () => {
+    setRefreshToken('');
+
+    expect(getRefreshToken()).toBeNull();
+  });
+
+  it('저장된 Refresh Token을 제거한다', () => {
+    localStorage.setItem('refreshToken', 'refresh-token');
+
+    removeRefreshToken();
+
+    expect(getRefreshToken()).toBeNull();
   });
 });
