@@ -93,11 +93,6 @@ api.interceptors.response.use(
       originalRequest?.url,
     );
 
-    if (error.response?.status === 403) {
-      notifyUnauthorized();
-      return Promise.reject(error);
-    }
-
     if (error.response?.status !== 401 || isRefreshExcluded) {
       return Promise.reject(error);
     }
