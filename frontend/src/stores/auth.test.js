@@ -2,7 +2,13 @@ import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { login as loginApi, logout as logoutApi, signup as signupApi } from '@/api/auth';
-import { getAccessToken, removeAccessToken, setAccessToken } from '@/api/token';
+import {
+  getAccessToken,
+  removeAccessToken,
+  removeRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from '@/api/token';
 import {
   getMyAccount,
   updateCharacter,
@@ -20,7 +26,9 @@ vi.mock('@/api/auth', () => ({
 vi.mock('@/api/token', () => ({
   getAccessToken: vi.fn(),
   removeAccessToken: vi.fn(),
+  removeRefreshToken: vi.fn(),
   setAccessToken: vi.fn(),
+  setRefreshToken: vi.fn(),
 }));
 vi.mock('@/api/user', () => ({
   getMyAccount: vi.fn(),
@@ -65,6 +73,7 @@ describe('auth store', () => {
   it('로그인 성공 시 토큰과 사용자 정보를 저장한다', async () => {
     const loginResult = {
       accessToken: 'new-token',
+      refreshToken: 'refresh-token',
       accountId: 1,
       characterType: 'CAT',
       email: 'user@example.com',
@@ -80,6 +89,7 @@ describe('auth store', () => {
       nickname: '길동',
     });
     expect(setAccessToken).toHaveBeenCalledWith('new-token');
+    expect(setRefreshToken).toHaveBeenCalledWith('refresh-token');
     expect(store.isAuthenticated).toBe(true);
     expect(store.loading).toBe(false);
   });
@@ -125,6 +135,7 @@ describe('auth store', () => {
     store.clearAuth();
 
     expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(removeRefreshToken).toHaveBeenCalledOnce();
     expect(store.isAuthenticated).toBe(false);
     expect(store.myPage).toBeNull();
   });
@@ -137,6 +148,7 @@ describe('auth store', () => {
 
     expect(logoutApi).toHaveBeenCalledOnce();
     expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(removeRefreshToken).toHaveBeenCalledOnce();
     expect(store.loading).toBe(false);
   });
 
@@ -146,6 +158,7 @@ describe('auth store', () => {
 
     await expect(store.logout()).rejects.toThrow('logout failed');
     expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(removeRefreshToken).toHaveBeenCalledOnce();
     expect(store.loading).toBe(false);
   });
 
@@ -186,6 +199,7 @@ describe('auth store', () => {
     await store.changePassword({ currentPassword: 'old', newPassword: 'new' });
 
     expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(removeRefreshToken).toHaveBeenCalledOnce();
     expect(store.isAuthenticated).toBe(false);
     expect(store.loading).toBe(false);
   });
@@ -210,6 +224,7 @@ describe('auth store', () => {
 
     expect(withdraw).toHaveBeenCalledWith({ password: 'password1!' });
     expect(removeAccessToken).toHaveBeenCalledOnce();
+    expect(removeRefreshToken).toHaveBeenCalledOnce();
     expect(store.isAuthenticated).toBe(false);
   });
 });

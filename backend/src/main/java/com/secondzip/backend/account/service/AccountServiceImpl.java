@@ -2,10 +2,7 @@ package com.secondzip.backend.account.service;
 
 import com.secondzip.backend.account.domain.Account;
 import com.secondzip.backend.account.dto.request.*;
-import com.secondzip.backend.account.dto.response.AccountResponseDTO;
-import com.secondzip.backend.account.dto.response.ActivitySummaryDTO;
-import com.secondzip.backend.account.dto.response.LoginResponseDTO;
-import com.secondzip.backend.account.dto.response.MyPageResponseDTO;
+import com.secondzip.backend.account.dto.response.*;
 import com.secondzip.backend.account.mapper.AccountMapper;
 import com.secondzip.backend.common.exception.BusinessException;
 import com.secondzip.backend.common.exception.ErrorCode;
@@ -403,5 +400,74 @@ public class AccountServiceImpl implements AccountService {
                     ErrorCode.REQUIRED_TERM_NOT_AGREED
             );
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TokenResponseDTO reissueAccessToken(
+            TokenReissueRequestDTO requestDTO
+    ) {
+        String refreshToken = requestDTO.getRefreshToken();
+
+        Claims claims;
+
+        try {
+            claims = jwtTokenProvider.parseClaims(refreshToken);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            throw new BusinessException(
+                    ErrorCode.EXPIRED_TOKEN,
+                    "Refresh Token이 만료되었습니다."
+            );
+        } catch (Exception e) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_TOKEN,
+                    "유효하지 않은 Refresh Token입니다."
+            );
+        }
+
+        // Access Token을 재발급 API에 넣는 것을 방지
+        String tokenType = claims.get("type", String.class);
+
+        if (!"REFRESH".equals(tokenType)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_TOKEN,
+                    "Refresh Token이 아닙니다."
+            );
+        }
+
+        Long accountId;
+
+        try {
+            accountId = Long.valueOf(claims.getSubject());
+        } catch (Exception e) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_TOKEN,
+                    "Refresh Token의 회원 정보가 올바르지 않습니다."
+            );
+        }
+
+        // Redis에 로그인 당시 저장된 Refresh Token인지 확인
+        if (!refreshTokenService.matches(accountId, refreshToken)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_TOKEN,
+                    "유효하지 않은 Refresh Token입니다."
+            );
+        }
+
+        Account account = accountMapper.findById(accountId);
+
+        if (account == null) {
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "회원정보를 찾을 수 없습니다."
+            );
+        }
+
+        String newAccessToken =
+                jwtTokenProvider.createAccessToken(account);
+
+        return TokenResponseDTO.builder()
+                .accessToken(newAccessToken)
+                .build();
     }
 }

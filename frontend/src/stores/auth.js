@@ -6,7 +6,13 @@ import {
   logout as logoutApi,
   signup as signupApi,
 } from '@/api/auth';
-import { getAccessToken, removeAccessToken, setAccessToken } from '@/api/token';
+import {
+  getAccessToken,
+  removeAccessToken,
+  removeRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from '@/api/token';
 import {
   getMyAccount,
   updateCharacter as updateCharacterApi,
@@ -41,6 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
       const result = await loginApi(loginData);
 
       setAccessToken(result.accessToken);
+      setRefreshToken(result.refreshToken);
       accessToken.value = result.accessToken;
       myPage.value = {
         accountId: result.accountId,
@@ -108,6 +115,7 @@ export const useAuthStore = defineStore('auth', () => {
   // 브라우저 토큰과 Pinia의 인증 정보를 함께 초기화
   const clearAuth = () => {
     removeAccessToken();
+    removeRefreshToken();
     accessToken.value = null;
     myPage.value = null;
   };
