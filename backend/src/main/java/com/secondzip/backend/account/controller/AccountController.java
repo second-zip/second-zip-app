@@ -2,12 +2,15 @@ package com.secondzip.backend.account.controller;
 
 import com.secondzip.backend.account.dto.request.LoginDTO;
 import com.secondzip.backend.account.dto.request.SignupDTO;
+import com.secondzip.backend.account.dto.request.TokenReissueRequestDTO;
 import com.secondzip.backend.account.dto.response.LoginResponseDTO;
 import com.secondzip.backend.account.dto.response.MessageResponseDTO;
+import com.secondzip.backend.account.dto.response.TokenResponseDTO;
 import com.secondzip.backend.account.service.AccountService;
 import com.secondzip.backend.security.jwt.JwtTokenResolver;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,16 @@ public class AccountController {
 
     private final AccountService accountService;
     private final JwtTokenResolver jwtTokenResolver;
+
+    @ApiOperation(value = "Access Token 재발급", notes = "유효한 Refresh Token을 검증하여 새로운 Access Token을 발급합니다.")
+    @PostMapping("/token/reissue")
+    public ResponseEntity<TokenResponseDTO> reissue(
+            @Valid @RequestBody TokenReissueRequestDTO requestDTO
+    ) {
+        return ResponseEntity.ok(
+                accountService.reissueAccessToken(requestDTO)
+        );
+    }
 
     @ApiOperation(value = "회원가입", notes = "이메일, 비밀번호, 닉네임, 캐릭터 유형을 입력하여 회원가입합니다.")
     @PostMapping("/signup")
