@@ -134,6 +134,7 @@ describe('API response interceptor', () => {
 
     await expect(handleError(error)).rejects.toBe(error);
 
+    expect(reissueAccessToken).not.toHaveBeenCalled();
     expect(removeAccessToken).toHaveBeenCalledOnce();
     expect(removeRefreshToken).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
